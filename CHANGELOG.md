@@ -36,10 +36,10 @@ Initial official release of the **UdharCard Merchant App**, a comprehensive digi
 - **Customer Directory**: Searchable list of registered customers with outstanding balances (`customer_list_screen.dart`).
 - **Customer Ledger View**: Detailed line-item transaction history per customer (`customer_ledger_screen.dart`).
 - **Add Udhar Record**: Dynamic entry form to log credit (gave) or debit (received) transactions with notes (`add_udhar_screen.dart`).
-- **Voice Entry**: AI-powered hands-free voice entry for logging udhar transactions via voice commands (`voice_entry_screen.dart`).
+- **Voice Entry Engine**: AI & Offline NLP hands-free voice assistant for logging udhar transactions via voice commands (`voice_entry_screen.dart`, `voice_entry_controller.dart`). Supports dual-processing via Gemini AI and local regex parser fallback.
 
 #### 💳 Payments, Withdrawals & Wallet
-- **QR Code Payments**: Dynamic merchant QR code generator for customer payments (`qr_code_screen.dart`).
+- **Dual QR Code Payments**: Integrated system-generated QR code alongside **Custom Merchant QR Upload** (`qr_code_screen.dart`). Allows merchants to pick static QR images from Gallery or Camera with persistent local Hive caching.
 - **Withdrawal Engine**: Multi-gateway withdrawal/payout support including Flutterwave and custom bank gateways (`withdraw_screen.dart`, `flutter_wave_withdraw_screen.dart`).
 - **Withdrawal History & Preview**: Complete payout history tracking with status indicators (`withdraw_history_screen.dart`, `withdraw_preview_screen.dart`).
 - **Transaction Logs**: Detailed transaction history filterable by date, type, and status (`transaction_screen.dart`).
