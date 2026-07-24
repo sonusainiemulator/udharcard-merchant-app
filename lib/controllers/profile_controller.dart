@@ -300,4 +300,43 @@ class ProfileController extends GetxController {
       Helpers.showSnackBar(msg: '${data['message']}');
     }
   }
+
+  // -------------------------- Custom Merchant QR Code --------------------------
+  String? customQrCodePath;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadCustomQrCode();
+  }
+
+  void loadCustomQrCode() {
+    customQrCodePath = HiveHelp.read(Keys.customQrCodePath);
+    update();
+  }
+
+  Future<void> pickCustomQrCode(ImageSource source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+      if (image != null) {
+        customQrCodePath = image.path;
+        HiveHelp.write(Keys.customQrCodePath, image.path);
+        Helpers.showSnackBar(msg: "Custom QR Code updated successfully!");
+        update();
+      }
+    } catch (e) {
+      Helpers.showSnackBar(msg: "Failed to pick image: $e");
+    }
+  }
+
+  Future<void> removeCustomQrCode() async {
+    customQrCodePath = null;
+    await HiveHelp.remove(Keys.customQrCodePath);
+    Helpers.showSnackBar(msg: "Custom QR Code removed.");
+    update();
+  }
 }

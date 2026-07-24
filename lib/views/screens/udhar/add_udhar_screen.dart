@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/dimensions.dart';
 import '../../../controllers/udhar_controller.dart';
@@ -60,6 +61,19 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                   storedLanguage: storedLanguage,
                 ),
 
+                if (controller.transactionType == 'received') ...[
+                  VSpace(28.h),
+                  _SectionLabel(
+                    text: storedLanguage['Payment Method'] ?? 'Payment Method',
+                  ),
+                  VSpace(10.h),
+                  _PaymentMethodToggle(
+                    selectedMethod: controller.paymentMethod,
+                    onChanged: controller.setPaymentMethod,
+                    storedLanguage: storedLanguage,
+                  ),
+                ],
+
                 VSpace(28.h),
 
                 // ── Customer selector ─────────────────────────────
@@ -76,6 +90,19 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                     }
                   },
                   onClear: controller.clearSelectedUser,
+                ),
+
+                VSpace(28.h),
+
+                // ── Date & Time Selector ──────────────────────────
+                _SectionLabel(text: storedLanguage['Date & Time'] ?? 'Transaction Date'),
+                VSpace(10.h),
+                _DateSelector(
+                  selectedDate: controller.selectedDate,
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    controller.pickDateAndTime(context);
+                  },
                 ),
 
                 VSpace(28.h),
@@ -430,6 +457,123 @@ class _RemarksField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(color: AppColors.mainColor),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodToggle extends StatelessWidget {
+  const _PaymentMethodToggle({
+    required this.selectedMethod,
+    required this.onChanged,
+    required this.storedLanguage,
+  });
+
+  final String selectedMethod;
+  final void Function(String) onChanged;
+  final Map storedLanguage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48.h,
+      decoration: BoxDecoration(
+        color:
+            Get.isDarkMode ? AppColors.darkCardColor : AppColors.fillColorColor,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.borderColor),
+      ),
+      child: Row(
+        children: [
+          _TypeOption(
+            label: storedLanguage['Cash'] ?? 'Cash',
+            value: 'cash',
+            selectedType: selectedMethod,
+            activeColor: AppColors.mainColor,
+            onTap: () => onChanged('cash'),
+          ),
+          _TypeOption(
+            label: storedLanguage['Online'] ?? 'Online',
+            value: 'online',
+            selectedType: selectedMethod,
+            activeColor: AppColors.mainColor,
+            onTap: () => onChanged('online'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tappable card that shows selected date or defaults to Now
+class _DateSelector extends StatelessWidget {
+  const _DateSelector({
+    required this.selectedDate,
+    required this.onTap,
+  });
+
+  final DateTime? selectedDate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasDate = selectedDate != null;
+    final String formattedDate = hasDate
+        ? DateFormat('dd MMM yyyy, hh:mm a').format(selectedDate!)
+        : 'Now';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color:
+              Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: hasDate ? AppColors.mainColor : AppColors.borderColor,
+            width: hasDate ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40.h,
+              height: 40.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.mainColor.withValues(alpha: 0.1),
+              ),
+              child: Icon(
+                Icons.calendar_month_outlined,
+                color: AppColors.mainColor,
+                size: 20.sp,
+              ),
+            ),
+            HSpace(12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: context.t.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15.sp,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.black50,
+              size: 20.sp,
+            ),
+          ],
         ),
       ),
     );

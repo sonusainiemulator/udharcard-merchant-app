@@ -97,17 +97,18 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                           isPrefixIcon: true,
                           prefixIcon: 'call',
                           keyboardType: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
                           controller: controller.firebasePhoneController,
                           onChanged: (v) {
                             controller.firebasePhoneVal = v;
                             controller.update();
                           },
                         ),
-                        VSpace(48.h),
+                        VSpace(32.h),
                         Material(
                           color: Colors.transparent,
                           child: AppButton(
-                            text: storedLanguage['Send OTP'] ?? "Send OTP",
+                            text: storedLanguage['Send OTP via SMS'] ?? "Send OTP via SMS",
                             isLoading: controller.isLoading,
                             bgColor: controller.firebasePhoneVal.isEmpty
                                 ? AppThemes.getInactiveColor()
@@ -119,6 +120,25 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                                 : () async {
                                     Helpers.hideKeyboard();
                                     await controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                  },
+                          ),
+                        ),
+                        VSpace(16.h),
+                        Material(
+                          color: Colors.transparent,
+                          child: AppButton(
+                            text: storedLanguage['Send OTP via WhatsApp (Coming Soon)'] ?? "Send OTP via WhatsApp (Coming Soon)",
+                            isLoading: false,
+                            bgColor: controller.firebasePhoneVal.isEmpty
+                                ? AppThemes.getInactiveColor()
+                                : const Color(0xFF25D366), // WhatsApp Green
+                            onTap: controller.firebasePhoneVal.isEmpty
+                                ? null
+                                : () {
+                                    Helpers.hideKeyboard();
+                                    Helpers.showSnackBar(
+                                      msg: "WhatsApp OTP is coming soon!",
+                                    );
                                   },
                           ),
                         ),

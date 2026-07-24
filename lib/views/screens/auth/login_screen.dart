@@ -123,6 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               "Username or Email",
                           isPrefixIcon: true,
                           prefixIcon: 'person',
+                          autofillHints: const [AutofillHints.email, AutofillHints.telephoneNumber, AutofillHints.username],
                           controller: controller.userNameEditingController,
                           onChanged: (v) {
                             controller.userNameVal = v;
@@ -271,10 +272,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Material(
                           color: Colors.transparent,
                           child: AppButton(
-                            text: storedLanguage['Login with Phone (OTP)'] ?? "Login with Phone (OTP)",
+                            text: storedLanguage['Login with Phone / WhatsApp'] ?? "Login with Phone / WhatsApp",
                             isLoading: false,
                             bgColor: AppColors.mainColor.withValues(alpha: 0.1),
-                            textColor: AppColors.mainColor,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.mainColor,
+                                ),
                             onTap: () {
                               Get.toNamed(RoutesName.firebasePhoneLoginScreen);
                               controller.clearFirebaseOtpController();

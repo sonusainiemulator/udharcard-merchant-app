@@ -45,6 +45,7 @@ class CustomTextField extends StatelessWidget {
   final double? suffixIconSize;
   final BorderRadius? borderRadius;
   final void Function(String)? onFieldSubmitted;
+  final Iterable<String>? autofillHints;
   const CustomTextField({
     super.key,
     required this.hintext,
@@ -83,6 +84,7 @@ class CustomTextField extends StatelessWidget {
     this.isReverseColor = false,
     this.borderWidth,
     this.suffixIconSize,
+    this.autofillHints,
   });
 
   @override
@@ -98,6 +100,7 @@ class CustomTextField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       errorText: errorText,
       errorBorder: errorBorder,
+      autofillHints: autofillHints,
       focusedErrorBorder: focusedErrorBorder,
       controller: controller,
       obscureText: obsCureText ?? false,

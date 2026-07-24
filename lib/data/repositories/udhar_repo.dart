@@ -10,16 +10,21 @@ class UdharRepo {
     required String type, // "credit" or "debit"
     required String remarks,
     String paymentMethod = "cash",
+    String? createdAt,
   }) async {
+    final Map<String, dynamic> fields = {
+      "customer_id": customerId,
+      "amount": amount,
+      "type": type,
+      "payment_method": paymentMethod,
+      "notes": remarks,
+    };
+    if (createdAt != null && createdAt.isNotEmpty) {
+      fields["created_at"] = createdAt;
+    }
     return await ApiClient.post(
       ENDPOINT_URL: AppConstants.addUdharUrl,
-      fields: {
-        "customer_id": customerId,
-        "amount": amount,
-        "type": type,
-        "payment_method": paymentMethod,
-        "notes": remarks,
-      },
+      fields: fields,
     );
   }
 
@@ -107,6 +112,8 @@ class UdharRepo {
           'payment_method': 'cash',
           'notes': txMap['remarks'] ?? '',
           'due_date': txMap['due_date'],
+          'user_identifier': txMap['user_identifier'],
+          'created_at': txMap['created_at'],
         };
         
         if (origCustId.startsWith('local_cust_')) {
@@ -140,4 +147,37 @@ class UdharRepo {
       fields: {"customer_id": customerId, "amount": amount},
     );
   }
+
+  /// POST /merchant/udhar/customers/{id}/remind - Send payment reminder push notification
+  static Future<http.Response> sendPaymentReminder({
+    required String customerId,
+  }) async {
+    return await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.sendReminderUrl}/$customerId/remind",
+      fields: {}, // Assuming no extra body fields needed, just trigger push
+    );
+  }
+
+  /// POST /merchant/udhar/customers/{id}/generate-pdf-bill - Request 28-day / monthly PDF bill generation & dispatch
+  static Future<http.Response> generatePdfBill({
+    required String customerId,
+    required String channel,
+    String? month,
+    String cycle = "28_days",
+  }) async {
+    final Map<String, dynamic> fields = {
+      "channel": channel,
+      "cycle": cycle,
+    };
+    if (month != null && month.isNotEmpty) {
+      fields["month"] = month;
+    }
+    return await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.generatePdfBillUrl}/$customerId/generate-pdf-bill",
+      fields: fields,
+    );
+  }
 }
+
+
+

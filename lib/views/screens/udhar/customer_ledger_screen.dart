@@ -9,6 +9,8 @@ import '../../../controllers/udhar_controller.dart';
 import '../../../themes/themes.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import '../../../utils/services/helpers.dart';
+import '../../../routes/routes_name.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
@@ -62,6 +64,42 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
           appBar: CustomAppBar(
             title: widget.customerName,
             actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.chat_bubble_outline,
+                  color: AppColors.mainColor,
+                  size: 20.sp,
+                ),
+                onPressed: () {
+                  Get.toNamed(
+                    RoutesName.chatLedgerScreen,
+                    arguments: {
+                      'customerId': widget.customerId,
+                      'customerName': widget.customerName,
+                    },
+                  );
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.filter_alt_outlined,
+                  color: AppColors.mainColor,
+                  size: 20.sp,
+                ),
+                onPressed: () async {
+                  final DateTimeRange? picked = await showDateRangePicker(
+                    context: context,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                    initialDateRange: controller.ledgerDateRange,
+                  );
+                  if (picked != null) {
+                    controller.setLedgerDateRange(picked);
+                  } else if (controller.ledgerDateRange != null) {
+                    controller.setLedgerDateRange(null); // Clear filter
+                  }
+                },
+              ),
               IconButton(
                 icon: Icon(
                   Icons.share,
@@ -193,49 +231,38 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           children: [
                             Expanded(
                               child: _QuickActionBtn(
-                                label: 'WhatsApp',
-                                icon: Icons.chat_bubble_outline,
-                                color: Colors.green,
-                                onTap:
-                                    () => _sendWhatsAppReminder(
-                                      balance,
-                                      storedLanguage,
-                                    ),
+                                label: 'Remind',
+                                icon: Icons.notifications_active_outlined,
+                                color: Colors.blueAccent,
+                                onTap: () => controller.sendPaymentReminder(widget.customerId),
                               ),
                             ),
-                            HSpace(12.w),
+                            HSpace(6.w),
+                            Expanded(
+                              child: _QuickActionBtn(
+                                label: 'PDF Bill',
+                                icon: Icons.picture_as_pdf_outlined,
+                                color: Colors.deepOrangeAccent,
+                                onTap: () => _showPdfBillModal(context, widget.customerId),
+                              ),
+                            ),
+                            HSpace(6.w),
+                            Expanded(
+                              child: _QuickActionBtn(
+                                label: 'Remind',
+                                icon: Icons.notifications_active_outlined,
+                                color: Colors.green,
+                                onTap:
+                                    () => _showReminderOptions(context, balance, storedLanguage),
+                              ),
+                            ),
+                            HSpace(6.w),
                             Expanded(
                               child: _QuickActionBtn(
                                 label: 'UPI QR',
                                 icon: Icons.qr_code_scanner,
                                 color: AppColors.mainColor,
                                 onTap: () => _showQrDialog(context, balance),
-                              ),
-                            ),
-                            HSpace(12.w),
-                            Expanded(
-                              child: _QuickActionBtn(
-                                label: 'Record',
-                                icon: Icons.add_circle_outline,
-                                color: AppColors.blackColor,
-                                onTap: () {
-                                  // Set selected customer on controller and navigate to add transaction
-                                  final Map<String, dynamic> userMap =
-                                      Map<String, dynamic>.from(
-                                        controller.usersList.firstWhere(
-                                          (u) =>
-                                              u['id'].toString() ==
-                                              widget.customerId,
-                                          orElse:
-                                              () => {
-                                                "id": widget.customerId,
-                                                "name": widget.customerName,
-                                              },
-                                        ),
-                                      );
-                                  controller.selectUser(userMap);
-                                  Get.toNamed('/addUdharScreen');
-                                },
                               ),
                             ),
                           ],
@@ -269,9 +296,10 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           onRefresh:
                               () => controller.fetchCustomerLedger(
                                 widget.customerId,
+                                showLoading: false,
                               ),
                           child:
-                              controller.ledgerTransactions.isEmpty
+                              controller.filteredLedgerTransactions.isEmpty
                                   ? ListView(
                                     physics:
                                         const AlwaysScrollableScrollPhysics(),
@@ -294,7 +322,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                       vertical: 8.h,
                                     ),
                                     itemCount:
-                                        controller.ledgerTransactions.length,
+                                        controller.filteredLedgerTransactions.length,
                                     separatorBuilder:
                                         (_, __) => Divider(
                                           height: 1,
@@ -302,7 +330,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                         ),
                                     itemBuilder: (context, i) {
                                       final tx =
-                                          controller.ledgerTransactions[i];
+                                          controller.filteredLedgerTransactions[i];
                                       final bool isCredit =
                                           tx['type'] ==
                                           'given'; // Credit entry (Udhar Diya)
@@ -364,7 +392,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                                   ),
                                                   VSpace(2.h),
                                                   Text(
-                                                    tx['created_at'] ?? '',
+                                                    Helpers.formatDateAndTime(tx['created_at']),
                                                     style: context.t.bodySmall
                                                         ?.copyWith(
                                                           color:
@@ -492,15 +520,266 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     );
   }
 
-  // ── Reminders & Integrations ─────────────────────────────────────────
+  void _showPdfBillModal(BuildContext context, String customerId) {
+    String selectedChannel = 'both'; // 'whatsapp', 'email', 'both'
+    String selectedCycle = '28_days'; // '28_days', 'calendar_month'
+
+    final controller = Get.find<UdharController>();
+    final bool isOverdue = controller.isCustomerOverdue28Days();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      backgroundColor: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Padding(
+              padding: EdgeInsets.all(20.r),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Generate & Send PDF Bill',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppThemes.getIconBlackColor(),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  if (isOverdue) ...[
+                    VSpace(6.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16.sp),
+                          HSpace(6.w),
+                          Expanded(
+                            child: Text(
+                              'Automatic Alert: Unpaid Udhar exceeded 28-day cycle!',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  VSpace(10.h),
+                  Text(
+                    'Billing Cycle:',
+                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                  ),
+                  VSpace(4.h),
+                  RadioListTile<String>(
+                    title: const Text('28-Day Cycle Bill (Auto)'),
+                    subtitle: const Text('Generates statement for the last 28 days of credit'),
+                    value: '28_days',
+                    groupValue: selectedCycle,
+                    activeColor: AppColors.mainColor,
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => selectedCycle = val);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Calendar Month Bill'),
+                    subtitle: const Text('Generates statement for the current calendar month'),
+                    value: 'calendar_month',
+                    groupValue: selectedCycle,
+                    activeColor: AppColors.mainColor,
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => selectedCycle = val);
+                    },
+                  ),
+                  VSpace(10.h),
+                  Text(
+                    'Dispatch Channels:',
+                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                  ),
+                  VSpace(4.h),
+                  RadioListTile<String>(
+                    title: const Text('Both WhatsApp & Email PDF'),
+                    value: 'both',
+                    groupValue: selectedChannel,
+                    activeColor: AppColors.mainColor,
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => selectedChannel = val);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('WhatsApp PDF Only'),
+                    value: 'whatsapp',
+                    groupValue: selectedChannel,
+                    activeColor: AppColors.mainColor,
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => selectedChannel = val);
+                    },
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Email PDF Only'),
+                    value: 'email',
+                    groupValue: selectedChannel,
+                    activeColor: AppColors.mainColor,
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => selectedChannel = val);
+                    },
+                  ),
+                  VSpace(16.h),
+                  GetBuilder<UdharController>(
+                    builder: (ctrl) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrangeAccent,
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          icon: ctrl.isGeneratingPdf
+                              ? SizedBox(
+                                  width: 18.w,
+                                  height: 18.h,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Icon(Icons.send_rounded, size: 18.sp, color: Colors.white),
+                          label: Text(
+                            ctrl.isGeneratingPdf ? 'Generating PDF...' : 'Send 28-Day PDF Bill',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          onPressed: ctrl.isGeneratingPdf
+                              ? null
+                              : () async {
+                                  Navigator.pop(ctx);
+                                  await ctrl.generateAndSendPdfBill(
+                                    customerId,
+                                    channel: selectedChannel,
+                                    cycle: selectedCycle,
+                                  );
+                                },
+                        ),
+                      );
+                    },
+                  ),
+                  VSpace(10.h),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showReminderOptions(BuildContext context, double balance, Map language) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Send Reminder",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.mainColor,
+                ),
+              ),
+              SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.notifications, color: Colors.blue),
+                title: Text("In-App Notification"),
+                subtitle: Text("Send a push notification to their UdharCard app"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.find<UdharController>().sendPaymentReminder(widget.customerId);
+                },
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.chat_bubble, color: Colors.green),
+                title: Text("WhatsApp"),
+                subtitle: Text("Send a personalized WhatsApp message"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _sendWhatsAppReminder(balance, language);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _sendWhatsAppReminder(double outstandingBalance, Map language) {
-    if (outstandingBalance <= 0) {
-      Get.snackbar('Settled Account', 'No outstanding balance to collect.');
-      return;
+    final controller = Get.find<UdharController>();
+    final txList = controller.filteredLedgerTransactions;
+    
+    String historyMsg = "";
+    if (txList.isNotEmpty) {
+      historyMsg = "\n\n*Recent Transactions:*\n";
+      final int count = txList.length > 5 ? 5 : txList.length;
+      for (int i = 0; i < count; i++) {
+        final tx = txList[i];
+        final bool isGiven = (tx['type'] ?? 'given') == 'given' || (tx['type'] == 'credit');
+        final amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+        final date = Helpers.formatDateAndTime(tx['created_at']);
+        final remark = tx['remarks'] ?? tx['notes'] ?? '';
+        
+        historyMsg += "• ${isGiven ? 'Given' : 'Received'}: ₹${amt.toStringAsFixed(2)} on $date";
+        if (remark.toString().isNotEmpty) {
+          historyMsg += " ($remark)";
+        }
+        historyMsg += "\n";
+      }
     }
-    final String message =
-        "Dear ${widget.customerName}, this is a friendly reminder that you have an outstanding payment of ₹${outstandingBalance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+
+    String message = "";
+    if (outstandingBalance <= 0) {
+      message = "Dear ${widget.customerName}, your current account balance with us is settled (₹0.00). Thank you for doing business with us!";
+    } else {
+      message = "Dear ${widget.customerName}, this is a friendly reminder that you have an outstanding payment of ₹${outstandingBalance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+    }
+
+    message += historyMsg;
+
     final String encodedMsg = Uri.encodeComponent(message);
     final String url = "https://wa.me/?text=$encodedMsg";
     _launchUrl(url);

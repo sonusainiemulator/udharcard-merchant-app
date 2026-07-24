@@ -80,6 +80,9 @@ class AppConstants {
   static const String customerLedgerUrl = "/merchant/udhar/customers";
   static const String customerQrUrl = "/merchant/udhar/qr/generate";
   static const String udharSyncUrl = "/merchant/udhar/sync";
+  static const String sendReminderUrl = "/merchant/udhar/customers";
+  static const String sendAppReminderUrl = "/merchant/udhar/customer"; // id/remind is appended in repo
+  static const String generatePdfBillUrl = "/merchant/udhar/customers";
 }
 
 //----------IMAGE DIRECTORY---------//

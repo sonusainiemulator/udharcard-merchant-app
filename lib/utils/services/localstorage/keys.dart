@@ -16,4 +16,5 @@ class Keys {
   static String UNIQUE_ID = "UNIQUE_ID";
   static String currencySymbol = "currencySymbol";
   static String isNotificationSeen = "isNotificationSeen";
+  static String customQrCodePath = "customQrCodePath";
 }

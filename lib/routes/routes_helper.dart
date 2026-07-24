@@ -5,6 +5,7 @@ import '../views/screens/transfer/transfer_money_screen.dart';
 import '../views/screens/udhar/add_udhar_screen.dart';
 import '../views/screens/udhar/customer_list_screen.dart';
 import '../views/screens/udhar/customer_ledger_screen.dart';
+import '../views/screens/udhar/chat_ledger_screen.dart';
 import '../views/screens/udhar/udhar_dashboard_screen.dart';
 import 'routes_name.dart';
 import '../routes/page_index.dart';
@@ -137,6 +138,16 @@ class RouteHelper {
     GetPage(
       name: RoutesName.udharDashboardScreen,
       page: () => const UdharDashboardScreen(),
+    ),
+    GetPage(
+      name: RoutesName.chatLedgerScreen,
+      page: () {
+        final args = Get.arguments ?? {};
+        return ChatLedgerScreen(
+          customerId: (args['customerId'] ?? '').toString(),
+          customerName: (args['customerName'] ?? '').toString(),
+        );
+      },
     ),
   ];
 }

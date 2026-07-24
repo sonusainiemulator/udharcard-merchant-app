@@ -12,6 +12,7 @@ import '../../../../utils/services/helpers.dart';
 import '../../../../utils/services/localstorage/hive.dart';
 import '../../../../utils/services/localstorage/keys.dart';
 import '../../../routes/routes_name.dart';
+import '../../../controllers/withdraw_history_controller.dart';
 import '../home/home_screen.dart';
 import '../../widgets/appDialog.dart';
 import '../../widgets/app_button.dart';
@@ -289,13 +290,9 @@ class WithdrawHistoryScreen extends StatelessWidget {
                                                         ),
                                                         VSpace(3.h),
                                                         Text(
-                                                          DateFormat(
-                                                            'dd MMM yyyy',
-                                                          ).format(
-                                                            DateTime.parse(
-                                                              data.createdTime
-                                                                  .toString(),
-                                                            ),
+                                                          Helpers.formatDateAndTime(
+                                                            data.createdTime
+                                                                .toString(),
                                                           ),
                                                           maxLines: 1,
                                                           overflow:

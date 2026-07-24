@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/repositories/udhar_repo.dart';
 import '../data/source/network/api_client.dart';
 import '../utils/services/helpers.dart';
@@ -33,6 +34,7 @@ class UdharController extends GetxController {
 
   /// Transaction direction: "given" = udhar diya, "received" = payment wapas mila
   String transactionType = "given";
+  String paymentMethod = "cash";
   bool isSubmitting = false;
 
   // ── Form fields for adding customer ──────────────────────────────────────────
@@ -45,6 +47,34 @@ class UdharController extends GetxController {
   bool isAddingCustomer = false;
   bool isUpdatingLimit = false;
 
+  /// Selected date for new transactions
+  DateTime? selectedDate;
+
+  Future<void> pickDateAndTime(BuildContext context) async {
+    final DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (date != null) {
+      final TimeOfDay? time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(selectedDate ?? DateTime.now()),
+      );
+      if (time != null) {
+        selectedDate = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          time.hour,
+          time.minute,
+        );
+        update();
+      }
+    }
+  }
+
   // ── Contact list / search ─────────────────────────────────────
   bool isUsersLoading = false;
   List<dynamic> usersList = [];
@@ -54,8 +84,34 @@ class UdharController extends GetxController {
   // ── Ledger / Detailed transactions ─────────────────────────────
   bool isLedgerLoading = false;
   List<dynamic> ledgerTransactions = [];
+  List<dynamic> filteredLedgerTransactions = [];
+  DateTimeRange? ledgerDateRange;
   double currentOutstandingBalance = 0.0;
   double currentCreditLimit = 5000.0;
+
+  void setLedgerDateRange(DateTimeRange? range) {
+    ledgerDateRange = range;
+    _applyLedgerDateFilter();
+  }
+
+  void _applyLedgerDateFilter() {
+    if (ledgerDateRange == null) {
+      filteredLedgerTransactions = List.from(ledgerTransactions);
+    } else {
+      filteredLedgerTransactions = ledgerTransactions.where((tx) {
+        if (tx['created_at'] == null) return true;
+        try {
+          final DateTime txDate = DateTime.parse(tx['created_at'].toString());
+          final start = ledgerDateRange!.start;
+          final end = ledgerDateRange!.end.add(const Duration(days: 1)); // Include the end day fully
+          return txDate.isAfter(start) && txDate.isBefore(end);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+    }
+    update();
+  }
 
   @override
   void onInit() {
@@ -99,6 +155,7 @@ class UdharController extends GetxController {
         HiveHelp.write('cached_users', usersList);
       }
     } else {
+      syncOfflineTransactions();
       try {
         final response = await UdharRepo.getUsers();
         if (response.statusCode == 200) {
@@ -473,14 +530,17 @@ class UdharController extends GetxController {
   // Ledger Loading
   // ─────────────────────────────────────────────────────────────
 
-  Future<void> fetchCustomerLedger(String customerId) async {
-    isLedgerLoading = true;
-    update();
+  Future<void> fetchCustomerLedger(String customerId, {bool showLoading = true}) async {
+    if (showLoading) {
+      isLedgerLoading = true;
+      update();
+    }
     await checkConnection();
 
     // Local/offline-created customers do not exist on server yet.
     if (customerId.startsWith('local_cust_')) {
       _loadLedgerFromLocalOrEmpty(customerId);
+      _applyLedgerDateFilter();
       isLedgerLoading = false;
       update();
       return;
@@ -551,7 +611,10 @@ class UdharController extends GetxController {
       }
     }
 
-    isLedgerLoading = false;
+    _applyLedgerDateFilter();
+    if (showLoading) {
+      isLedgerLoading = false;
+    }
     update();
   }
 
@@ -591,6 +654,11 @@ class UdharController extends GetxController {
     update();
   }
 
+  void setPaymentMethod(String method) {
+    paymentMethod = method;
+    update();
+  }
+
   Future<void> submitUdhar() async {
     if (selectedUser == null) {
       Helpers.showSnackBar(msg: 'Please select a customer');
@@ -619,6 +687,7 @@ class UdharController extends GetxController {
     final amountStr = amountCtrl.text.trim();
     final remarksStr = remarksCtrl.text.trim();
     final typeStr = transactionType;
+    final paymentMethodStr = paymentMethod;
 
     if (isOffline) {
       _queueOfflineTransaction(
@@ -627,6 +696,8 @@ class UdharController extends GetxController {
         amount: amountStr,
         type: typeStr,
         remarks: remarksStr,
+        paymentMethod: paymentMethodStr,
+        createdAt: selectedDate?.toIso8601String(),
       );
       _updateLocalCustomerBalance(selectedCustomerId, identifier, amt, typeStr);
       _resetForm();
@@ -644,7 +715,8 @@ class UdharController extends GetxController {
           amount: amountStr,
           type: typeStr == 'given' ? 'credit' : 'debit',
           remarks: remarksStr,
-          paymentMethod: 'cash',
+          paymentMethod: paymentMethodStr,
+          createdAt: selectedDate?.toIso8601String(),
         );
 
         final data = jsonDecode(response.body);
@@ -671,6 +743,8 @@ class UdharController extends GetxController {
             amount: amountStr,
             type: typeStr,
             remarks: remarksStr,
+            paymentMethod: paymentMethodStr,
+            createdAt: selectedDate?.toIso8601String(),
           );
           _updateLocalCustomerBalance(
             selectedCustomerId,
@@ -694,6 +768,8 @@ class UdharController extends GetxController {
           amount: amountStr,
           type: typeStr,
           remarks: remarksStr,
+          paymentMethod: paymentMethodStr,
+          createdAt: selectedDate?.toIso8601String(),
         );
         _updateLocalCustomerBalance(
           selectedCustomerId,
@@ -735,11 +811,16 @@ class UdharController extends GetxController {
           transactions: txQueue,
         );
         final pushData = jsonDecode(pushResponse.body);
+        print('=== PUSH SYNC RESPONSE: ${pushResponse.statusCode} ===');
+        print('=== PUSH SYNC BODY: ${pushResponse.body} ===');
         if (pushResponse.statusCode == 200 && pushData['status'] == 'success') {
           HiveHelp.write('offline_customers_queue', []);
           HiveHelp.write('offline_tx_queue', []);
+        } else {
+          print('Push Sync Failed: ${pushData['message']}');
         }
-      } catch (_) {
+      } catch (e) {
+        print('=== PUSH SYNC EXCEPTION: $e ===');
         // Keep queue to retry next time
       }
     }
@@ -772,12 +853,76 @@ class UdharController extends GetxController {
     fetchUsers();
   }
 
+  Future<void> syncManual() async {
+    if (isSyncing) return;
+    await checkConnection();
+    if (isOffline) {
+      Helpers.showSnackBar(msg: "You are offline. Cannot sync.");
+      return;
+    }
+    
+    isSyncing = true;
+    update();
+    
+    bool hasPushed = false;
+    bool hasPulled = false;
+
+    List<dynamic> customersQueue = HiveHelp.read('offline_customers_queue') ?? [];
+    List<dynamic> txQueue = HiveHelp.read('offline_tx_queue') ?? [];
+
+    if (customersQueue.isNotEmpty || txQueue.isNotEmpty) {
+      try {
+        final pushResponse = await UdharRepo.pushSync(
+          customers: customersQueue,
+          transactions: txQueue,
+        );
+        final pushData = jsonDecode(pushResponse.body);
+        if (pushResponse.statusCode == 200 && pushData['status'] == 'success') {
+          HiveHelp.write('offline_customers_queue', []);
+          HiveHelp.write('offline_tx_queue', []);
+          hasPushed = true;
+        } else {
+          Helpers.showSnackBar(msg: "Sync Push Failed: ${pushData['message'] ?? 'Unknown error'}");
+        }
+      } catch (e) {
+        Helpers.showSnackBar(msg: "Sync Push Error: $e");
+      }
+    }
+
+    String lastSyncTime = HiveHelp.read('last_sync_time') ?? '1970-01-01 00:00:00';
+    try {
+      final pullResponse = await UdharRepo.pullSync(lastSyncTime: lastSyncTime);
+      final pullData = jsonDecode(pullResponse.body);
+      if (pullResponse.statusCode == 200 && pullData['status'] == 'success') {
+        HiveHelp.write('last_sync_time', DateTime.now().toString().substring(0, 19));
+        if (pullData['data'] != null) {
+          final list = pullData['data']['customers'] ?? pullData['data']['contacts'];
+          if (list != null) {
+            usersList = List<dynamic>.from(list);
+            HiveHelp.write('cached_users', usersList);
+          }
+        }
+        hasPulled = true;
+      }
+    } catch (_) {}
+
+    isSyncing = false;
+    update();
+    
+    if (hasPushed || hasPulled || (customersQueue.isEmpty && txQueue.isEmpty)) {
+      Helpers.showSnackBar(msg: "Sync Completed Successfully.");
+    }
+    fetchUsers();
+  }
+
   void _queueOfflineTransaction({
     required String customerId,
     required String customerIdentifier,
     required String amount,
     required String type,
     required String remarks,
+    required String paymentMethod,
+    String? createdAt,
   }) {
     final List<dynamic> queue = List<dynamic>.from(
       HiveHelp.read('offline_tx_queue') ?? [],
@@ -790,7 +935,8 @@ class UdharController extends GetxController {
       'amount': amount,
       'type': type,
       'remarks': remarks,
-      'created_at': DateTime.now().toIso8601String(),
+      'payment_method': paymentMethod,
+      'created_at': createdAt ?? DateTime.now().toIso8601String(),
     });
 
     HiveHelp.write('offline_tx_queue', queue);
@@ -893,9 +1039,117 @@ class UdharController extends GetxController {
 
   void _resetForm() {
     selectedUser = null;
+    selectedDate = null;
     amountCtrl.clear();
     remarksCtrl.clear();
     transactionType = "given";
+  }
+
+  bool isSendingReminder = false;
+
+  Future<void> sendPaymentReminder(String customerId) async {
+    isSendingReminder = true;
+    update();
+    await checkConnection();
+
+    if (isOffline) {
+      Helpers.showSnackBar(
+        msg: 'You are offline. Cannot send reminder.',
+      );
+      isSendingReminder = false;
+      update();
+      return;
+    }
+
+    try {
+      final response = await UdharRepo.sendPaymentReminder(
+        customerId: customerId,
+      );
+      final data = _decodeJsonMap(response.body) ?? {};
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        Helpers.showSnackBar(
+          msg: data['message'] ?? 'Payment reminder sent successfully',
+        );
+      } else {
+        Helpers.showSnackBar(
+          msg: data['message']?.toString() ?? 'Failed to send reminder',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Failed to send payment reminder');
+    }
+
+    isSendingReminder = false;
+    update();
+  }
+
+  bool isGeneratingPdf = false;
+
+  bool isCustomerOverdue28Days() {
+    if (ledgerTransactions.isEmpty) return false;
+    try {
+      final oldestPendingTx = ledgerTransactions.lastWhere(
+        (tx) => (tx['type'] == 'given' || tx['type'] == 'credit'),
+        orElse: () => null,
+      );
+      if (oldestPendingTx != null && oldestPendingTx['created_at'] != null) {
+        final DateTime txDate = DateTime.parse(oldestPendingTx['created_at'].toString());
+        final int daysDiff = DateTime.now().difference(txDate).inDays;
+        return daysDiff >= 28;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Future<void> generateAndSendPdfBill(
+    String customerId, {
+    String channel = 'both',
+    String? month,
+    String cycle = '28_days',
+  }) async {
+    isGeneratingPdf = true;
+    update();
+    await checkConnection();
+
+    if (isOffline) {
+      Helpers.showSnackBar(
+        msg: 'You are offline. Cannot generate PDF bill.',
+      );
+      isGeneratingPdf = false;
+      update();
+      return;
+    }
+
+    try {
+      final response = await UdharRepo.generatePdfBill(
+        customerId: customerId,
+        channel: channel,
+        month: month,
+        cycle: cycle,
+      );
+      final data = _decodeJsonMap(response.body) ?? {};
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final String pdfUrl = data['data']?['pdf_url']?.toString() ?? '';
+        if (pdfUrl.isNotEmpty) {
+          try {
+            final Uri url = Uri.parse(pdfUrl);
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          } catch (_) {}
+        }
+        Helpers.showSnackBar(
+          msg: data['message'] ?? '28-Day Due Bill PDF generated & sent successfully!',
+        );
+      } else {
+        Helpers.showSnackBar(
+          msg: data['message']?.toString() ?? 'Failed to generate PDF bill',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Failed to generate 28-Day PDF bill');
+    }
+
+    isGeneratingPdf = false;
+    update();
   }
 
   Future<void> generateDynamicQr(String customerId, String amount) async {

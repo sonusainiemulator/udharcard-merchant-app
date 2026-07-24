@@ -116,6 +116,16 @@ class Helpers {
       return "";
     }
   }
+
+  static String formatDateAndTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final DateTime date = DateTime.parse(dateStr).toLocal();
+      return DateFormat('dd MMM yyyy, hh:mm a').format(date);
+    } catch (e) {
+      return dateStr; // Return raw string if parsing fails
+    }
+  }
 }
 
 extension StringExtension on String {

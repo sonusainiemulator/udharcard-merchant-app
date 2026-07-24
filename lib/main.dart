@@ -19,7 +19,11 @@ import 'utils/services/localstorage/init_hive.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint("Firebase init failed (missing google-services.json): $e");
+  }
   await initHive();
   _initializeApp();
   runApp(const MyApp());

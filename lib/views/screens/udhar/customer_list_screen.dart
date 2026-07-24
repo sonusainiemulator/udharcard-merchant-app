@@ -104,14 +104,20 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               // ── Khatabook-style summary strip ─────────────────────
               Container(
                 margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 decoration: BoxDecoration(
                   color:
                       Get.isDarkMode
                           ? AppColors.darkCardColor
                           : AppColors.whiteColor,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: AppColors.borderColor),
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.blackColor.withValues(alpha: 0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -120,35 +126,28 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                         title: storedLanguage['You Will Get'] ?? 'You Will Get',
                         value: '₹${totalOutstanding.toStringAsFixed(0)}',
                         valueColor: AppColors.greenColor,
+                        bgColor: AppColors.greenColor.withValues(alpha: 0.1),
                       ),
                     ),
-                    Container(
-                      width: 1,
-                      height: 42.h,
-                      color: AppColors.borderColor,
-                    ),
-                    HSpace(10.w),
+                    HSpace(8.w),
                     Expanded(
                       child: _StripStat(
                         title:
                             storedLanguage['You Will Give'] ?? 'You Will Give',
                         value: '₹${totalAdvance.toStringAsFixed(0)}',
                         valueColor: AppColors.redColor,
+                        bgColor: AppColors.redColor.withValues(alpha: 0.1),
                       ),
                     ),
-                    Container(
-                      width: 1,
-                      height: 42.h,
-                      color: AppColors.borderColor,
-                    ),
-                    HSpace(10.w),
+                    HSpace(8.w),
                     Expanded(
                       child: _StripStat(
                         title:
                             storedLanguage['Active Accounts'] ??
-                            'Active Accounts',
+                            'Active',
                         value: '$activeCount',
                         valueColor: AppColors.mainColor,
+                        bgColor: AppColors.mainColor.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -161,13 +160,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
                 child: Container(
-                  height: 40.h,
+                  height: 48.h,
+                  padding: EdgeInsets.all(4.w),
                   decoration: BoxDecoration(
                     color:
                         Get.isDarkMode
                             ? AppColors.darkCardColor
                             : AppColors.fillColorColor,
-                    borderRadius: BorderRadius.circular(10.r),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Row(
                     children: [
@@ -175,14 +175,28 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                         child: GestureDetector(
                           onTap:
                               () => setState(() => selectedFilter = 'active'),
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color:
                                   selectedFilter == 'active'
-                                      ? AppColors.mainColor
+                                      ? (Get.isDarkMode
+                                          ? AppColors.scaffoldColor
+                                          : AppColors.whiteColor)
                                       : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(10.r),
+                              boxShadow:
+                                  selectedFilter == 'active'
+                                      ? [
+                                        BoxShadow(
+                                          color: AppColors.blackColor
+                                              .withValues(alpha: 0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                      : null,
                             ),
                             child: Text(
                               storedLanguage['Active Ledgers'] ??
@@ -190,10 +204,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                               style: TextStyle(
                                 color:
                                     selectedFilter == 'active'
-                                        ? Colors.white
+                                        ? (Get.isDarkMode
+                                            ? AppColors.whiteColor
+                                            : AppColors.mainColor)
                                         : AppColors.black50,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12.sp,
+                                fontSize: 13.sp,
                               ),
                             ),
                           ),
@@ -202,24 +218,40 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () => setState(() => selectedFilter = 'all'),
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color:
                                   selectedFilter == 'all'
-                                      ? AppColors.mainColor
+                                      ? (Get.isDarkMode
+                                          ? AppColors.scaffoldColor
+                                          : AppColors.whiteColor)
                                       : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(10.r),
+                              boxShadow:
+                                  selectedFilter == 'all'
+                                      ? [
+                                        BoxShadow(
+                                          color: AppColors.blackColor
+                                              .withValues(alpha: 0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                      : null,
                             ),
                             child: Text(
                               storedLanguage['All Contacts'] ?? 'All Contacts',
                               style: TextStyle(
                                 color:
                                     selectedFilter == 'all'
-                                        ? Colors.white
+                                        ? (Get.isDarkMode
+                                            ? AppColors.whiteColor
+                                            : AppColors.mainColor)
                                         : AppColors.black50,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12.sp,
+                                fontSize: 13.sp,
                               ),
                             ),
                           ),
@@ -257,10 +289,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                             : AppColors.fillColorColor,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 14.w,
-                      vertical: 10.h,
+                      vertical: 14.h,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.r),
+                      borderRadius: BorderRadius.circular(30.r),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -307,10 +339,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           : ListView.separated(
                             padding: EdgeInsets.symmetric(
                               horizontal: 20.w,
-                              vertical: 8.h,
+                              vertical: 12.h,
                             ),
                             itemCount: displayList.length,
-                            separatorBuilder: (_, __) => VSpace(12.h),
+                            separatorBuilder: (_, __) => VSpace(16.h),
                             itemBuilder: (context, index) {
                               final Map<String, dynamic> user =
                                   Map<String, dynamic>.from(displayList[index]);
@@ -331,7 +363,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                   alignment: Alignment.centerRight,
                                   padding: EdgeInsets.only(right: 20.w),
                                   child: Icon(
-                                    Icons.chat_bubble_outline,
+                                    Icons.notifications_active_outlined,
                                     color: Colors.white,
                                     size: 24.sp,
                                   ),
@@ -339,7 +371,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                 confirmDismiss: (direction) async {
                                   if (direction ==
                                       DismissDirection.endToStart) {
-                                    // Swipe Left: launch WhatsApp reminder
+                                    // Swipe Left: launch WhatsApp reminder or App reminder
                                     final double bal =
                                         double.tryParse(
                                           user['outstanding_balance']
@@ -348,15 +380,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                         ) ??
                                         0.0;
                                     if (bal > 0) {
-                                      final String message =
-                                          "Dear ${user['name']}, this is a friendly reminder that you have an outstanding payment of ₹${bal.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
-                                      final String encodedMsg =
-                                          Uri.encodeComponent(message);
-                                      await launchUrl(
-                                        Uri.parse(
-                                          "https://wa.me/?text=$encodedMsg",
-                                        ),
-                                        mode: LaunchMode.externalApplication,
+                                      _showReminderOptions(
+                                        context,
+                                        user['id'].toString(),
+                                        user['name'].toString(),
+                                        bal,
                                       );
                                     } else {
                                       Get.snackbar(
@@ -428,78 +456,78 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
     controller.editLimitCtrl.text = currentLimit;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            backgroundColor:
-                Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            title: Text(
-              storedLanguage['Upgrade Credit Limit'] ?? 'Upgrade Credit Limit',
-              style: context.t.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 16.sp,
-              ),
-            ),
-            content: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(20.h),
+                Text(
+                  storedLanguage['Upgrade Credit Limit'] ?? 'Upgrade Credit Limit',
+                  style: context.t.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18.sp,
+                  ),
+                ),
+                VSpace(4.h),
                 Text(
                   customerName,
                   style: context.t.bodyMedium?.copyWith(
                     color: AppColors.black50,
                   ),
                 ),
-                VSpace(10.h),
+                VSpace(20.h),
                 CustomTextField(
                   hintext: storedLanguage['Credit Limit'] ?? 'Credit Limit (₹)',
                   controller: controller.editLimitCtrl,
                   keyboardType: TextInputType.number,
                 ),
+                VSpace(24.h),
+                GetBuilder<UdharController>(
+                  builder: (ctrl) => AppButton(
+                    text: storedLanguage['Update'] ?? 'Update',
+                    isLoading: ctrl.isUpdatingLimit,
+                    onTap: () async {
+                      await ctrl.updateCustomerCreditLimit(
+                        customerId: customerId,
+                        creditLimit: ctrl.editLimitCtrl.text,
+                      );
+                      if (context.mounted) {
+                        Get.back();
+                      }
+                    },
+                  ),
+                ),
+                VSpace(10.h),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text(storedLanguage['Cancel'] ?? 'Cancel'),
-              ),
-              GetBuilder<UdharController>(
-                builder:
-                    (ctrl) => TextButton(
-                      onPressed:
-                          ctrl.isUpdatingLimit
-                              ? null
-                              : () async {
-                                await ctrl.updateCustomerCreditLimit(
-                                  customerId: customerId,
-                                  creditLimit: ctrl.editLimitCtrl.text,
-                                );
-                                if (context.mounted) {
-                                  Get.back();
-                                }
-                              },
-                      child:
-                          ctrl.isUpdatingLimit
-                              ? SizedBox(
-                                width: 16.w,
-                                height: 16.w,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.mainColor,
-                                ),
-                              )
-                              : Text(
-                                storedLanguage['Update'] ?? 'Update',
-                                style: TextStyle(color: AppColors.mainColor),
-                              ),
-                    ),
-              ),
-            ],
           ),
+        );
+      },
     );
   }
 
@@ -509,109 +537,109 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     UdharController controller,
     Map storedLanguage,
   ) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            backgroundColor:
-                Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20.w,
-              vertical: 10.h,
-            ),
-            titlePadding: EdgeInsets.only(left: 20.w, right: 10.w, top: 10.h),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  storedLanguage['Add Customer'] ?? 'New Customer',
-                  style: context.t.bodyLarge?.copyWith(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: AppColors.black50,
-                    size: 20.sp,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.9,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    VSpace(10.h),
-                    CustomTextField(
-                      hintext: storedLanguage['Name'] ?? 'Customer Name *',
-                      controller: controller.nameCtrl,
-                    ),
-                    VSpace(12.h),
-                    CustomTextField(
-                      hintext: storedLanguage['Phone'] ?? 'Phone Number *',
-                      controller: controller.phoneCtrl,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    VSpace(12.h),
-                    CustomTextField(
-                      hintext:
-                          storedLanguage['Email'] ?? 'Email Address (Optional)',
-                      controller: controller.emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    VSpace(12.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomTextField(
-                            hintext:
-                                storedLanguage['Credit Limit'] ??
-                                'Credit Limit (₹)',
-                            controller: controller.limitCtrl,
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        HSpace(12.w),
-                        Expanded(
-                          child: CustomTextField(
-                            hintext:
-                                storedLanguage['Opening Balance'] ??
-                                'Opening Bal (₹)',
-                            controller: controller.openingBalanceCtrl,
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
-                    ),
-                    VSpace(10.h),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: EdgeInsets.only(bottom: 10.h, left: 10.w, right: 10.w),
-                child: GetBuilder<UdharController>(
-                  builder:
-                      (ctrl) => AppButton(
-                        text:
-                            storedLanguage['Add Customer'] ?? 'Create Customer',
-                        isLoading: ctrl.isAddingCustomer,
-                        onTap: () => ctrl.addCustomer(),
-                      ),
-                ),
-              ),
-            ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
+          child: Container(
+            padding: EdgeInsets.only(left: 20.w, right: 20.w, top: 20.h, bottom: 20.h),
+            decoration: BoxDecoration(
+              color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.black30,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                  ),
+                  VSpace(20.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        storedLanguage['Add Customer'] ?? 'New Customer',
+                        style: context.t.bodyLarge?.copyWith(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Icon(
+                          Icons.close,
+                          color: AppColors.black50,
+                          size: 24.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                  VSpace(20.h),
+                  CustomTextField(
+                    hintext: storedLanguage['Name'] ?? 'Customer Name *',
+                    controller: controller.nameCtrl,
+                  ),
+                  VSpace(12.h),
+                  CustomTextField(
+                    hintext: storedLanguage['Phone'] ?? 'Phone Number *',
+                    controller: controller.phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  VSpace(12.h),
+                  CustomTextField(
+                    hintext: storedLanguage['Email'] ?? 'Email Address (Optional)',
+                    controller: controller.emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  VSpace(12.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomTextField(
+                          hintext: storedLanguage['Credit Limit'] ?? 'Credit Limit (₹)',
+                          controller: controller.limitCtrl,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      HSpace(12.w),
+                      Expanded(
+                        child: CustomTextField(
+                          hintext: storedLanguage['Opening Balance'] ?? 'Opening Bal (₹)',
+                          controller: controller.openingBalanceCtrl,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                  VSpace(24.h),
+                  GetBuilder<UdharController>(
+                    builder: (ctrl) => AppButton(
+                      text: storedLanguage['Add Customer'] ?? 'Create Customer',
+                      isLoading: ctrl.isAddingCustomer,
+                      onTap: () => ctrl.addCustomer(),
+                    ),
+                  ),
+                  VSpace(10.h),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -667,11 +695,13 @@ class _StripStat extends StatelessWidget {
     required this.title,
     required this.value,
     required this.valueColor,
+    required this.bgColor,
   });
 
   final String title;
   final String value;
   final Color valueColor;
+  final Color bgColor;
 
   @override
   Widget build(BuildContext context) {
@@ -697,6 +727,64 @@ class _StripStat extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showReminderOptions(
+    BuildContext context,
+    String customerId,
+    String customerName,
+    double balance,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Send Reminder",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.mainColor,
+                ),
+              ),
+              SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.notifications, color: Colors.blue),
+                title: Text("In-App Notification"),
+                subtitle: Text("Send a push notification to their UdharCard app"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.find<UdharController>().sendPaymentReminder(customerId);
+                },
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.chat_bubble, color: Colors.green),
+                title: Text("WhatsApp"),
+                subtitle: Text("Send a personalized WhatsApp message"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final String message =
+                      "Dear $customerName, this is a friendly reminder that you have an outstanding payment of ₹${balance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+                  final String encodedMsg = Uri.encodeComponent(message);
+                  await launchUrl(
+                    Uri.parse("https://wa.me/?text=$encodedMsg"),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -745,21 +833,27 @@ class _CustomerCard extends StatelessWidget {
           color:
               Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.blackColor.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
             Row(
               children: [
                 CircleAvatar(
-                  radius: 22.r,
+                  radius: 26.r,
                   backgroundColor: AppColors.mainColor.withValues(alpha: 0.1),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : 'C',
                     style: TextStyle(
                       color: AppColors.mainColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16.sp,
+                      fontSize: 20.sp,
                     ),
                   ),
                 ),
@@ -860,18 +954,25 @@ class _CustomerCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  HSpace(8.w),
+                  HSpace(12.w),
                   Text(
                     'Limit: ₹${creditLimit.toInt()}',
-                    style: TextStyle(fontSize: 10.sp, color: AppColors.black50),
+                    style: TextStyle(fontSize: 11.sp, color: AppColors.black50, fontWeight: FontWeight.w500),
                   ),
-                  HSpace(8.w),
+                  HSpace(6.w),
                   GestureDetector(
                     onTap: onEditLimit,
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 14.sp,
-                      color: AppColors.mainColor,
+                    child: Container(
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.mainColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 14.sp,
+                        color: AppColors.mainColor,
+                      ),
                     ),
                   ),
                 ],
@@ -884,15 +985,22 @@ class _CustomerCard extends StatelessWidget {
                 children: [
                   Text(
                     'Limit: ₹${creditLimit.toInt()}',
-                    style: TextStyle(fontSize: 10.sp, color: AppColors.black50),
+                    style: TextStyle(fontSize: 11.sp, color: AppColors.black50, fontWeight: FontWeight.w500),
                   ),
-                  HSpace(8.w),
+                  HSpace(6.w),
                   GestureDetector(
                     onTap: onEditLimit,
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 14.sp,
-                      color: AppColors.mainColor,
+                    child: Container(
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.mainColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 14.sp,
+                        color: AppColors.mainColor,
+                      ),
                     ),
                   ),
                 ],

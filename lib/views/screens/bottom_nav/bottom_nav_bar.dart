@@ -114,7 +114,9 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
                           child: Container(
                             padding: EdgeInsets.zero,
                             child: Image.asset(
-                              "$rootImageDir/transaction.png",
+                              controller.selectedIndex == 1
+                                  ? "$rootImageDir/wallet1.png"
+                                  : "$rootImageDir/wallet.png",
                               height:
                                   controller.selectedIndex == 1 ? 28.h : 26.h,
                               color:
@@ -136,9 +138,7 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
                           child: Container(
                             padding: EdgeInsets.zero,
                             child: Image.asset(
-                              controller.selectedIndex == 2
-                                  ? "$rootImageDir/settings1.png"
-                                  : "$rootImageDir/settings.png",
+                              "$rootImageDir/transaction.png",
                               height: 22.h,
                               color:
                                   controller.selectedIndex == 2

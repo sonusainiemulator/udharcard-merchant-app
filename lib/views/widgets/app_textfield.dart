@@ -32,6 +32,7 @@ class AppTextField extends StatelessWidget {
   final String? errorText;
   final Color? fillColor;
   final InputBorder? focusedBorder;
+  final Iterable<String>? autofillHints;
 
   const AppTextField({
     super.key,
@@ -62,6 +63,7 @@ class AppTextField extends StatelessWidget {
     this.errorText,
     this.fillColor,
     this.focusedBorder,
+    this.autofillHints,
   });
 
   @override
@@ -72,6 +74,7 @@ class AppTextField extends StatelessWidget {
       focusNode: focusNode,
       controller: controller,
       autofocus: autofocus,
+      autofillHints: autofillHints,
       minLines: minLines ?? 1,
       maxLines: maxLines ?? 1,
       obscureText: obscureText,

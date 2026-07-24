@@ -293,8 +293,7 @@ class TransactionScreen extends StatelessWidget {
                                                       ),
                                                       VSpace(3.h),
                                                       Text(
-                                                        data.createdTime
-                                                            .toString(),
+                                                        Helpers.formatDateAndTime(data.createdTime?.toString()),
 
                                                         maxLines: 1,
                                                         overflow:

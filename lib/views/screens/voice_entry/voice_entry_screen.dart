@@ -276,102 +276,73 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           VSpace(15.h),
                         ],
 
-                        // Parsing Output Card
-                        Container(
-                          width: double.maxFinite,
-                          padding: EdgeInsets.all(16.h),
-                          decoration: BoxDecoration(
-                            color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(
-                              color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor,
+                        // AI Thinking State
+                        if (controller.isThinking) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(vertical: 20.h),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 24.w,
+                                  height: 24.w,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mainColor),
+                                ),
+                                HSpace(12.w),
+                                Text(
+                                  "Processing with AI...",
+                                  style: context.t.bodyMedium?.copyWith(
+                                    color: AppColors.mainColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                storedLanguage['Live Output Preview'] ?? "Live Output Preview",
-                                style: context.t.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppThemes.getIconBlackColor(),
+                          VSpace(15.h),
+                        ],
+
+                        // AI Reply Display
+                        if (controller.aiReply.isNotEmpty) ...[
+                          Container(
+                            width: double.maxFinite,
+                            padding: EdgeInsets.all(16.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.greenColor.withValues(alpha: .08),
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(color: AppColors.greenColor.withValues(alpha: .3)),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.auto_awesome, color: AppColors.greenColor, size: 24.sp),
+                                    HSpace(8.w),
+                                    Text(
+                                      "AI Assistant Response",
+                                      style: context.t.titleMedium?.copyWith(
+                                        color: AppColors.greenColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const Divider(),
-                              VSpace(10.h),
-                              
-                              // Customer name row
-                              _buildParsedRow(
-                                icon: Icons.person,
-                                label: storedLanguage['Customer'] ?? "Customer",
-                                value: controller.parsedName.isNotEmpty ? controller.parsedName : "-",
-                                valueColor: controller.parsedName.isNotEmpty && controller.parsedName != "Unknown" 
-                                    ? AppThemes.getIconBlackColor() 
-                                    : AppColors.black50,
-                              ),
-                              VSpace(12.h),
-
-                              // Amount row
-                              _buildParsedRow(
-                                icon: Icons.attach_money,
-                                label: storedLanguage['Amount'] ?? "Amount",
-                                value: controller.parsedAmount > 0 
-                                    ? "${controller.parsedAmount.toStringAsFixed(2)}" 
-                                    : "-",
-                                valueColor: controller.parsedAmount > 0 
-                                    ? AppColors.blackColor 
-                                    : AppColors.black50,
-                              ),
-                              VSpace(12.h),
-
-                              // Type row
-                              _buildParsedRow(
-                                icon: Icons.swap_horiz,
-                                label: storedLanguage['Type'] ?? "Type",
-                                value: controller.parsedType.isNotEmpty ? controller.parsedType : "-",
-                                valueColor: controller.parsedType == "Received" 
-                                    ? AppColors.greenColor 
-                                    : controller.parsedType == "Given" 
-                                        ? AppColors.redColor 
-                                        : AppColors.black50,
-                              ),
-                              VSpace(20.h),
-
-                              // Save button
-                              SizedBox(
-                                width: double.maxFinite,
-                                height: 48.h,
-                                child: ElevatedButton(
-                                  onPressed: (controller.parsedName.isNotEmpty && 
-                                               controller.parsedName != "Unknown" && 
-                                               controller.parsedAmount > 0)
-                                      ? () => controller.saveTransaction()
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.mainColor,
-                                    disabledBackgroundColor: AppColors.mainColor.withValues(alpha: .3),
-                                    foregroundColor: AppColors.blackColor,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    storedLanguage['Confirm & Add Transaction'] ?? "Confirm & Add Transaction",
-                                    style: context.t.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: (controller.parsedName.isNotEmpty && 
-                                               controller.parsedName != "Unknown" && 
-                                               controller.parsedAmount > 0)
-                                          ? AppColors.blackColor
-                                          : AppColors.black50,
-                                    ),
+                                VSpace(12.h),
+                                Text(
+                                  controller.aiReply,
+                                  textAlign: TextAlign.center,
+                                  style: context.t.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppThemes.getIconBlackColor(),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                          VSpace(15.h),
+                        ],
                         
                         VSpace(25.h),
 

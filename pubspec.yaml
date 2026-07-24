@@ -90,6 +90,8 @@ dependencies:
   speech_to_text: ^7.0.0
   # debugPrint
   logger: ^2.5.0
+  flutter_tts: ^4.2.5
+  google_generative_ai: ^0.4.7
   #flutter build apk --split-per-abi --build-name=2.0.0 --build-number=2
   
 

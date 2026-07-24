@@ -148,6 +148,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           hintext: storedLanguage['Phone Number'] ?? "Phone Number",
                           isPrefixIcon: true,
                           prefixIcon: 'call',
+                          keyboardType: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
                           focusNode: phoneNode,
                           controller: controller.phoneEditingController,
                           onChanged: (v) {
@@ -246,10 +248,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Material(
                           color: Colors.transparent,
                           child: AppButton(
-                            text: storedLanguage['Register with Phone (OTP)'] ?? "Register with Phone (OTP)",
+                            text: storedLanguage['Register with Phone / WhatsApp'] ?? "Register with Phone / WhatsApp",
                             isLoading: false,
                             bgColor: AppColors.mainColor.withValues(alpha: 0.1),
-                            textColor: AppColors.mainColor,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.mainColor,
+                                ),
                             onTap: () {
                               Get.toNamed(RoutesName.firebasePhoneLoginScreen);
                               controller.clearFirebaseOtpController();
