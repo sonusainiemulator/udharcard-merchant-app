@@ -70,6 +70,14 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            def versionNameStr = variant.versionName ?: flutterVersionName
+            def versionCodeStr = variant.versionCode ?: flutterVersionCode
+            outputFileName = "udharcard-merchant-app-v${versionNameStr}-${versionCodeStr}-${variant.buildType.name}.apk"
+        }
+    }
 }
 
 flutter {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:paysecure/utils/services/helpers.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_colors.dart';
@@ -725,14 +726,19 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 leading: Icon(Icons.chat_bubble, color: Colors.green),
                 title: Text("WhatsApp"),
                 subtitle: Text("Send a personalized WhatsApp message"),
-                onTap: () async {
+                onTap: () {
                   Navigator.pop(context);
-                  final String message =
-                      "Dear $customerName, this is a friendly reminder that you have an outstanding payment of ₹${balance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
-                  final String encodedMsg = Uri.encodeComponent(message);
-                  await launchUrl(
-                    Uri.parse("https://wa.me/?text=$encodedMsg"),
-                    mode: LaunchMode.externalApplication,
+                  Helpers.checkAndForcePhoneVerification(
+                    context,
+                    onVerified: () async {
+                      final String message =
+                          "Dear $customerName, this is a friendly reminder that you have an outstanding payment of ₹${balance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+                      final String encodedMsg = Uri.encodeComponent(message);
+                      await launchUrl(
+                        Uri.parse("https://wa.me/?text=$encodedMsg"),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
                   );
                 },
               ),

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-07-26
+
+### ✨ Added
+- **Mobile Number Verification Enforcement**:
+  - Merchants must add a mobile number before sending SMS/WhatsApp alerts.
+  - "Mobile Number Required" dialog with redirect to Edit Profile screen.
+  - Applied across Home, Customer List, and Customer Ledger screens.
+
+### 🔧 Improved
+- **Versioned APK Naming**: Release APK now includes version info (e.g., `udharcard-merchant-app-v1.0.3-4-release.apk`).
+
+---
+
 ## [1.0.2] - 2026-07-26
 
 ### ✨ Added

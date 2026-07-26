@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:paysecure/controllers/profile_controller.dart' as paysecure_profile;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../config/app_colors.dart';
@@ -125,6 +126,54 @@ class Helpers {
     } catch (e) {
       return dateStr; // Return raw string if parsing fails
     }
+  }
+
+  static String extractInitials(String? name) {
+    if (name == null || name.trim().isEmpty) return '';
+    List<String> parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
+  /// Check if phone number is added. If not, show a dialog to force the user to add it.
+  static bool checkAndForcePhoneVerification(BuildContext context, {required Function onVerified}) {
+    // Local import to avoid circular dependencies if any
+    final profileController = Get.find<paysecure_profile.ProfileController>();
+    final phone = profileController.profileList.isNotEmpty ? profileController.profileList.first.phone : null;
+    
+    if (phone == null || phone.toString().trim().isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text("Mobile Number Required", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.mainColor)),
+          content: Text("You must add and verify your mobile number in your profile settings before sending alerts."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel", style: TextStyle(color: AppColors.black50)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.mainColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                Get.toNamed('/editProfileScreen'); // Use exact route string to avoid importing routes_name.dart here if needed
+              },
+              child: Text("Setup Now", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    
+    onVerified();
+    return true;
   }
 }
 

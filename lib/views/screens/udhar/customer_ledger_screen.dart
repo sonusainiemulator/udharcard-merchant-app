@@ -680,12 +680,26 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           onPressed: ctrl.isGeneratingPdf
                               ? null
                               : () async {
-                                  Navigator.pop(ctx);
-                                  await ctrl.generateAndSendPdfBill(
-                                    customerId,
-                                    channel: selectedChannel,
-                                    cycle: selectedCycle,
-                                  );
+                                  if (selectedChannel == 'whatsapp' || selectedChannel == 'both') {
+                                    Helpers.checkAndForcePhoneVerification(
+                                      context,
+                                      onVerified: () async {
+                                        Navigator.pop(ctx);
+                                        await ctrl.generateAndSendPdfBill(
+                                          customerId,
+                                          channel: selectedChannel,
+                                          cycle: selectedCycle,
+                                        );
+                                      },
+                                    );
+                                  } else {
+                                    Navigator.pop(ctx);
+                                    await ctrl.generateAndSendPdfBill(
+                                      customerId,
+                                      channel: selectedChannel,
+                                      cycle: selectedCycle,
+                                    );
+                                  }
                                 },
                         ),
                       );
@@ -738,7 +752,10 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                 subtitle: Text("Send a personalized WhatsApp message"),
                 onTap: () {
                   Navigator.pop(context);
-                  _sendWhatsAppReminder(balance, language);
+                  Helpers.checkAndForcePhoneVerification(
+                    context,
+                    onVerified: () => _sendWhatsAppReminder(balance, language),
+                  );
                 },
               ),
             ],

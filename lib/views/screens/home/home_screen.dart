@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:paysecure/utils/services/helpers.dart';
 import 'package:paysecure/controllers/bindings/controller_index.dart';
 import 'package:paysecure/routes/routes_name.dart';
 import 'package:paysecure/views/screens/merchant-settings/merchant_settings_screen.dart';
@@ -906,19 +908,24 @@ class _HomeScreenState extends State<HomeScreen>
                                                 DismissDirection.endToStart) {
                                               // Swipe Left: WhatsApp Reminder
                                               if (balance > 0) {
-                                                final String message =
-                                                    "Dear $name, this is a friendly reminder that you have an outstanding payment of ₹${balance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
-                                                final String encodedMsg =
-                                                    Uri.encodeComponent(
-                                                      message,
+                                                Helpers.checkAndForcePhoneVerification(
+                                                  context,
+                                                  onVerified: () async {
+                                                    final String message =
+                                                        "Dear $name, this is a friendly reminder that you have an outstanding payment of ₹${balance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+                                                    final String encodedMsg =
+                                                        Uri.encodeComponent(
+                                                          message,
+                                                        );
+                                                    await launchUrl(
+                                                      Uri.parse(
+                                                        "https://wa.me/?text=$encodedMsg",
+                                                      ),
+                                                      mode:
+                                                          LaunchMode
+                                                              .externalApplication,
                                                     );
-                                                await launchUrl(
-                                                  Uri.parse(
-                                                    "https://wa.me/?text=$encodedMsg",
-                                                  ),
-                                                  mode:
-                                                      LaunchMode
-                                                          .externalApplication,
+                                                  },
                                                 );
                                               } else {
                                                 Get.snackbar(
