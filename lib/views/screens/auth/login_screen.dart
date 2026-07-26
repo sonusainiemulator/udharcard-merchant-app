@@ -24,13 +24,20 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  FocusNode node = FocusNode();
+  FocusNode phoneNode = FocusNode();
+
   @override
   void initState() {
-    node.addListener(() {
+    phoneNode.addListener(() {
       setState(() {});
     });
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    phoneNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -38,26 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
     AuthController controller = Get.find<AuthController>();
     TextTheme t = Theme.of(context).textTheme;
-
-    //--------------REMEMBER ME----------------
-    if (HiveHelp.read(Keys.userName) != null &&
-        HiveHelp.read(Keys.userPass) != null &&
-        HiveHelp.read(Keys.isRemember) != null) {
-      if (HiveHelp.read(Keys.isRemember) == true) {
-        controller.userNameEditingController.text = HiveHelp.read(
-          Keys.userName,
-        );
-        controller.signInPassEditingController.text = HiveHelp.read(
-          Keys.userPass,
-        );
-        controller.userNameVal = HiveHelp.read(Keys.userName);
-        controller.singInPassVal = HiveHelp.read(Keys.userPass);
-      }
-    }
-    if (HiveHelp.read(Keys.isRemember) != null) {
-      controller.isRemember = HiveHelp.read(Keys.isRemember);
-    }
-
     bool isDark = Get.isDarkMode;
 
     return GetBuilder<AuthController>(
@@ -162,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           VSpace(28.h),
                           // Title & Subtitle
                           Text(
-                            storedLanguage['Log In'] ?? "Log In 👋",
+                            storedLanguage['Mobile Login'] ?? "Mobile Login 👋",
                             style: t.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 28.sp,
@@ -170,8 +157,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(6.h),
                           Text(
-                            storedLanguage['Hello there, log in to continue!'] ??
-                                "Log in to manage your shop ledger & transactions",
+                            storedLanguage['Enter mobile number to receive OTP'] ??
+                                "Enter your registered mobile number for OTP login",
                             style: t.displayMedium?.copyWith(
                               color: AppThemes.getParagraphColor(),
                               fontSize: 14.sp,
@@ -179,108 +166,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(24.h),
 
-                          // Username / Email Input
+                          // Phone Number Input
                           CustomTextField(
                             hintext:
-                                storedLanguage['Username or Email'] ??
-                                "Username or Email",
+                                storedLanguage['Mobile Number (e.g. +919876543210)'] ??
+                                "Mobile Number (e.g. +919876543210)",
                             isPrefixIcon: true,
-                            prefixIcon: 'person',
+                            prefixIcon: 'call',
+                            keyboardType: TextInputType.phone,
                             autofillHints: const [
-                              AutofillHints.email,
                               AutofillHints.telephoneNumber,
-                              AutofillHints.username,
                             ],
-                            controller: controller.userNameEditingController,
+                            focusNode: phoneNode,
+                            controller: controller.firebasePhoneController,
                             onChanged: (v) {
-                              controller.userNameVal = v;
+                              controller.firebasePhoneVal = v;
                               controller.update();
                             },
                           ),
-                          VSpace(16.h),
-
-                          // Password Input
-                          CustomTextField(
-                            hintext: storedLanguage['Password'] ?? "Password",
-                            isPrefixIcon: true,
-                            isSuffixIcon: true,
-                            obsCureText: controller.isNewPassShow,
-                            prefixIcon: 'lock',
-                            suffixIcon:
-                                controller.isNewPassShow ? 'hide' : 'show',
-                            controller: controller.signInPassEditingController,
-                            onChanged: (v) {
-                              controller.singInPassVal = v;
-                              controller.update();
-                            },
-                            onSuffixPressed: () {
-                              controller.isNewPassShow =
-                                  !controller.isNewPassShow;
-                              controller.update();
-                            },
-                          ),
-                          VSpace(14.h),
-
-                          // Remember Me & Forgot Password Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Transform.scale(
-                                    scale: 0.85,
-                                    child: Checkbox(
-                                      checkColor: AppColors.blackColor,
-                                      activeColor: AppColors.mainColor,
-                                      visualDensity: VisualDensity.compact,
-                                      side: BorderSide(
-                                        color: AppThemes.getHintColor(),
-                                      ),
-                                      value: controller.isRemember,
-                                      onChanged: (v) {
-                                        controller.isRemember = v!;
-                                        HiveHelp.write(Keys.isRemember, v);
-                                        controller.update();
-                                      },
-                                    ),
-                                  ),
-                                  Text(
-                                    storedLanguage['Remember me'] ??
-                                        "Remember me",
-                                    style: t.bodySmall?.copyWith(
-                                      fontSize: 14.sp,
-                                      color:
-                                          isDark
-                                              ? AppColors.whiteColor
-                                              : AppColors.black30,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  Get.toNamed(RoutesName.forgotPassScreen);
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4.h),
-                                  child: Text(
-                                    storedLanguage['Forgot Your Password?'] ??
-                                        "Forgot Password?",
-                                    style: t.displayMedium?.copyWith(
-                                      fontSize: 14.sp,
-                                      color: AppColors.mainColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          VSpace(24.h),
 
                           // Error Message Banner
                           if (controller.loginErrorMessage != null) ...[
-                            VSpace(14.h),
                             Container(
                               width: double.infinity,
                               padding: EdgeInsets.symmetric(
@@ -316,65 +223,66 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
+                            VSpace(20.h),
                           ],
 
-                          VSpace(24.h),
-                          // Primary Login Button
+                          // Primary Send OTP Button
                           Material(
                             color: Colors.transparent,
                             child: AppButton(
-                              text: storedLanguage['Log In'] ?? "Log In",
+                              text: storedLanguage['Send OTP via SMS'] ?? "Send OTP via SMS",
                               isLoading: controller.isLoading,
-                              bgColor:
-                                  controller.userNameVal.isEmpty ||
-                                          controller.singInPassVal.isEmpty
-                                      ? AppThemes.getInactiveColor()
-                                      : AppColors.mainColor,
-                              onTap:
-                                  controller.userNameVal.isEmpty ||
-                                          controller.singInPassVal.isEmpty
-                                      ? null
-                                      : controller.isLoading
-                                      ? null
-                                      : () async {
-                                        Helpers.hideKeyboard();
-                                        await controller.login();
-                                      },
+                              bgColor: controller.firebasePhoneVal.isEmpty
+                                  ? AppThemes.getInactiveColor()
+                                  : AppColors.mainColor,
+                              onTap: controller.firebasePhoneVal.isEmpty
+                                  ? null
+                                  : controller.isLoading
+                                  ? null
+                                  : () async {
+                                      Helpers.hideKeyboard();
+                                      await controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                    },
                             ),
                           ),
                           VSpace(14.h),
 
-                          // Premium WhatsApp & Phone OTP Login Button
+                          // WhatsApp OTP Option
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () {
-                                Get.toNamed(
-                                  RoutesName.firebasePhoneLoginScreen,
-                                );
-                                controller.clearFirebaseOtpController();
-                              },
+                              onTap: controller.firebasePhoneVal.isEmpty
+                                  ? null
+                                  : () {
+                                      Helpers.hideKeyboard();
+                                      controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                    },
                               borderRadius: BorderRadius.circular(14.r),
                               child: Container(
                                 width: double.infinity,
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF25D366),
-                                      Color(0xFF128C7E),
-                                    ],
+                                  gradient: LinearGradient(
+                                    colors: controller.firebasePhoneVal.isEmpty
+                                        ? [
+                                            AppThemes.getInactiveColor(),
+                                            AppThemes.getInactiveColor(),
+                                          ]
+                                        : [
+                                            const Color(0xFF25D366),
+                                            const Color(0xFF128C7E),
+                                          ],
                                   ),
                                   borderRadius: BorderRadius.circular(14.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF25D366,
-                                      ).withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                                  boxShadow: controller.firebasePhoneVal.isEmpty
+                                      ? []
+                                      : [
+                                          BoxShadow(
+                                            color: const Color(0xFF25D366).withValues(alpha: 0.3),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -385,10 +293,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     HSpace(10.w),
                                     Text(
-                                      storedLanguage[
-                                            'Login with Phone / WhatsApp'
-                                          ] ??
-                                          "Login with Phone / WhatsApp OTP",
+                                      storedLanguage['Send OTP via WhatsApp'] ??
+                                          "Send OTP via WhatsApp",
                                       style: TextStyle(
                                         fontSize: 15.sp,
                                         fontWeight: FontWeight.bold,
@@ -432,10 +338,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(20.h),
 
-                          // Premium Google & Apple Buttons
+                          // Google & Apple Buttons
                           Row(
                             children: [
-                              // Google Button
                               Expanded(
                                 child: InkWell(
                                   onTap: () {
@@ -448,31 +353,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                       horizontal: 12.w,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? AppColors.darkCardColor
-                                              : Colors.white,
+                                      color: isDark
+                                          ? AppColors.darkCardColor
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(16.r),
                                       border: Border.all(
-                                        color:
-                                            isDark
-                                                ? AppColors.borderColor
-                                                : const Color(0xFFEAECF0),
+                                        color: isDark
+                                            ? AppColors.borderColor
+                                            : const Color(0xFFEAECF0),
                                         width: 1.5,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.04,
-                                          ),
+                                          color: Colors.black.withValues(alpha: 0.04),
                                           blurRadius: 10,
                                           offset: const Offset(0, 2),
                                         ),
                                       ],
                                     ),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         GoogleBrandIcon(size: 20.sp),
                                         HSpace(8.w),
@@ -481,10 +381,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                           style: TextStyle(
                                             fontSize: 15.sp,
                                             fontWeight: FontWeight.bold,
-                                            color:
-                                                isDark
-                                                    ? Colors.white
-                                                    : const Color(0xFF1D2939),
+                                            color: isDark
+                                                ? Colors.white
+                                                : const Color(0xFF1D2939),
                                           ),
                                         ),
                                       ],
@@ -492,64 +391,60 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              HSpace(14.w),
-                              // Apple Button
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () {
-                                    controller.signInWithApple();
-                                  },
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 14.h,
-                                      horizontal: 12.w,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? AppColors.darkCardColor
-                                              : const Color(0xFF111827),
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? AppColors.borderColor
-                                                : const Color(0xFF111827),
-                                        width: 1.5,
+                              if (GetPlatform.isIOS) ...[
+                                HSpace(14.w),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      controller.signInWithApple();
+                                    },
+                                    borderRadius: BorderRadius.circular(16.r),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 14.h,
+                                        horizontal: 12.w,
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.08,
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppColors.darkCardColor
+                                            : const Color(0xFF111827),
+                                        borderRadius: BorderRadius.circular(16.r),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppColors.borderColor
+                                              : const Color(0xFF111827),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.08),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 2),
                                           ),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        AppleBrandIcon(
-                                          size: 22.sp,
-                                          color: Colors.white,
-                                        ),
-                                        HSpace(8.w),
-                                        Text(
-                                          storedLanguage['Apple'] ?? 'Apple',
-                                          style: TextStyle(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.bold,
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          AppleBrandIcon(
+                                            size: 22.sp,
                                             color: Colors.white,
                                           ),
-                                        ),
-                                      ],
+                                          HSpace(8.w),
+                                          Text(
+                                            storedLanguage['Apple'] ?? 'Apple',
+                                            style: TextStyle(
+                                              fontSize: 15.sp,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                           VSpace(24.h),
@@ -569,7 +464,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               InkWell(
                                 onTap: () {
                                   Get.toNamed(RoutesName.registerScreen);
-                                  controller.clearSignInController();
                                 },
                                 child: Text(
                                   storedLanguage["Create account"] ??
@@ -601,4 +495,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

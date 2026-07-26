@@ -9,7 +9,6 @@ import 'package:get/get.dart';
 import '../../../../config/app_colors.dart';
 import '../../../config/dimensions.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
 import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/keys.dart';
@@ -28,8 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   FocusNode emailNode = FocusNode();
   FocusNode phoneNode = FocusNode();
   FocusNode shopNode = FocusNode();
-  FocusNode passNode = FocusNode();
-  FocusNode confirmPassNode = FocusNode();
 
   @override
   void initState() {
@@ -38,8 +35,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     emailNode.addListener(() => setState(() {}));
     phoneNode.addListener(() => setState(() {}));
     shopNode.addListener(() => setState(() {}));
-    passNode.addListener(() => setState(() {}));
-    confirmPassNode.addListener(() => setState(() {}));
   }
 
   @override
@@ -48,8 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     emailNode.dispose();
     phoneNode.dispose();
     shopNode.dispose();
-    passNode.dispose();
-    confirmPassNode.dispose();
     super.dispose();
   }
 
@@ -193,27 +186,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           VSpace(16.h),
 
-                          // Email
+                          // Phone Number
                           CustomTextField(
                             hintext:
-                                storedLanguage['Email Address'] ??
-                                "Email Address",
-                            isPrefixIcon: true,
-                            prefixIcon: 'email',
-                            focusNode: emailNode,
-                            controller: controller.emailEditingController,
-                            onChanged: (v) {
-                              controller.emailVal = v;
-                              controller.update();
-                            },
-                          ),
-                          VSpace(16.h),
-
-                          // Phone
-                          CustomTextField(
-                            hintext:
-                                storedLanguage['Phone Number'] ??
-                                "Phone Number",
+                                storedLanguage['Mobile Number (e.g. +919876543210)'] ??
+                                "Mobile Number (e.g. +919876543210)",
                             isPrefixIcon: true,
                             prefixIcon: 'call',
                             keyboardType: TextInputType.phone,
@@ -243,155 +220,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           VSpace(16.h),
 
-                          // Password
-                          CustomTextField(
-                            hintext: storedLanguage['Password'] ?? "Password",
-                            isPrefixIcon: true,
-                            isSuffixIcon: true,
-                            obsCureText: controller.isRegisterPassShow,
-                            prefixIcon: 'lock',
-                            suffixIcon:
-                                controller.isRegisterPassShow
-                                    ? 'hide'
-                                    : 'show',
-                            focusNode: passNode,
-                            controller: controller.passwordEditingController,
-                            onChanged: (v) {
-                              controller.passwordVal = v;
-                              controller.update();
-                            },
-                            onSuffixPressed: () {
-                              controller.isRegisterPassShow =
-                                  !controller.isRegisterPassShow;
-                              controller.update();
-                            },
-                          ),
-                          VSpace(16.h),
-
-                          // Confirm Password
+                          // Email Address
                           CustomTextField(
                             hintext:
-                                storedLanguage['Confirm Password'] ??
-                                "Confirm Password",
+                                storedLanguage['Email Address (Optional)'] ??
+                                "Email Address (Optional)",
                             isPrefixIcon: true,
-                            isSuffixIcon: true,
-                            obsCureText: controller.isRegisterConfirmPassShow,
-                            prefixIcon: 'lock',
-                            suffixIcon:
-                                controller.isRegisterConfirmPassShow
-                                    ? 'hide'
-                                    : 'show',
-                            focusNode: confirmPassNode,
-                            controller:
-                                controller.confirmPasswordEditingController,
+                            prefixIcon: 'email',
+                            focusNode: emailNode,
+                            controller: controller.emailEditingController,
                             onChanged: (v) {
-                              controller.confirmPasswordVal = v;
-                              controller.update();
-                            },
-                            onSuffixPressed: () {
-                              controller.isRegisterConfirmPassShow =
-                                  !controller.isRegisterConfirmPassShow;
+                              controller.emailVal = v;
                               controller.update();
                             },
                           ),
                           VSpace(24.h),
 
-                          // Primary Register Button
+                          // Register & Get OTP Button
                           Material(
                             color: Colors.transparent,
                             child: AppButton(
-                              text:
-                                  storedLanguage['Sign Up'] ??
-                                  "Create Merchant Account",
+                              text: storedLanguage['Register & Send OTP'] ??
+                                  "Register & Send OTP",
                               isLoading: controller.isLoading,
-                              bgColor:
-                                  controller.nameVal.isEmpty ||
-                                          controller.emailVal.isEmpty ||
-                                          controller.phoneVal.isEmpty ||
-                                          controller.shopNameVal.isEmpty ||
-                                          controller.passwordVal.isEmpty ||
-                                          controller.confirmPasswordVal.isEmpty
-                                      ? AppThemes.getInactiveColor()
-                                      : AppColors.mainColor,
-                              onTap:
-                                  controller.nameVal.isEmpty ||
-                                          controller.emailVal.isEmpty ||
-                                          controller.phoneVal.isEmpty ||
-                                          controller.shopNameVal.isEmpty ||
-                                          controller.passwordVal.isEmpty ||
-                                          controller.confirmPasswordVal.isEmpty
-                                      ? null
-                                      : controller.isLoading
-                                      ? null
-                                      : () async {
-                                        if (controller.passwordVal !=
-                                            controller.confirmPasswordVal) {
-                                          Helpers.showSnackBar(
-                                            msg: "Passwords do not match",
-                                          );
-                                          return;
-                                        }
-                                        Helpers.hideKeyboard();
-                                        await controller.register();
-                                      },
-                            ),
-                          ),
-                          VSpace(14.h),
-
-                          // Premium WhatsApp & Phone OTP Register Button
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                Get.toNamed(
-                                  RoutesName.firebasePhoneLoginScreen,
-                                );
-                                controller.clearFirebaseOtpController();
-                              },
-                              borderRadius: BorderRadius.circular(14.r),
-                              child: Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(vertical: 14.h),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF25D366),
-                                      Color(0xFF128C7E),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(14.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF25D366,
-                                      ).withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    WhatsAppBrandIcon(
-                                      color: Colors.white,
-                                      size: 20.sp,
-                                    ),
-                                    HSpace(10.w),
-                                    Text(
-                                      storedLanguage[
-                                            'Register with Phone / WhatsApp'
-                                          ] ??
-                                          "Register with Phone / WhatsApp OTP",
-                                      style: TextStyle(
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              bgColor: (controller.nameVal.isEmpty ||
+                                      controller.phoneVal.isEmpty ||
+                                      controller.shopNameVal.isEmpty)
+                                  ? AppThemes.getInactiveColor()
+                                  : AppColors.mainColor,
+                              onTap: (controller.nameVal.isEmpty ||
+                                      controller.phoneVal.isEmpty ||
+                                      controller.shopNameVal.isEmpty)
+                                  ? null
+                                  : controller.isLoading
+                                  ? null
+                                  : () async {
+                                      Helpers.hideKeyboard();
+                                      controller.firebasePhoneController.text = controller.phoneVal;
+                                      controller.firebasePhoneVal = controller.phoneVal;
+                                      await controller.sendFirebaseOtp(controller.phoneVal);
+                                    },
                             ),
                           ),
                           VSpace(24.h),
@@ -408,8 +276,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                                 child: Text(
-                                  storedLanguage['Or connect with'] ??
-                                      'Or connect with',
+                                  storedLanguage['Or register with'] ??
+                                      'Or register with',
                                   style: t.bodySmall?.copyWith(
                                     color: AppColors.black50,
                                     fontSize: 13.sp,
@@ -426,10 +294,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           VSpace(20.h),
 
-                          // Premium Google & Apple Buttons
+                          // Google & Apple Buttons
                           Row(
                             children: [
-                              // Google Button
                               Expanded(
                                 child: InkWell(
                                   onTap: () {
@@ -442,31 +309,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       horizontal: 12.w,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? AppColors.darkCardColor
-                                              : Colors.white,
+                                      color: isDark
+                                          ? AppColors.darkCardColor
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(16.r),
                                       border: Border.all(
-                                        color:
-                                            isDark
-                                                ? AppColors.borderColor
-                                                : const Color(0xFFEAECF0),
+                                        color: isDark
+                                            ? AppColors.borderColor
+                                            : const Color(0xFFEAECF0),
                                         width: 1.5,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.04,
-                                          ),
+                                          color: Colors.black.withValues(alpha: 0.04),
                                           blurRadius: 10,
                                           offset: const Offset(0, 2),
                                         ),
                                       ],
                                     ),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         GoogleBrandIcon(size: 20.sp),
                                         HSpace(8.w),
@@ -475,10 +337,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           style: TextStyle(
                                             fontSize: 15.sp,
                                             fontWeight: FontWeight.bold,
-                                            color:
-                                                isDark
-                                                    ? Colors.white
-                                                    : const Color(0xFF1D2939),
+                                            color: isDark
+                                                ? Colors.white
+                                                : const Color(0xFF1D2939),
                                           ),
                                         ),
                                       ],
@@ -486,64 +347,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 ),
                               ),
-                              HSpace(14.w),
-                              // Apple Button
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () {
-                                    controller.signInWithApple();
-                                  },
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 14.h,
-                                      horizontal: 12.w,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isDark
-                                              ? AppColors.darkCardColor
-                                              : const Color(0xFF111827),
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      border: Border.all(
-                                        color:
-                                            isDark
-                                                ? AppColors.borderColor
-                                                : const Color(0xFF111827),
-                                        width: 1.5,
+                              if (GetPlatform.isIOS) ...[
+                                HSpace(14.w),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      controller.signInWithApple();
+                                    },
+                                    borderRadius: BorderRadius.circular(16.r),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 14.h,
+                                        horizontal: 12.w,
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.08,
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppColors.darkCardColor
+                                            : const Color(0xFF111827),
+                                        borderRadius: BorderRadius.circular(16.r),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppColors.borderColor
+                                              : const Color(0xFF111827),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.08),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 2),
                                           ),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        AppleBrandIcon(
-                                          size: 22.sp,
-                                          color: Colors.white,
-                                        ),
-                                        HSpace(8.w),
-                                        Text(
-                                          storedLanguage['Apple'] ?? 'Apple',
-                                          style: TextStyle(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.bold,
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          AppleBrandIcon(
+                                            size: 22.sp,
                                             color: Colors.white,
                                           ),
-                                        ),
-                                      ],
+                                          HSpace(8.w),
+                                          Text(
+                                            storedLanguage['Apple'] ?? 'Apple',
+                                            style: TextStyle(
+                                              fontSize: 15.sp,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                           VSpace(24.h),
@@ -562,8 +419,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               InkWell(
                                 onTap: () {
-                                  Get.offAllNamed(RoutesName.loginScreen);
-                                  controller.clearRegisterController();
+                                  Get.back();
                                 },
                                 child: Text(
                                   storedLanguage["Log In"] ?? "Log In",
@@ -594,4 +450,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

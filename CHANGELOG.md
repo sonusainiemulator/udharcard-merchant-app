@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2026-07-27
+
+### 📱 Default Mobile Number Login System
+- **Mobile OTP Login**: Set mobile number + OTP verification as the primary default authentication method on Login and Register screens.
+- **Removed Username & Password**: Purged traditional username and password fields to streamline merchant onboarding.
+- **Android Platform Specifics**: Automatically hid Apple sign-in on Android devices while expanding Google sign-in to full width.
+
+---
+
 ## [1.0.7] - 2026-07-27
 
 ### 🎨 Premium Social & WhatsApp Buttons
