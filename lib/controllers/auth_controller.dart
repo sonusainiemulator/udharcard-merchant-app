@@ -363,4 +363,37 @@ class AuthController extends GetxController {
       Helpers.showSnackBar(msg: 'Sign in failed: $e');
     }
   }
+
+  // ------------------- Social Logins -----------------------
+  Future<void> signInWithGoogle() async {
+    isLoading = true;
+    update();
+    try {
+      // Stub: Here we will use GoogleSignIn to get the auth credentials,
+      // and send it to our backend to authenticate the merchant.
+      await Future.delayed(const Duration(seconds: 1));
+      Helpers.showSnackBar(msg: 'Google Sign-In is not fully configured yet. Backend integration required.', title: 'Coming Soon');
+    } catch (e) {
+      loginErrorMessage = 'Google Sign-In failed: $e';
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
+
+  Future<void> signInWithApple() async {
+    isLoading = true;
+    update();
+    try {
+      // Stub: Here we will use SignInWithApple to get the auth credentials,
+      // and send it to our backend to authenticate the merchant.
+      await Future.delayed(const Duration(seconds: 1));
+      Helpers.showSnackBar(msg: 'Apple Sign-In is not fully configured yet. Backend integration required.', title: 'Coming Soon');
+    } catch (e) {
+      loginErrorMessage = 'Apple Sign-In failed: $e';
+    } finally {
+      isLoading = false;
+      update();
+    }
+  }
 }

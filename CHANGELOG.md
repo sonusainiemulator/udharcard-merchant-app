@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-07-26
+
+### ✨ Added
+- **Social Login (Google & Apple)**:
+  - Added "Continue with Google" and "Continue with Apple" UI buttons to the Login and Registration screens.
+  - Added new dependencies `google_sign_in` and `sign_in_with_apple`.
+  - Added stub methods to `AuthController` for backend integration.
+
+---
+
 ## [1.0.1] - 2026-07-26
 
 ### ✨ Added

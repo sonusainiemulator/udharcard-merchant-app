@@ -262,7 +262,96 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                         ),
-                        VSpace(24.h),
+                        VSpace(30.h),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider(color: AppColors.borderColor, thickness: 1)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w),
+                              child: Text(
+                                storedLanguage['Or connect with'] ?? 'Or connect with',
+                                style: t.bodySmall?.copyWith(color: AppColors.black50, fontSize: 14.sp),
+                              ),
+                            ),
+                            const Expanded(child: Divider(color: AppColors.borderColor, thickness: 1)),
+                          ],
+                        ),
+                        VSpace(30.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  controller.signInWithGoogle();
+                                },
+                                borderRadius: BorderRadius.circular(12.r),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  decoration: BoxDecoration(
+                                    color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(color: AppColors.borderColor),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        "$rootImageDir/google.png",
+                                        height: 24.h,
+                                        width: 24.w,
+                                      ),
+                                      HSpace(8.w),
+                                      Text(
+                                        storedLanguage['Google'] ?? 'Google',
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            HSpace(16.w),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  controller.signInWithApple();
+                                },
+                                borderRadius: BorderRadius.circular(12.r),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                                  decoration: BoxDecoration(
+                                    color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(color: AppColors.borderColor),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        "$rootImageDir/apple.png",
+                                        height: 24.h,
+                                        width: 24.w,
+                                        color: Get.isDarkMode ? AppColors.whiteColor : AppColors.blackColor,
+                                      ),
+                                      HSpace(8.w),
+                                      Text(
+                                        storedLanguage['Apple'] ?? 'Apple',
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        VSpace(32.h),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
