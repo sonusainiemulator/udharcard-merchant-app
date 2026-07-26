@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-07-27
+
+### 🎨 UI & UX Overhaul
+- **Redesigned Login & Registration Pages**:
+  - Prominent high-res app logo header with shadow/glow styling.
+  - "MERCHANT PORTAL" & "MERCHANT REGISTRATION" gradient pill badges.
+  - Cleaned up excessive vertical padding for compact, sleek scrolling.
+  - WhatsApp & Phone OTP button styled with WhatsApp green branding.
+  - Added bottom branding footer (`AuthFooterBranding`):
+    - 🔒 **100% Secure & Trusted**
+    - 🇮🇳 **Made in India**
+    - 💼 **Designed by Rakebig Services**
+
+---
+
 ## [1.0.4] - 2026-07-27
 
 ### 🐛 Fixed
