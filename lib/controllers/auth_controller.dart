@@ -291,6 +291,7 @@ class AuthController extends GetxController {
 
   Future sendFirebaseOtp(String phoneNumber) async {
     isLoading = true;
+    loginErrorMessage = null;
     update();
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
@@ -301,13 +302,16 @@ class AuthController extends GetxController {
         },
         verificationFailed: (FirebaseAuthException e) {
           isLoading = false;
+          loginErrorMessage = e.message ?? 'Verification failed';
           update();
-          Helpers.showSnackBar(msg: e.message ?? 'Verification failed');
+          Helpers.showSnackBar(msg: e.message ?? 'Verification failed', title: "Error!");
         },
         codeSent: (String verificationId, int? resendToken) {
           isLoading = false;
           firebaseVerificationId = verificationId;
+          loginErrorMessage = null;
           update();
+          Helpers.showSnackBar(msg: "Verification code sent to $phoneNumber", title: "Success");
           Get.toNamed(RoutesName.firebaseOtpVerifyScreen);
         },
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -316,14 +320,16 @@ class AuthController extends GetxController {
       );
     } catch (e) {
       isLoading = false;
+      loginErrorMessage = 'Failed to send OTP: $e';
       update();
-      Helpers.showSnackBar(msg: 'Failed to send OTP: $e');
+      Helpers.showSnackBar(msg: 'Failed to send OTP: $e', title: "Error!");
     }
   }
 
   Future verifyFirebaseOtp() async {
     if (firebaseVerificationId == null || firebaseOtpVal.isEmpty) return;
     isLoading = true;
+    loginErrorMessage = null;
     update();
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
@@ -333,8 +339,9 @@ class AuthController extends GetxController {
       await _signInWithFirebaseCredential(credential);
     } catch (e) {
       isLoading = false;
+      loginErrorMessage = 'Invalid OTP or verification failed.';
       update();
-      Helpers.showSnackBar(msg: 'Invalid OTP or verification failed.');
+      Helpers.showSnackBar(msg: 'Invalid OTP or verification failed.', title: "Error!");
     }
   }
 

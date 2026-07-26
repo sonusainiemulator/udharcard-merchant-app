@@ -684,51 +684,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sub-widgets
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StripStat extends StatelessWidget {
-  const _StripStat({
-    required this.title,
-    required this.value,
-    required this.valueColor,
-    required this.bgColor,
-  });
-
-  final String title;
-  final String value;
-  final Color valueColor;
-  final Color bgColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: context.t.bodySmall?.copyWith(
-            fontSize: 11.sp,
-            color: AppColors.black50,
-          ),
-        ),
-        VSpace(4.h),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w700,
-            color: valueColor,
-          ),
-        ),
-      ],
-    );
-  }
 
   void _showReminderOptions(
     BuildContext context,
@@ -785,6 +740,51 @@ class _StripStat extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StripStat extends StatelessWidget {
+  const _StripStat({
+    required this.title,
+    required this.value,
+    required this.valueColor,
+    required this.bgColor,
+  });
+
+  final String title;
+  final String value;
+  final Color valueColor;
+  final Color bgColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.t.bodySmall?.copyWith(
+            fontSize: 11.sp,
+            color: AppColors.black50,
+          ),
+        ),
+        VSpace(4.h),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }
