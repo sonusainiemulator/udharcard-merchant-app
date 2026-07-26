@@ -349,13 +349,23 @@ class AuthController extends GetxController {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       if (userCredential.user != null) {
-        // Assume Firebase auth successful, redirect to home.
-        // If your backend needs token integration, you would call backend API here.
-        HiveHelp.write(Keys.token, "firebase_auth_token_${userCredential.user!.uid}"); // Mock token
+        String? token = await userCredential.user!.getIdToken();
+        token ??= "firebase_auth_token_${userCredential.user!.uid}";
+        
+        // Persist merchant session permanently into local storage
+        HiveHelp.write(Keys.token, token);
+        HiveHelp.write(Keys.isNewUser, false);
+        HiveHelp.write(Keys.isRemember, true);
+        HiveHelp.write(Keys.userId, userCredential.user!.uid);
+        if (userCredential.user?.phoneNumber != null && userCredential.user!.phoneNumber!.isNotEmpty) {
+          HiveHelp.write(Keys.userName, userCredential.user!.phoneNumber);
+        }
+        
         isLoading = false;
         update();
         Get.offAllNamed(RoutesName.bottomNavBar);
         clearFirebaseOtpController();
+        clearRegisterController();
       }
     } catch (e) {
       isLoading = false;

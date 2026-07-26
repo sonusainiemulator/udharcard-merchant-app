@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2026-07-27
+
+### 🔐 Persistent Auth & Session Timeout Fix
+- **Prevented Premature Logout**: Updated `api_error.dart` to prevent background 401 HTTP errors from kicking authenticated merchants back to `LoginScreen` after 2-3 minutes.
+- **Session Token Persistence**: Saved Firebase Auth token, user ID, and merchant profile permanently in local storage (`HiveHelp`).
+- **Splash Screen Persistence Check**: Updated `SplashScreen` to verify both local token and `FirebaseAuth.instance.currentUser` before routing.
+
+---
+
 ## [1.0.8] - 2026-07-27
 
 ### 📱 Default Mobile Number Login System

@@ -623,6 +623,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             MaterialButton(
               onPressed: () async {
                 HiveHelp.remove(Keys.token);
+                HiveHelp.remove(Keys.isRemember);
+                HiveHelp.remove(Keys.isLoggedIn);
+                try {
+                  await FirebaseAuth.instance.signOut();
+                } catch (_) {}
                 Get.offAllNamed(RoutesName.loginScreen);
               },
               child: Text(storedLanguage['Yes'] ?? "Yes", style: t.bodyLarge),

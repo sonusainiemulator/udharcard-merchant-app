@@ -7,6 +7,7 @@ import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:get/get.dart';
 import 'package:paysecure/views/widgets/mediaquery_extension.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../config/app_colors.dart';
 import '../../../routes/routes_name.dart';
 import '../../../utils/services/localstorage/keys.dart';
@@ -40,11 +41,17 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     Future.delayed(const Duration(seconds: 3), () {
-      HiveHelp.read(Keys.token) != null
-          ? Get.offAllNamed(RoutesName.bottomNavBar)
-          : HiveHelp.read(Keys.isNewUser) != null
-              ? Get.offAllNamed(RoutesName.loginScreen)
-              : Get.offAllNamed(RoutesName.onbordingScreen);
+      final token = HiveHelp.read(Keys.token);
+      final isLoggedIn = (token != null && token.toString().isNotEmpty) ||
+          FirebaseAuth.instance.currentUser != null;
+
+      if (isLoggedIn) {
+        Get.offAllNamed(RoutesName.bottomNavBar);
+      } else if (HiveHelp.read(Keys.isNewUser) != null) {
+        Get.offAllNamed(RoutesName.loginScreen);
+      } else {
+        Get.offAllNamed(RoutesName.onbordingScreen);
+      }
     });
     AppController.to.getBasicCtrl();
 
