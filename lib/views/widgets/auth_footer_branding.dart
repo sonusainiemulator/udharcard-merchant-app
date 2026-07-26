@@ -26,8 +26,11 @@ class AuthFooterBranding extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6.w,
+            runSpacing: 4.h,
             children: [
               // 100% Secure Badge
               Row(
@@ -50,7 +53,7 @@ class AuthFooterBranding extends StatelessWidget {
                 ],
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10.w),
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
                 child: Text(
                   "•",
                   style: TextStyle(
@@ -78,8 +81,9 @@ class AuthFooterBranding extends StatelessWidget {
             ],
           ),
           VSpace(6.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Icon(
                 Icons.workspace_premium_rounded,

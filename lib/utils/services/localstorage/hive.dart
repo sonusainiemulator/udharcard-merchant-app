@@ -2,20 +2,33 @@ import 'package:hive/hive.dart';
 import 'keys.dart';
 
 class HiveHelp {
-  static var box = Hive.box(Keys.hiveinit);
   static dynamic read(String key) {
-    return box.get(key);
+    try {
+      if (!Hive.isBoxOpen(Keys.hiveinit)) return null;
+      return Hive.box(Keys.hiveinit).get(key);
+    } catch (_) {
+      return null;
+    }
   }
 
   static void write(String key, dynamic value) {
-    box.put(key, value);
+    try {
+      if (!Hive.isBoxOpen(Keys.hiveinit)) return;
+      Hive.box(Keys.hiveinit).put(key, value);
+    } catch (_) {}
   }
 
   static Future<void> remove(String key) async {
-    box.delete(key);
+    try {
+      if (!Hive.isBoxOpen(Keys.hiveinit)) return;
+      await Hive.box(Keys.hiveinit).delete(key);
+    } catch (_) {}
   }
 
   static void cleanall() {
-    box.clear();
+    try {
+      if (!Hive.isBoxOpen(Keys.hiveinit)) return;
+      Hive.box(Keys.hiveinit).clear();
+    } catch (_) {}
   }
 }

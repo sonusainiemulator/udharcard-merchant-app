@@ -406,8 +406,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           VSpace(24.h),
 
                           // Already have an account link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 storedLanguage["Already have an account?"] ??

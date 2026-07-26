@@ -292,13 +292,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                       size: 20.sp,
                                     ),
                                     HSpace(10.w),
-                                    Text(
-                                      storedLanguage['Send OTP via WhatsApp'] ??
-                                          "Send OTP via WhatsApp",
-                                      style: TextStyle(
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                    Flexible(
+                                      child: Text(
+                                        storedLanguage['Send OTP via WhatsApp'] ??
+                                            "Send OTP via WhatsApp",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 15.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -450,8 +454,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           VSpace(24.h),
 
                           // Don't have an account link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 storedLanguage["Don't have an account?"] ??
