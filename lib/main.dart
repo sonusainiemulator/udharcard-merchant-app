@@ -20,9 +20,28 @@ import 'utils/services/localstorage/init_hive.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: "AIzaSyD_CrlNjXE1YhLBvOe66p2FfT35Mobz3P8",
+          appId: "1:91651925903:android:3c0ca3eb6de91eafdb8dfa",
+          messagingSenderId: "91651925903",
+          projectId: "udharcard-app",
+          storageBucket: "udharcard-app.firebasestorage.app",
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
   } catch (e) {
-    debugPrint("Firebase init failed (missing google-services.json): $e");
+    debugPrint("Firebase init attempt 1 error: $e");
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+    } catch (err) {
+      debugPrint("Firebase init fallback error: $err");
+    }
   }
   await initHive();
   _initializeApp();

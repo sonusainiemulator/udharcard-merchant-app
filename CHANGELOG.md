@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-07-27
+
+### 🐛 Fixed
+- **Firebase Initialization Error**:
+  - Added missing `google-services.json` to `android/app/` for `com.udharcard.merchant.app`.
+  - Applied `com.google.gms.google-services` plugin in Android Gradle files.
+  - Added robust fallback `FirebaseOptions` in `lib/main.dart` to prevent `[core/no-app] No Firebase App '[DEFAULT]' has been created` error on OTP verification / Login with Phone.
+
+---
+
 ## [1.0.3] - 2026-07-26
 
 ### ✨ Added
