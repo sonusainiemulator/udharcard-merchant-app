@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:paysecure/firebase_options.dart';
 import 'package:paysecure/utils/services/custom_error.dart';
 import 'controllers/app_controller.dart';
 import 'controllers/bindings/bindings.dart';
@@ -20,21 +21,11 @@ import 'utils/services/localstorage/init_hive.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: "AIzaSyD_CrlNjXE1YhLBvOe66p2FfT35Mobz3P8",
-          appId: "1:91651925903:android:3c0ca3eb6de91eafdb8dfa",
-          messagingSenderId: "91651925903",
-          projectId: "udharcard-app",
-          storageBucket: "udharcard-app.firebasestorage.app",
-        ),
-      );
-    } else {
-      await Firebase.initializeApp();
-    }
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
-    debugPrint("Firebase init attempt 1 error: $e");
+    debugPrint("Firebase init attempt error: $e");
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();

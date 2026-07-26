@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:91651925903:android:3c0ca3eb6de91eafdb8dfa",
+        "mobilesdk_app_id": "1:91651925903:android:58222a508d1eba2fdb8dfa",
         "android_client_info": {
           "package_name": "com.udharcard.merchant.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD_CrlNjXE1YhLBvOe66p2FfT35Mobz3P8"
@@ -20,7 +25,79 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "91651925903-inlsg3b50mlqokfpt82hd1b5jlu6nka7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.udharcard.user"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:91651925903:android:3c0ca3eb6de91eafdb8dfa",
+        "android_client_info": {
+          "package_name": "com.udharcard.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "91651925903-3pa6q3jfukmbkmbfsspp0i5pmlforver.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.udharcard.user",
+            "certificate_hash": "11981dea769f4aa1d92771ba711fd3e46a9efae3"
+          }
+        },
+        {
+          "client_id": "91651925903-e9v4v61rj3k31sggc00d1ietusltmvin.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.udharcard.user",
+            "certificate_hash": "2a6b1e344ac9a3b3f0ee5741a11dd3d685653720"
+          }
+        },
+        {
+          "client_id": "91651925903-tldk6js9bth7pid77d7f2b7g635v6nn5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.udharcard.user",
+            "certificate_hash": "03190aa8689b83554be624d5fb8ccd1166d6e0b9"
+          }
+        },
+        {
+          "client_id": "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_CrlNjXE1YhLBvOe66p2FfT35Mobz3P8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "91651925903-inlsg3b50mlqokfpt82hd1b5jlu6nka7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.udharcard.user"
+              }
+            }
+          ]
         }
       }
     }

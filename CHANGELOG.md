@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2026-07-27
+
+### 🎨 Premium Social & WhatsApp Buttons
+- **Google Brand Icon**: Added official vector icon via `font_awesome_flutter` to guarantee crisp rendering across all screen densities.
+- **Apple Brand Icon**: Added official Apple vector icon with dark card contrast styling.
+- **WhatsApp OTP Action**: Upgraded to brand-gradient WhatsApp green button (`#25D366` to `#128C7E`) with soft shadow elevation.
+
+---
+
 ## [1.0.6] - 2026-07-27
 
 ### 🍏 iOS Rebrand

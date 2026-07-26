@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:paysecure/utils/app_constants.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:paysecure/views/widgets/auth_footer_branding.dart';
+import 'package:paysecure/views/widgets/brand_icons.dart';
 import 'package:paysecure/views/widgets/custom_textfield.dart';
 import 'package:get/get.dart';
 import '../../../../config/app_colors.dart';
@@ -343,30 +344,60 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(14.h),
 
-                          // Phone / WhatsApp Login Button
+                          // Premium WhatsApp & Phone OTP Login Button
                           Material(
                             color: Colors.transparent,
-                            child: AppButton(
-                              text:
-                                  storedLanguage[
-                                        'Login with Phone / WhatsApp'
-                                      ] ??
-                                      "Login with Phone / WhatsApp OTP",
-                              isLoading: false,
-                              bgColor: const Color(0xFF25D366).withValues(alpha: 0.12),
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyLarge?.copyWith(
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF0F9447),
-                              ),
+                            child: InkWell(
                               onTap: () {
                                 Get.toNamed(
                                   RoutesName.firebasePhoneLoginScreen,
                                 );
                                 controller.clearFirebaseOtpController();
                               },
+                              borderRadius: BorderRadius.circular(14.r),
+                              child: Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF25D366),
+                                      Color(0xFF128C7E),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF25D366,
+                                      ).withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    WhatsAppBrandIcon(
+                                      color: Colors.white,
+                                      size: 20.sp,
+                                    ),
+                                    HSpace(10.w),
+                                    Text(
+                                      storedLanguage[
+                                            'Login with Phone / WhatsApp'
+                                          ] ??
+                                          "Login with Phone / WhatsApp OTP",
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                           VSpace(24.h),
@@ -401,44 +432,59 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(20.h),
 
-                          // Google & Apple Buttons
+                          // Premium Google & Apple Buttons
                           Row(
                             children: [
+                              // Google Button
                               Expanded(
                                 child: InkWell(
                                   onTap: () {
                                     controller.signInWithGoogle();
                                   },
-                                  borderRadius: BorderRadius.circular(12.r),
+                                  borderRadius: BorderRadius.circular(16.r),
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      vertical: 13.h,
+                                      vertical: 14.h,
+                                      horizontal: 12.w,
                                     ),
                                     decoration: BoxDecoration(
                                       color:
                                           isDark
                                               ? AppColors.darkCardColor
-                                              : AppColors.whiteColor,
-                                      borderRadius: BorderRadius.circular(12.r),
+                                              : Colors.white,
+                                      borderRadius: BorderRadius.circular(16.r),
                                       border: Border.all(
-                                        color: AppColors.borderColor,
+                                        color:
+                                            isDark
+                                                ? AppColors.borderColor
+                                                : const Color(0xFFEAECF0),
+                                        width: 1.5,
                                       ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.04,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Image.asset(
-                                          "$rootImageDir/google.png",
-                                          height: 22.h,
-                                          width: 22.w,
-                                        ),
+                                        GoogleBrandIcon(size: 20.sp),
                                         HSpace(8.w),
                                         Text(
                                           storedLanguage['Google'] ?? 'Google',
                                           style: TextStyle(
-                                            fontSize: 14.sp,
+                                            fontSize: 15.sp,
                                             fontWeight: FontWeight.bold,
+                                            color:
+                                                isDark
+                                                    ? Colors.white
+                                                    : const Color(0xFF1D2939),
                                           ),
                                         ),
                                       ],
@@ -447,45 +493,56 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               HSpace(14.w),
+                              // Apple Button
                               Expanded(
                                 child: InkWell(
                                   onTap: () {
                                     controller.signInWithApple();
                                   },
-                                  borderRadius: BorderRadius.circular(12.r),
+                                  borderRadius: BorderRadius.circular(16.r),
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      vertical: 13.h,
+                                      vertical: 14.h,
+                                      horizontal: 12.w,
                                     ),
                                     decoration: BoxDecoration(
                                       color:
                                           isDark
                                               ? AppColors.darkCardColor
-                                              : AppColors.whiteColor,
-                                      borderRadius: BorderRadius.circular(12.r),
+                                              : const Color(0xFF111827),
+                                      borderRadius: BorderRadius.circular(16.r),
                                       border: Border.all(
-                                        color: AppColors.borderColor,
+                                        color:
+                                            isDark
+                                                ? AppColors.borderColor
+                                                : const Color(0xFF111827),
+                                        width: 1.5,
                                       ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Image.asset(
-                                          "$rootImageDir/apple.png",
-                                          height: 22.h,
-                                          width: 22.w,
-                                          color:
-                                              isDark
-                                                  ? AppColors.whiteColor
-                                                  : AppColors.blackColor,
+                                        AppleBrandIcon(
+                                          size: 22.sp,
+                                          color: Colors.white,
                                         ),
                                         HSpace(8.w),
                                         Text(
                                           storedLanguage['Apple'] ?? 'Apple',
                                           style: TextStyle(
-                                            fontSize: 14.sp,
+                                            fontSize: 15.sp,
                                             fontWeight: FontWeight.bold,
+                                            color: Colors.white,
                                           ),
                                         ),
                                       ],
