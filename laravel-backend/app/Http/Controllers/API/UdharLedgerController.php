@@ -1,0 +1,141 @@
+<?php
+
+namespace App\Http\Controllers\API;
+
+use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Transaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
+class UdharLedgerController extends Controller
+{
+    /**
+     * Get transaction timeline and balance summaries for a specific customer.
+     */
+    public function show(Request $request, $customerId)
+    {
+        $merchantId = auth()->id() ?? $request->header('X-Merchant-Id') ?? 1;
+
+        $customer = Customer::where('merchant_id', $merchantId)
+            ->where('id', $customerId)
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Customer not found.'
+            ], 404);
+        }
+
+        $transactions = Transaction::where('customer_id', $customerId)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tx) {
+                return [
+                    'id' => $tx->id,
+                    'amount' => (float)$tx->amount,
+                    'type' => $tx->type, // given, received
+                    'remarks' => $tx->remarks,
+                    'created_at' => $tx->created_at->format('Y-m-d H:i:s'),
+                    'due_date' => $tx->due_date ? $tx->due_date->format('Y-m-d') : null,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'customer_name' => $customer->name,
+                'outstanding_balance' => (float)$customer->outstanding_balance,
+                'credit_limit' => (float)$customer->credit_limit,
+                'transactions' => $transactions
+            ]
+        ]);
+    }
+
+    /**
+     * Record a new Udhar (Credit) or Payment (Debit) transaction.
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email_or_phone' => 'required|string',
+            'amount' => 'required|numeric|min:0.01',
+            'type' => 'required|in:given,received',
+            'remarks' => 'nullable|string|max:500',
+            'due_date' => 'nullable|date',
+            'payment_method' => 'nullable|in:cash,upi,bank_transfer,qr_code',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        $merchantId = auth()->id() ?? $request->header('X-Merchant-Id') ?? 1;
+        $identifier = $request->email_or_phone;
+
+        // Find customer by ID, email or phone
+        $customer = Customer::where('merchant_id', $merchantId)
+            ->where(function($query) use ($identifier) {
+                $query->where('id', $identifier)
+                      ->orWhere('phone', $identifier)
+                      ->orWhere('email', $identifier);
+            })->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Customer account not found.'
+            ], 404);
+        }
+
+        $amount = (float)$request->amount;
+        $type = $request->type; // given (credit) or received (debit)
+
+        // Enforce credit limit on credit entry
+        if ($type == 'given') {
+            $predictedBalance = $customer->outstanding_balance + $amount;
+            if ($predictedBalance > $customer->credit_limit) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Transaction declined. This exceeds the customer's credit limit of ₹" . number_format($customer->credit_limit, 2)
+                ], 400);
+            }
+        }
+
+        // DB Transaction to ensure atomic execution
+        $transaction = DB::transaction(function() use ($customer, $merchantId, $amount, $type, $request) {
+            // Update customer's outstanding balance
+            if ($type == 'given') {
+                $customer->increment('outstanding_balance', $amount);
+            } else {
+                $customer->decrement('outstanding_balance', $amount);
+            }
+
+            // Create ledger entry log
+            return Transaction::create([
+                'merchant_id' => $merchantId,
+                'customer_id' => $customer->id,
+                'amount' => $amount,
+                'type' => $type,
+                'payment_method' => $request->input('payment_method', 'cash'),
+                'remarks' => $request->remarks,
+                'due_date' => $request->due_date,
+                'status' => 'completed',
+            ]);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Ledger transaction recorded successfully.',
+            'data' => [
+                'transaction_id' => $transaction->id,
+                'outstanding_balance' => (float)$customer->fresh()->outstanding_balance
+            ]
+        ], 200);
+    }
+}

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-07-26
+
+### ✨ Added
+- **NFC Tap & Pay (Coming Soon)**:
+  - Added a new UI element on the home screen for the upcoming NFC feature.
+  - Tapping the button displays a friendly "Coming Soon" message to users while backend and reader requirements are finalized.
+
+---
+
 ## [1.0.0] - 2026-07-24
 
 ### 🚀 Highlights & Initial Release

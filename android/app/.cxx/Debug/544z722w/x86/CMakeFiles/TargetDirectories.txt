@@ -1,0 +1,2 @@
+/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/Debug/544z722w/x86/CMakeFiles/edit_cache.dir
+/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/Debug/544z722w/x86/CMakeFiles/rebuild_cache.dir

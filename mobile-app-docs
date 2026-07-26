@@ -1,0 +1,517 @@
+# Udhar Card Merchant Mobile App: Product & Integration Requirements Document (PRD)
+
+This document provides the full product requirements, UI/UX design specifications, and API integration instructions for developers building the **Udhar Card Merchant Mobile App** (compatible with iOS and Android).
+
+---
+
+## 1. Document Overview
+
+### Objectives
+*   **Empower Merchants:** Give merchants a fast, reliable mobile app to manage customer credits ("Udhar") and collections on the go.
+*   **Frictionless Payments:** Integrate UPI QR Code generation directly into the workflow for instant offline-to-online reconciliation.
+*   **Reliability:** Allow offline access to view ledgers and prepare transactions, with auto-sync when network connectivity returns.
+
+### Target Platforms
+*   **iOS:** Swift / SwiftUI or Flutter (supporting iOS 15+)
+*   **Android:** Kotlin / Jetpack Compose or Flutter (supporting Android 8.0 / API Level 26+)
+
+---
+
+## 2. System Architecture & Authentication
+
+### 2.1 API Base Configuration
+All requests must communicate with the main gateway:
+*   **Base URL:** `https://pay.udharcard.shop/api`
+*   **Global Headers:**
+    ```http
+    Content-Type: application/json
+    Accept: application/json
+    Authorization: Bearer <token>
+    ```
+
+### 2.2 Auth Flow Spec
+```mermaid
+sequenceDiagram
+    participant App as Mobile App Client
+    participant API as Merchant Gateway API
+    
+    App->>API: POST /login (username, password, type="merchant")
+    alt Credentials Valid
+        API-->>App: 200 OK (token, status="success")
+        Note over App: Save token securely in iOS Keychain / Android Keystore
+    else Credentials Invalid
+        API-->>App: 200/422 Error (status="error", errors)
+        Note over App: Show user error toast
+    end
+```
+
+---
+
+## 3. Detailed API Reference for Mobile Integration
+
+### 3.1 Authentication & Profile
+#### `POST /login`
+*   **Payload:**
+    ```json
+    {
+      "username": "merchant_username",
+      "password": "merchant_password",
+      "type": "merchant"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "You’ve been logged in successfully",
+      "token": "1|abc123xyz..."
+    }
+    ```
+
+---
+
+### 3.2 Dashboard Specs
+#### `GET /merchant/udhar/dashboard`
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "total_udhar_given": 12500.00,
+        "total_amount_received": 4500.00,
+        "pending_collection": 8000.00,
+        "active_customers": 12,
+        "today_transactions_count": 2,
+        "today_transactions": [
+          {
+            "id": 15,
+            "customer_id": 5,
+            "type": "credit",
+            "amount": "1500.00",
+            "running_balance": "8000.00",
+            "payment_method": "cash",
+            "notes": "Grocery credit",
+            "due_date": "2026-07-01T00:00:00.000000Z",
+            "customer": {
+              "id": 5,
+              "name": "Jane Doe",
+              "phone": "9876543210"
+            }
+          }
+        ],
+        "chart_data": [
+          { "month": "Jan 2026", "credit": 5000, "debit": 2000 },
+          { "month": "Feb 2026", "credit": 7000, "debit": 4000 },
+          { "month": "Mar 2026", "credit": 12000, "debit": 8500 }
+        ]
+      }
+    }
+    ```
+
+---
+
+### 3.3 Customer Management Specs
+#### `GET /merchant/udhar/customers`
+*   **Query Params:** `search` (Optional)
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "current_page": 1,
+        "data": [
+          {
+            "id": 5,
+            "merchant_id": 2,
+            "name": "Jane Doe",
+            "phone": "9876543210",
+            "email": "jane@example.com",
+            "credit_limit": "20000.00",
+            "outstanding_balance": "8000.00",
+            "opening_balance": "0.00",
+            "status": 1,
+            "due_date": "2026-07-01T00:00:00.000000Z"
+          }
+        ]
+      }
+    }
+    ```
+
+#### `POST /merchant/udhar/customers`
+*   **Payload:**
+    ```json
+    {
+      "name": "Rahul Kumar",
+      "phone": "9988776655",
+      "email": "rahul@example.com",
+      "credit_limit": 15000,
+      "opening_balance": 1200,
+      "due_date": "2026-07-15"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "Customer created successfully",
+      "data": {
+        "id": 18,
+        "name": "Rahul Kumar",
+        "outstanding_balance": 1200
+      }
+    }
+    ```
+
+#### `PUT /merchant/udhar/customers/{id}`
+*   **Payload:**
+    ```json
+    {
+      "name": "Rahul Kumar Updated",
+      "phone": "9988776655",
+      "email": "rahul.updated@example.com",
+      "credit_limit": 20000,
+      "due_date": "2026-07-20",
+      "status": "1"
+    }
+    ```
+
+#### `DELETE /merchant/udhar/customers/{id}`
+*   **Response:**
+    ```json
+    {
+      "status": "success",
+      "message": "Customer deleted successfully"
+    }
+    ```
+
+---
+
+### 3.4 Ledger Transactions Specs
+#### `GET /merchant/udhar/customers/{id}/ledger`
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "customer": {
+          "id": 5,
+          "name": "Jane Doe",
+          "outstanding_balance": "8000.00"
+        },
+        "ledgers": {
+          "current_page": 1,
+          "data": [
+            {
+              "id": 15,
+              "customer_id": 5,
+              "type": "credit",
+              "amount": "1500.00",
+              "running_balance": "8000.00",
+              "payment_method": "cash",
+              "notes": "Grocery items bought",
+              "due_date": "2026-07-01T00:00:00.000000Z",
+              "created_at": "2026-06-20T13:45:00.000000Z"
+            }
+          ]
+        }
+      }
+    }
+    ```
+
+#### `POST /merchant/udhar/ledger`
+*   **Payload:**
+    ```json
+    {
+      "customer_id": 5,
+      "type": "credit", // or "debit"
+      "amount": 2500,
+      "payment_method": "cash", // "cash", "upi", "bank_transfer"
+      "transaction_id": "TXN_OPTIONAL_123",
+      "notes": "Bread and butter",
+      "due_date": "2026-07-01"
+    }
+    ```
+
+#### `DELETE /merchant/udhar/ledger/{id}`
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "Ledger transaction entry deleted successfully and balances updated."
+    }
+    ```
+
+---
+
+### 3.5 Reminders & QR Payments
+#### `POST /merchant/udhar/ledger/{id}/reminder`
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "message": "Dear Jane Doe, this is a friendly reminder...",
+        "whatsapp_url": "https://api.whatsapp.com/send?phone=919876543210&text=Dear+Jane...",
+        "phone": "9876543210",
+        "outstanding_balance": 5500,
+        "sms_status": "Dispatched via system gateway"
+      }
+    }
+    ```
+
+#### `POST /merchant/udhar/qr/generate`
+*   **Payload:**
+    ```json
+    {
+      "customer_id": 5,
+      "amount": 5500
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "upi_uri": "upi://pay?pa=merchant@upi&pn=John+Doe&am=5500.00&tr=UDHAR1718873400C5",
+        "qr_code_svg": "data:image/svg+xml;base64,PHN2Zy...",
+        "transaction_reference": "UDHAR1718873400C5"
+      }
+    }
+    ```
+
+---
+
+### 3.6 Offline Synchronization APIs
+The following endpoints allow the mobile app to sync its offline database state with the server database.
+
+#### `GET /merchant/udhar/sync`
+Allows the mobile client to pull modified data since the last sync time.
+*   **Query Params:** `last_sync_time` (optional, date-time format e.g. `2026-06-20 14:00:00`)
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "last_sync_time": "2026-06-21 21:45:00",
+        "customers": [
+          {
+            "id": 18,
+            "merchant_id": 2,
+            "name": "Rahul Kumar",
+            "phone": "9988776655",
+            "email": "rahul@example.com",
+            "credit_limit": "15000.00",
+            "outstanding_balance": "1200.00",
+            "opening_balance": "1200.00",
+            "status": 1,
+            "due_date": "2026-07-15T00:00:00.000000Z",
+            "created_at": "2026-06-20T14:10:00.000000Z",
+            "updated_at": "2026-06-21T21:40:00.000000Z"
+          }
+        ],
+        "ledgers": [
+          {
+            "id": 19,
+            "customer_id": 5,
+            "merchant_id": 2,
+            "type": "debit",
+            "amount": "2500.00",
+            "running_balance": "5500.00",
+            "payment_method": "upi",
+            "transaction_id": "TXN981729837",
+            "notes": "Received partial payment",
+            "due_date": "2026-07-01T00:00:00.000000Z",
+            "created_at": "2026-06-20T14:12:00.000000Z",
+            "updated_at": "2026-06-20T14:12:00.000000Z"
+          }
+        ],
+        "active_customer_ids": [5, 18],
+        "active_ledger_ids": [15, 19]
+      }
+    }
+    ```
+
+#### `POST /merchant/udhar/sync`
+Allows the mobile client to push records created or updated offline.
+*   **Request Payload:**
+    ```json
+    {
+      "customers": [
+        {
+          "local_id": "temp-cust-uuid-111",
+          "name": "Offline Customer Name",
+          "phone": "9898989898",
+          "email": "offline@example.com",
+          "credit_limit": 10000,
+          "opening_balance": 500,
+          "due_date": "2026-07-10"
+        }
+      ],
+      "ledgers": [
+        {
+          "local_id": "temp-ledger-uuid-222",
+          "customer_id": null,
+          "customer_local_id": "temp-cust-uuid-111",
+          "type": "credit",
+          "amount": 250,
+          "payment_method": "cash",
+          "notes": "offline purchase",
+          "due_date": "2026-07-10"
+        }
+      ]
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "Offline data synchronized successfully",
+      "data": {
+        "customers": [
+          {
+            "local_id": "temp-cust-uuid-111",
+            "server_id": 19,
+            "customer": {
+              "id": 19,
+              "name": "Offline Customer Name",
+              "outstanding_balance": "750.00"
+            }
+          }
+        ],
+        "ledgers": [
+          {
+            "local_id": "temp-ledger-uuid-222",
+            "server_id": 20,
+            "ledger": {
+              "id": 20,
+              "customer_id": 19,
+              "type": "credit",
+              "amount": "250.00",
+              "running_balance": "750.00"
+            }
+          }
+        ]
+      }
+    }
+    ```
+
+---
+
+## 4. UI/UX Design Requirements
+
+### 4.1 Visual Design Tokens
+To achieve a premium, state-of-the-art feel, the app must implement these design choices:
+*   **Typography:** Use modern, high-readability sans-serif fonts: **Outfit** or **Inter**.
+*   **Color Palette:**
+    *   **Primary/Brand:** Indigo Dark (`#2D3748` / `#4A5568`)
+    *   **Credit/Outstanding (Udhar Given):** Crimson Accent (`#E53E3E` / HSL `360, 77%, 57%`)
+    *   **Debit/Settled (Payment Received):** Emerald Accent (`#38A169` / HSL `145, 63%, 42%`)
+    *   **Backgrounds:** Deep Slate dark theme gradients or sleek, ultra-clean off-white `#F7FAFC`.
+*   **Styling Theme:** Modern Glassmorphism. Card layouts should use slight borders (`1px rgba(255,255,255,0.08)`), blur effects (Backdrop Filter), and soft shadows (`shadow-xl`).
+
+### 4.2 Core Screens Layout Specs
+
+```
++-----------------------------------+
+|  [Logo] UdharCard    [Bell] [Profile] |
+|                                   |
+|  PENDING COLLECTION               |
+|  ₹ 1,28,450                       |
+|  [ + Add Customer ] [ Today's QR ]|
+|                                   |
+|  Weekly Collection Trends          |
+|  [============ Chart ============]|
+|                                   |
+|  Recent Activity                  |
+|  - Jane Doe      Received  ₹1,500 |
+|  - Rahul Kumar   Given     ₹5,000 |
++-----------------------------------+
+```
+
+#### 1. Login Screen
+*   Clean form with Floating Labels.
+*   Biometric Login prompt (FaceID / TouchID / Android Fingerprint) after the first successful login.
+
+#### 2. Dashboard Screen
+*   **Top Header:** Global Search icon, Notifications bell, Profile Settings toggle.
+*   **Summary Cards:** Large outstanding balance counter (colored in crimson) next to a smaller "Today's Collection" card (colored in emerald).
+*   **Action Row:** "Add Customer", "Collect Money", "Scan QR".
+*   **Weekly Chart:** Interactive line chart showing Credit vs Debit trends.
+*   **Activity Stream:** Paginated list of today's ledger entries.
+
+#### 3. Contact & Customer Directory Screen
+*   Segmented controller: [Active Ledgers] | [All Contacts].
+*   Fast-scrolling indexer (A-Z) with Search capability matching Name and Phone.
+*   Unified Contact card: Displays Customer name, phone, and **Net Balance** badge (Red for debit, Green for surplus).
+*   Swipe gestures:
+    *   **Swipe Left:** Quick shortcut to launch WhatsApp reminder.
+    *   **Swipe Right:** Quick transaction entry page.
+
+#### 4. Customer Profile & Ledger Timeline Screen
+*   Header: Customer avatar, name, registered phone number, and a horizontal "Credit Limit Progress Bar" showing utilized vs remaining limit.
+*   **Timeline View:** A clean chronological ledger timeline:
+    *   *Credit Card (Udhar Given):* Align text left, red background highlights.
+    *   *Debit Card (Payment Received):* Align text right, green background highlights.
+    *   Each entry must display the `running_balance` indicator.
+*   Bottom persistent bar: Two wide buttons: `[ - GAVE (CREDIT) ]` and `[ + RECEIVED (DEBIT) ]`.
+
+#### 5. Payment QR Code Bottom Sheet / Modal
+*   Displays dynamic QR code generated using `qr_code_svg`.
+*   Shows a "Live Payment Status" listener with auto-dismiss on success (polling the database or using WebSockets).
+*   **Share button:** Opens native OS sharesheet to share the UPI deep link or base64 QR as a PNG file.
+
+#### 6. Add Transaction (Credit/Debit) Form Screen
+*   **Layout & Fields:**
+    *   Segmented switch at the top: `[ Udhar Given (Credit) ]` | `[ Payment Received (Debit) ]` with corresponding red/green dynamic color styling.
+    *   Customer selector display showing selected customer's name and photo.
+    *   Large numeric entry pad input for `Amount`.
+    *   Date picker input for `Transaction Date` and optional `Due Date`.
+    *   Dropdown for `Payment Method` (`Cash`, `UPI`, `Bank Transfer`, `Gateway`).
+    *   Text input field for optional `Transaction Reference ID` and `Notes`.
+*   **Frictionless features:**
+    *   If `Credit` is selected, validate transaction amount against `credit_limit` locally and show warning if limit will be exceeded.
+    *   "Quick Note Suggestions" buttons (e.g. "Grocery", "Milk bill", "Cash received") to prevent typing.
+
+#### 7. Transaction Reports & Filter Screen
+*   **Layout & Features:**
+    *   Compact Date Range selector preset buttons: `[ Today ]`, `[ This Week ]`, `[ This Month ]`, `[ Custom Range ]`.
+    *   Summary card displaying `Total Credit Given`, `Total Received`, and `Net Cash Flow` for the selected period.
+    *   Filtered transactions list grouped by date.
+    *   **Export CTA Button:** Allows printing the report or sharing it as a PDF or Excel spreadsheet.
+
+#### 8. Offline Sync Manager & Conflict Resolution Screen
+*   **Layout & Features:**
+    *   Status header showing connection state (`Online` / `Offline`) and `Last Synced Time`.
+    *   Lists of pending transactions in the local queue with details (type, amount, date) and a retry button.
+    *   **Manual Trigger Button:** "Sync Now" to trigger immediate queue synchronization.
+    *   **Conflict Resolution Dialogs:** If a transaction fails to sync due to a server-side rule (e.g., credit limit updated on another device), show an interactive dialog to choice options: `[ Keep Local ]`, `[ Overwrite with Server ]`, `[ Edit Transaction ]`.
+
+#### 9. Merchant Settings Screen
+*   **Layout & Features:**
+    *   **Profile Settings:** Profile picture upload, Business Name, registered Email, and phone number.
+    *   **Payment Details Setup:** Input fields for Merchant UPI ID / VPA to construct the QR codes.
+    *   **App Preferences:** Toggle switch for Dark Mode, biometric validation settings, and push notifications toggle.
+
+---
+
+## 5. Offline Sync & Resilience Requirements
+
+To ensure the app performs well in areas with weak cellular networks:
+
+1.  **Local SQLite/Room Database Store:**
+    *   Cache dashboard endpoints, contacts directory, and transaction history locally.
+    *   All reads (`GET`) must fall back to local database caches immediately when offline, showing a subtle "Offline - Cached Data" banner at the top of the viewport.
+2.  **Offline Transaction Queue:**
+    *   When the merchant records a transaction (`POST /merchant/udhar/ledger`) without internet, save the transaction locally with a temporary GUID status `pending_sync`.
+    *   Recalculate customer running balances instantly on the UI to keep it responsive.
+3.  **Sync Manager:**
+    *   Register background sync workers (iOS BackgroundTasks framework / Android WorkManager).
+    *   Automatically flush the queued transactions sequentially to `/merchant/udhar/ledger` when a network connection is detected.
+
+---
+
+## 6. Security & Compliance
+
+*   **Secure Storage:** Tokens and credentials must never be written to plaintext storage (SharedPreferences / UserDefaults). Use iOS Keychain Services and Android Keystore.
+*   **Rooting/Jailbreak Detection:** Prevent app from opening on rooted or compromised devices to protect financial ledger data.
+*   **SSL Pinning:** Bind network requests explicitly to `pay.udharcard.shop` SSL certificates to avoid man-in-the-middle exploits.

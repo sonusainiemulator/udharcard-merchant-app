@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/bugfinder/fvm/versions/3.29.2/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/bugfinder/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/RelWithDebInfo/6m4s3f5p/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/bugfinder/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/RelWithDebInfo/6m4s3f5p/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

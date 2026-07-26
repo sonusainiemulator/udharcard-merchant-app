@@ -1,0 +1,2 @@
+/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/RelWithDebInfo/5n1j3t4h/x86_64/CMakeFiles/edit_cache.dir
+/Users/bugfinder/Downloads/bug-finder-project/PAYSECURE-APP/paysecure/android/app/.cxx/RelWithDebInfo/5n1j3t4h/x86_64/CMakeFiles/rebuild_cache.dir

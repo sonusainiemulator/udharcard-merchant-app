@@ -674,6 +674,56 @@ class _HomeScreenState extends State<HomeScreen>
                                   },
                                 ),
 
+                                VSpace(20.h),
+
+                                // ── NFC Tap & Pay (Coming Soon) ──
+                                InkWell(
+                                  onTap: () {
+                                    Get.snackbar(
+                                      'Coming Soon',
+                                      'NFC Payments are coming soon! We are working hard to bring this feature to you.',
+                                      backgroundColor: AppColors.mainColor,
+                                      colorText: Colors.white,
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      margin: EdgeInsets.all(16.r),
+                                      borderRadius: 12.r,
+                                      icon: const Icon(Icons.nfc_rounded, color: Colors.white),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.symmetric(vertical: 16.h),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.mainColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(16.r),
+                                      border: Border.all(
+                                        color: AppColors.mainColor.withValues(alpha: 0.25),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.nfc_rounded,
+                                          size: 24.sp,
+                                          color: AppColors.mainColor,
+                                        ),
+                                        HSpace(12.w),
+                                        Text(
+                                          storedLanguage['NFC Tap & Pay'] ?? 'NFC Tap & Pay',
+                                          style: TextStyle(
+                                            fontSize: 16.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.mainColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
                                 VSpace(28.h),
 
                                 // ── Everyday Directory Search Bar ──
