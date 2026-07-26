@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-07-27
+
+### 🍏 iOS Rebrand
+- **iOS App Name**: Updated Display Name and Bundle Name to **Udharcard Merchant**.
+- **iOS Bundle Identifier**: Set `PRODUCT_BUNDLE_IDENTIFIER` to `com.udharcard.merchant` across Debug, Profile, and Release Xcode configurations.
+
+---
+
 ## [1.0.5] - 2026-07-27
 
 ### 🎨 UI & UX Overhaul
