@@ -16,6 +16,7 @@ import '../../../themes/themes.dart';
 import '../../../utils/app_constants.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/spacing.dart';
 
@@ -624,7 +625,6 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               onPressed: () async {
                 HiveHelp.remove(Keys.token);
                 HiveHelp.remove(Keys.isRemember);
-                HiveHelp.remove(Keys.isLoggedIn);
                 try {
                   await FirebaseAuth.instance.signOut();
                 } catch (_) {}

@@ -47,9 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     TextTheme t = Theme.of(context).textTheme;
     bool isDark = Get.isDarkMode;
 
-    return GetBuilder<AuthController>(
-      builder: (_) {
-        return Scaffold(
+    return Scaffold(
           body: Container(
             height: Dimensions.screenHeight,
             width: Dimensions.screenWidth,
@@ -186,6 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(24.h),
 
+                          GetBuilder<AuthController>(builder: (controller) => Column(children: [
                           // Error Message Banner
                           if (controller.loginErrorMessage != null) ...[
                             Container(
@@ -312,6 +311,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           VSpace(24.h),
 
+                          ])),
                           // Social Login Divider
                           Row(
                             children: [
@@ -496,7 +496,5 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
-      },
-    );
   }
 }

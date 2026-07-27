@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.10] - 2026-07-28
+
+### 🐛 Bug Fixes
+- **Login UI Flickering**: Fixed an issue where the login screens flickered rapidly when typing a phone number by optimizing the widget rebuild tree in `login_screen.dart` and `firebase_phone_login_screen.dart`.
+
+---
+
 ## [1.0.9] - 2026-07-27
 
 ### 🔐 Persistent Auth & Session Timeout Fix

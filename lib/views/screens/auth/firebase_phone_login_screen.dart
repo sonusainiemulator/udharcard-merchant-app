@@ -28,9 +28,7 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
     AuthController controller = Get.find<AuthController>();
     TextTheme t = Theme.of(context).textTheme;
 
-    return GetBuilder<AuthController>(
-      builder: (_) {
-        return Scaffold(
+    return Scaffold(
           body: Container(
             height: Dimensions.screenHeight,
             width: Dimensions.screenWidth,
@@ -104,6 +102,7 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                             controller.update();
                           },
                         ),
+                        GetBuilder<AuthController>(builder: (controller) => Column(children: [
                         VSpace(32.h),
                         Material(
                           color: Colors.transparent,
@@ -142,6 +141,7 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                                   },
                           ),
                         ),
+                        ])),
                         VSpace(24.h),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -170,7 +170,5 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
             ),
           ),
         );
-      },
-    );
   }
 }
