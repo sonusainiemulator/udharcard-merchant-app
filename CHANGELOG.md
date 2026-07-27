@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.12] - 2026-07-28
+
+### ✨ UI/UX Improvements
+- **Auth Screens**: Redesigned the bottom navigation links (Login / Register) into touch-friendly, centered rows for a better user experience.
+- **Registration Screen**: Added the '🇮🇳 +91' visual prefix to the phone input field, matching the login screen design.
+
+---
+
 ## [1.0.11] - 2026-07-28
 
 ### ✨ Enhancements & Bug Fixes

@@ -189,10 +189,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           // Phone Number
                           CustomTextField(
                             hintext:
-                                storedLanguage['Mobile Number (e.g. +919876543210)'] ??
-                                "Mobile Number (e.g. +919876543210)",
+                                storedLanguage['Mobile Number'] ??
+                                "Mobile Number",
                             isPrefixIcon: true,
-                            prefixIcon: 'call',
+                            prefixWidget: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 15.w),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "🇮🇳 +91",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16.sp,
+                                      color: isDark ? AppColors.whiteColor : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Container(
+                                    width: 1.w,
+                                    height: 24.h,
+                                    color: Colors.grey.withOpacity(0.3),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                ],
+                              ),
+                            ),
                             keyboardType: TextInputType.phone,
                             autofillHints: const [
                               AutofillHints.telephoneNumber,
@@ -406,32 +428,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           VSpace(24.h),
 
                           // Already have an account link
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                storedLanguage["Already have an account?"] ??
-                                    "Already have an account? ",
-                                style: t.displayMedium?.copyWith(
-                                  fontSize: 14.sp,
-                                  color: AppThemes.getParagraphColor(),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Get.back();
+                              },
+                              borderRadius: BorderRadius.circular(12.r),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      storedLanguage["Already have an account?"] ??
+                                          "Already have an account? ",
+                                      style: t.displayMedium?.copyWith(
+                                        fontSize: 15.sp,
+                                        color: AppThemes.getParagraphColor(),
+                                      ),
+                                    ),
+                                    HSpace(4.w),
+                                    Text(
+                                      storedLanguage["Log In"] ?? "Log In",
+                                      style: t.titleMedium?.copyWith(
+                                        fontSize: 15.sp,
+                                        color: AppColors.mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              InkWell(
-                                onTap: () {
-                                  Get.back();
-                                },
-                                child: Text(
-                                  storedLanguage["Log In"] ?? "Log In",
-                                  style: t.titleMedium?.copyWith(
-                                    fontSize: 14.sp,
-                                    color: AppColors.mainColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                           VSpace(24.h),
 

@@ -476,33 +476,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           VSpace(24.h),
 
                           // Don't have an account link
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                storedLanguage["Don't have an account?"] ??
-                                    "Don't have an account? ",
-                                style: t.displayMedium?.copyWith(
-                                  fontSize: 14.sp,
-                                  color: AppThemes.getParagraphColor(),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Get.toNamed(RoutesName.registerScreen);
+                              },
+                              borderRadius: BorderRadius.circular(12.r),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      storedLanguage["Don't have an account?"] ??
+                                          "Don't have an account? ",
+                                      style: t.displayMedium?.copyWith(
+                                        fontSize: 15.sp,
+                                        color: AppThemes.getParagraphColor(),
+                                      ),
+                                    ),
+                                    HSpace(4.w),
+                                    Text(
+                                      storedLanguage["Create account"] ??
+                                          "Create account",
+                                      style: t.titleMedium?.copyWith(
+                                        fontSize: 15.sp,
+                                        color: AppColors.mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              InkWell(
-                                onTap: () {
-                                  Get.toNamed(RoutesName.registerScreen);
-                                },
-                                child: Text(
-                                  storedLanguage["Create account"] ??
-                                      "Create account",
-                                  style: t.titleMedium?.copyWith(
-                                    fontSize: 14.sp,
-                                    color: AppColors.mainColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                           VSpace(24.h),
 
