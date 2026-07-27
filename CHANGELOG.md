@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.11] - 2026-07-28
+
+### ✨ Enhancements & Bug Fixes
+- **India Phone Number UI & Validation**:
+  - Added an explicitly styled "🇮🇳 +91" prefix to the mobile login fields (`login_screen.dart`, `firebase_phone_login_screen.dart`).
+  - Added logic in `AuthController` to automatically prepend `+91` if missing, completely fixing the Firebase E.164 formatting error when users type 10-digit mobile numbers.
+
+---
+
 ## [1.0.10] - 2026-07-28
 
 ### 🐛 Bug Fixes

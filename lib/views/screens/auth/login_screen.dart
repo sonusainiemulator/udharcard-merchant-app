@@ -167,10 +167,32 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Phone Number Input
                           CustomTextField(
                             hintext:
-                                storedLanguage['Mobile Number (e.g. +919876543210)'] ??
-                                "Mobile Number (e.g. +919876543210)",
+                                storedLanguage['Mobile Number'] ??
+                                "Mobile Number",
                             isPrefixIcon: true,
-                            prefixIcon: 'call',
+                            prefixWidget: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 15.w),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "🇮🇳 +91",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16.sp,
+                                      color: isDark ? AppColors.whiteColor : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Container(
+                                    width: 1.w,
+                                    height: 24.h,
+                                    color: Colors.grey.withOpacity(0.3),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                ],
+                              ),
+                            ),
                             keyboardType: TextInputType.phone,
                             autofillHints: const [
                               AutofillHints.telephoneNumber,

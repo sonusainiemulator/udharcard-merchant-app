@@ -20,6 +20,7 @@ class CustomTextField extends StatelessWidget {
   final int? maxLines;
   final EdgeInsetsGeometry? contentPadding;
   final String? prefixIcon;
+  final Widget? prefixWidget;
   final String? suffixIcon;
   final Widget? suffix;
   final dynamic Function(String)? onChanged;
@@ -64,6 +65,7 @@ class CustomTextField extends StatelessWidget {
     this.maxLines,
     this.contentPadding,
     this.prefixIcon,
+    this.prefixWidget,
     this.suffixIcon,
     this.suffix,
     this.onChanged,
@@ -140,7 +142,9 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       focusNode: focusNode,
       prefixIcon:
-          prefixIcon != null
+          prefixWidget != null
+              ? prefixWidget
+              : prefixIcon != null
               ? Padding(
                 padding: EdgeInsets.symmetric(horizontal: 15.w),
                 child: InkResponse(

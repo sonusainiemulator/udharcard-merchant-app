@@ -290,6 +290,9 @@ class AuthController extends GetxController {
   }
 
   Future sendFirebaseOtp(String phoneNumber) async {
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+91$phoneNumber';
+    }
     isLoading = true;
     loginErrorMessage = null;
     update();
