@@ -30,6 +30,10 @@
     <string>We need access to the camera to take photos for your profile.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>We need access to your photo library to select and upload photos.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>We need access to your microphone for voice entry transactions.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>We need access to speech recognition for voice commands and entry.</string>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>UILaunchStoryboardName</key>

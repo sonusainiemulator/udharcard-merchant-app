@@ -8,6 +8,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/helpers.dart';
+import '../routes/routes_name.dart';
 
 enum VoiceAssistantState { idle, listening, thinking, speaking }
 
@@ -178,17 +179,20 @@ User's speech: "$_transcribedText"
 ''';
 
         final response = await model.generateContent([Content.text(prompt)]);
-        final jsonStr = response.text?.replaceAll('```json', '')?.replaceAll('```', '')?.trim() ?? '{}';
+        final textResp = response.text ?? '';
+        final jsonStr = textResp.replaceAll('```json', '').replaceAll('```', '').trim();
         
-        final Map<String, dynamic> data = jsonDecode(jsonStr);
+        if (jsonStr.isNotEmpty && jsonStr.startsWith('{')) {
+          final Map<String, dynamic> data = jsonDecode(jsonStr);
 
-        if (data['action'] == 'add_udhar') {
-          parsedName = data['name'] ?? "Unknown";
-          parsedAmount = (data['amount'] ?? 0).toDouble();
-          parsedType = data['type'] ?? "Given";
-          _aiReply = data['reply'] ?? "Transaction recorded.";
-          saveTransaction();
-          processedWithAi = true;
+          if (data['action'] == 'add_udhar') {
+            parsedName = data['name'] ?? "Unknown";
+            parsedAmount = (data['amount'] ?? 0).toDouble();
+            parsedType = data['type'] ?? "Given";
+            _aiReply = data['reply'] ?? "Transaction recorded.";
+            saveTransaction();
+            processedWithAi = true;
+          }
         }
       }
     } catch (e) {
@@ -307,5 +311,16 @@ User's speech: "$_transcribedText"
       voiceTransactions = [];
     }
     update();
+  }
+
+  void postToUdharLedger(Map<String, dynamic> tx) {
+    Get.toNamed(
+      RoutesName.addUdharScreen,
+      arguments: {
+        "name": tx["name"],
+        "amount": tx["amount"],
+        "type": tx["type"],
+      },
+    );
   }
 }

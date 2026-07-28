@@ -472,81 +472,84 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                       ),
 
                                       // Amount Display
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            "${isRec ? '+' : '-'}${tx['amount'].toString()}",
-                                            style: context.t.bodyMedium?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: isRec ? AppColors.greenColor : AppColors.redColor,
-                                            ),
-                                          ),
-                                          VSpace(4.h),
-                                          Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                            decoration: BoxDecoration(
-                                              color: isRec 
-                                                  ? AppColors.greenColor.withValues(alpha: .1) 
-                                                  : AppColors.redColor.withValues(alpha: .1),
-                                              borderRadius: BorderRadius.circular(4.r),
-                                            ),
-                                            child: Text(
-                                              isRec ? "Received" : "Given",
-                                              style: context.t.bodySmall?.copyWith(
-                                                color: isRec ? AppColors.greenColor : AppColors.redColor,
-                                                fontSize: 10.sp,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                        VSpace(30.h),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildParsedRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    Color? valueColor,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 20.sp, color: AppColors.black50),
-        HSpace(12.w),
-        Text(
-          label,
-          style: context.t.bodyMedium?.copyWith(
-            color: AppColors.black50,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: context.t.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: valueColor ?? AppColors.blackColor,
-          ),
-        ),
-      ],
-    );
-  }
-}
+                                       Column(
+                                         crossAxisAlignment: CrossAxisAlignment.end,
+                                         children: [
+                                           Text(
+                                             "${isRec ? '+' : '-'}${tx['amount'].toString()}",
+                                             style: context.t.bodyMedium?.copyWith(
+                                               fontWeight: FontWeight.bold,
+                                               color: isRec ? AppColors.greenColor : AppColors.redColor,
+                                             ),
+                                           ),
+                                           VSpace(4.h),
+                                           Row(
+                                             mainAxisSize: MainAxisSize.min,
+                                             children: [
+                                               Container(
+                                                 padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                                 decoration: BoxDecoration(
+                                                   color: isRec 
+                                                       ? AppColors.greenColor.withValues(alpha: .1) 
+                                                       : AppColors.redColor.withValues(alpha: .1),
+                                                   borderRadius: BorderRadius.circular(4.r),
+                                                 ),
+                                                 child: Text(
+                                                   isRec ? "Received" : "Given",
+                                                   style: context.t.bodySmall?.copyWith(
+                                                     color: isRec ? AppColors.greenColor : AppColors.redColor,
+                                                     fontSize: 10.sp,
+                                                     fontWeight: FontWeight.w600,
+                                                   ),
+                                                 ),
+                                               ),
+                                               HSpace(6.w),
+                                               GestureDetector(
+                                                 onTap: () => controller.postToUdharLedger(tx),
+                                                 child: Container(
+                                                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                                   decoration: BoxDecoration(
+                                                     color: AppColors.mainColor.withValues(alpha: 0.2),
+                                                     borderRadius: BorderRadius.circular(4.r),
+                                                     border: Border.all(color: AppColors.mainColor),
+                                                   ),
+                                                   child: Row(
+                                                     children: [
+                                                       Icon(Icons.add_task, size: 10.sp, color: AppColors.blackColor),
+                                                       HSpace(2.w),
+                                                       Text(
+                                                         "Add Udhar",
+                                                         style: TextStyle(
+                                                           fontSize: 9.sp,
+                                                           fontWeight: FontWeight.bold,
+                                                           color: AppColors.blackColor,
+                                                         ),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                 ),
+                                               ),
+                                             ],
+                                           ),
+                                         ],
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               );
+                             },
+                           ),
+                         ],
+                         VSpace(30.h),
+                       ],
+                     ),
+                   ),
+                 ),
+               ],
+             ),
+           ),
+         );
+       },
+     );
+   }
+ }
