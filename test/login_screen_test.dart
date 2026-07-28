@@ -40,7 +40,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('MERCHANT PORTAL'), findsOneWidget);
       expect(find.textContaining('Mobile Login'), findsOneWidget);
@@ -52,7 +52,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Send OTP via SMS'), findsOneWidget);
       expect(find.text('Send OTP via WhatsApp'), findsOneWidget);
@@ -64,7 +64,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Google'), findsOneWidget);
     });
@@ -75,7 +75,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Username'), findsNothing);
       expect(find.text('Password'), findsNothing);
@@ -88,7 +88,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('100% Secure & Trusted'), findsOneWidget);
       expect(find.text('Made in India'), findsOneWidget);

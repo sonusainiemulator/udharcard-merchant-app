@@ -10,6 +10,7 @@ import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import '../../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/profile_controller.dart';
+import '../../../controllers/udhar_controller.dart';
 import '../../../controllers/verification_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
@@ -467,6 +468,18 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             ? "Merchant QR Uploaded"
             : "Upload store QR image",
         onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
+        iconData: Icons.upload_file_rounded,
+        subtitle: "Export JSON backup of customer ledgers",
+        onTap: () => UdharController.to.exportLedgerBackup(),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Restore Backup'] ?? "Restore Backup",
+        iconData: Icons.download_for_offline_rounded,
+        subtitle: "Restore customer ledgers from backup file",
+        onTap: () => UdharController.to.importLedgerBackup(),
       ),
       _ProfileMenuItem(
         title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",

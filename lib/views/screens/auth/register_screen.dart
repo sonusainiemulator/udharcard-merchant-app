@@ -356,6 +356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         GoogleBrandIcon(size: 20.sp),
                                         HSpace(8.w),
@@ -444,13 +445,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      storedLanguage["Already have an account?"] ??
-                                          "Already have an account? ",
-                                      style: t.displayMedium?.copyWith(
-                                        fontSize: 15.sp,
-                                        color: AppThemes.getParagraphColor(),
+                                    Flexible(
+                                      child: Text(
+                                        storedLanguage["Already have an account?"] ??
+                                            "Already have an account? ",
+                                        style: t.displayMedium?.copyWith(
+                                          fontSize: 15.sp,
+                                          color: AppThemes.getParagraphColor(),
+                                        ),
                                       ),
                                     ),
                                     HSpace(4.w),

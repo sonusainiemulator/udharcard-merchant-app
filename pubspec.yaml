@@ -81,6 +81,8 @@ dependencies:
   flutter_stripe: ^11.5.0
   razorpay_flutter: ^1.4.0
   url_launcher: ^6.2.6
+  flutter_contacts: ^1.1.9
+  share_plus: ^10.1.4
   confetti: ^0.8.0
   animated_text_kit: ^4.2.2
   avatar_glow:

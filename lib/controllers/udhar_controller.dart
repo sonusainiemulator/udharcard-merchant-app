@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../data/repositories/udhar_repo.dart';
 import '../data/source/network/api_client.dart';
 import '../utils/services/helpers.dart';
@@ -1236,6 +1241,121 @@ class UdharController extends GetxController {
         } catch (_) {}
       }
     });
+  }
+
+  // ── WhatsApp Payment Reminder ────────────────────────────────────────────────
+  Future<void> sendWhatsAppReminder(Map<String, dynamic> customer) async {
+    final String phone = (customer['mobile'] ?? customer['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+    final String name = (customer['name'] ?? 'Customer').toString();
+    final double balance = (customer['balance'] ?? currentOutstandingBalance).toDouble();
+    
+    final String merchantUpi = HiveHelp.read(Keys.merchantUpiId) ?? 'paysecure@upi';
+    final String upiUrl = "upi://pay?pa=$merchantUpi&pn=Merchant&am=${balance.abs()}&cu=INR";
+    
+    final String message = "Namaste $name ji,\nUdharCard Merchant par aapka ₹${balance.abs().toStringAsFixed(0)} ka udhar balance pending hai.\nKripya is UPI link se payment karein:\n$upiUrl\n\nDhanyawad!";
+    
+    if (phone.isEmpty) {
+      Helpers.showSnackBar(msg: "Customer phone number unavailable.");
+      return;
+    }
+    
+    final String formattedPhone = phone.length == 10 ? "91$phone" : phone;
+    final Uri whatsappUri = Uri.parse("whatsapp://send?phone=$formattedPhone&text=${Uri.encodeComponent(message)}");
+    final Uri webWhatsappUri = Uri.parse("https://wa.me/$formattedPhone?text=${Uri.encodeComponent(message)}");
+    
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(webWhatsappUri)) {
+        await launchUrl(webWhatsappUri, mode: LaunchMode.externalApplication);
+      } else {
+        Helpers.showSnackBar(msg: "Could not open WhatsApp.");
+      }
+    } catch (e) {
+      Helpers.showSnackBar(msg: "Error opening WhatsApp: $e");
+    }
+  }
+
+  // ── Phonebook Contact Import ────────────────────────────────────────────────
+  Future<void> pickContactFromPhonebook() async {
+    try {
+      if (await FlutterContacts.requestPermission()) {
+        final Contact? contact = await FlutterContacts.openExternalPick();
+        if (contact != null) {
+          nameCtrl.text = contact.displayName;
+          if (contact.phones.isNotEmpty) {
+            String rawPhone = contact.phones.first.number.replaceAll(RegExp(r'\D'), '');
+            if (rawPhone.length > 10) {
+              rawPhone = rawPhone.substring(rawPhone.length - 10);
+            }
+            phoneCtrl.text = rawPhone;
+          }
+          update();
+          Helpers.showSnackBar(msg: "Contact imported: ${contact.displayName}");
+        }
+      } else {
+        Helpers.showSnackBar(msg: "Permission denied to access contacts.");
+      }
+    } catch (e) {
+      Helpers.showSnackBar(msg: "Failed to pick contact: $e");
+    }
+  }
+
+  // ── Local Ledger Backup & Restore ──────────────────────────────────────────
+  Future<void> exportLedgerBackup() async {
+    try {
+      final List customers = HiveHelp.read(Keys.udharCustomers) ?? [];
+      final List transactions = HiveHelp.read(Keys.udharTransactions) ?? [];
+      
+      final Map<String, dynamic> backupData = {
+        "version": "1.0.16",
+        "timestamp": DateTime.now().toIso8601String(),
+        "merchant_upi": HiveHelp.read(Keys.merchantUpiId) ?? "",
+        "customers": customers,
+        "transactions": transactions,
+      };
+
+      final String jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+      final Directory dir = await getApplicationDocumentsDirectory();
+      final String filePath = "${dir.path}/udhar_backup_${DateTime.now().millisecondsSinceEpoch}.json";
+      final File file = File(filePath);
+      await file.writeAsString(jsonStr);
+
+      await Share.shareXFiles([XFile(filePath)], text: "UdharCard Merchant Ledger Backup JSON");
+    } catch (e) {
+      Helpers.showSnackBar(msg: "Failed to export backup: $e");
+    }
+  }
+
+  Future<void> importLedgerBackup() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final File file = File(result.files.single.path!);
+        final String content = await file.readAsString();
+        final Map<String, dynamic> data = jsonDecode(content);
+
+        if (data.containsKey("customers")) {
+          HiveHelp.write(Keys.udharCustomers, data["customers"]);
+          if (data.containsKey("transactions")) {
+            HiveHelp.write(Keys.udharTransactions, data["transactions"]);
+          }
+          if (data.containsKey("merchant_upi") && data["merchant_upi"].toString().isNotEmpty) {
+            HiveHelp.write(Keys.merchantUpiId, data["merchant_upi"]);
+          }
+          fetchUsers();
+          Helpers.showSnackBar(msg: "Backup restored successfully!");
+        } else {
+          Helpers.showSnackBar(msg: "Invalid backup file format.");
+        }
+      }
+    } catch (e) {
+      Helpers.showSnackBar(msg: "Error importing backup: $e");
+    }
   }
 
   void stopPaymentStatusListener() {

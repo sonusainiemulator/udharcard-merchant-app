@@ -18,4 +18,6 @@ class Keys {
   static String isNotificationSeen = "isNotificationSeen";
   static String customQrCodePath = "customQrCodePath";
   static String merchantUpiId = "merchantUpiId";
+  static String udharCustomers = "udharCustomers";
+  static String udharTransactions = "udharTransactions";
 }

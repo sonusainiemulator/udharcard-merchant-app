@@ -69,6 +69,14 @@ class SelectUserSheet extends StatelessWidget {
                         ),
                         const Spacer(),
                         IconButton(
+                          onPressed: () async {
+                            await controller.pickContactFromPhonebook();
+                          },
+                          icon: Icon(Icons.contacts, size: 22.sp, color: AppColors.mainColor),
+                          tooltip: "Import from Phonebook",
+                        ),
+                        HSpace(4.w),
+                        IconButton(
                           onPressed: () => Get.back(),
                           icon: Icon(Icons.close,
                               size: 22.sp, color: AppColors.black50),

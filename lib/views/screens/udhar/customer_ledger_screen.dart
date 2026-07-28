@@ -231,10 +231,14 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           children: [
                             Expanded(
                               child: _QuickActionBtn(
-                                label: 'Remind',
-                                icon: Icons.notifications_active_outlined,
-                                color: Colors.blueAccent,
-                                onTap: () => controller.sendPaymentReminder(widget.customerId),
+                                label: 'WhatsApp',
+                                icon: Icons.chat,
+                                color: const Color(0xFF25D366),
+                                onTap: () => controller.sendWhatsAppReminder({
+                                  'name': widget.customerName,
+                                  'mobile': controller.selectedUser?['mobile'] ?? controller.selectedUser?['phone'] ?? widget.customerId,
+                                  'balance': balance,
+                                }),
                               ),
                             ),
                             HSpace(6.w),

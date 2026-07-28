@@ -495,13 +495,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                 padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      storedLanguage["Don't have an account?"] ??
-                                          "Don't have an account? ",
-                                      style: t.displayMedium?.copyWith(
-                                        fontSize: 15.sp,
-                                        color: AppThemes.getParagraphColor(),
+                                    Flexible(
+                                      child: Text(
+                                        storedLanguage["Don't have an account?"] ??
+                                            "Don't have an account? ",
+                                        style: t.displayMedium?.copyWith(
+                                          fontSize: 15.sp,
+                                          color: AppThemes.getParagraphColor(),
+                                        ),
                                       ),
                                     ),
                                     HSpace(4.w),
