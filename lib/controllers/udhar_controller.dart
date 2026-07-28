@@ -8,6 +8,7 @@ import '../data/repositories/udhar_repo.dart';
 import '../data/source/network/api_client.dart';
 import '../utils/services/helpers.dart';
 import '../utils/services/localstorage/hive.dart';
+import '../utils/services/localstorage/keys.dart';
 import '../config/app_colors.dart';
 
 class UdharController extends GetxController {
@@ -1163,17 +1164,21 @@ class UdharController extends GetxController {
         amount: amount,
       );
       final data = jsonDecode(response.body);
+      String merchantUpi = HiveHelp.read(Keys.merchantUpiId) ?? "paysecure@ybl";
+      if (merchantUpi.trim().isEmpty) merchantUpi = "paysecure@ybl";
       if (response.statusCode == 200 && data['status'] == 'success') {
         generatedUpiUri = data['data']['upi_uri'];
         qrCodeSvg = data['data']['qr_code_svg'];
         txReference = data['data']['transaction_reference'];
       } else {
         generatedUpiUri =
-            "upi://pay?pa=paysecure@ybl&pn=Merchant&am=$amount&tn=Udhar";
+            "upi://pay?pa=$merchantUpi&pn=Merchant&am=$amount&tn=Udhar";
       }
     } catch (_) {
+      String merchantUpi = HiveHelp.read(Keys.merchantUpiId) ?? "paysecure@ybl";
+      if (merchantUpi.trim().isEmpty) merchantUpi = "paysecure@ybl";
       generatedUpiUri =
-          "upi://pay?pa=paysecure@ybl&pn=Merchant&am=$amount&tn=Udhar";
+          "upi://pay?pa=$merchantUpi&pn=Merchant&am=$amount&tn=Udhar";
     }
 
     isQrLoading = false;

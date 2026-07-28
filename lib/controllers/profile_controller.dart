@@ -301,17 +301,42 @@ class ProfileController extends GetxController {
     }
   }
 
-  // -------------------------- Custom Merchant QR Code --------------------------
+  // -------------------------- Custom Merchant QR Code & UPI --------------------------
   String? customQrCodePath;
+  String? merchantUpiId;
+  TextEditingController upiIdEditingController = TextEditingController();
 
   @override
   void onInit() {
     super.onInit();
     loadCustomQrCode();
+    loadMerchantUpiId();
   }
 
   void loadCustomQrCode() {
     customQrCodePath = HiveHelp.read(Keys.customQrCodePath);
+    update();
+  }
+
+  void loadMerchantUpiId() {
+    merchantUpiId = HiveHelp.read(Keys.merchantUpiId);
+    upiIdEditingController.text = merchantUpiId ?? '';
+    update();
+  }
+
+  Future<void> saveMerchantUpiId(String upiId) async {
+    merchantUpiId = upiId.trim();
+    upiIdEditingController.text = merchantUpiId!;
+    HiveHelp.write(Keys.merchantUpiId, merchantUpiId);
+    Helpers.showSnackBar(msg: "Merchant UPI ID saved successfully!");
+    update();
+  }
+
+  Future<void> removeMerchantUpiId() async {
+    merchantUpiId = null;
+    upiIdEditingController.clear();
+    HiveHelp.remove(Keys.merchantUpiId);
+    Helpers.showSnackBar(msg: "Merchant UPI ID removed.");
     update();
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:paysecure/utils/app_constants.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
@@ -30,6 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     phoneNode.addListener(() {
       setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<AuthController>().clearFirebaseOtpController();
     });
     super.initState();
   }
@@ -193,7 +197,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
-                            keyboardType: TextInputType.phone,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
                             autofillHints: const [
                               AutofillHints.telephoneNumber,
                             ],
@@ -253,16 +261,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: AppButton(
                               text: storedLanguage['Send OTP via SMS'] ?? "Send OTP via SMS",
                               isLoading: controller.isLoading,
-                              bgColor: controller.firebasePhoneVal.isEmpty
+                              bgColor: controller.firebasePhoneController.text.trim().isEmpty
                                   ? AppThemes.getInactiveColor()
                                   : AppColors.mainColor,
-                              onTap: controller.firebasePhoneVal.isEmpty
+                              onTap: controller.firebasePhoneController.text.trim().isEmpty
                                   ? null
                                   : controller.isLoading
                                   ? null
                                   : () async {
                                       Helpers.hideKeyboard();
-                                      await controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                      await controller.sendFirebaseOtp(controller.firebasePhoneController.text.trim());
                                     },
                             ),
                           ),
@@ -272,11 +280,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: controller.firebasePhoneVal.isEmpty
+                              onTap: controller.firebasePhoneController.text.trim().isEmpty
                                   ? null
                                   : () {
                                       Helpers.hideKeyboard();
-                                      controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                      controller.sendFirebaseOtp(controller.firebasePhoneController.text.trim());
                                     },
                               borderRadius: BorderRadius.circular(14.r),
                               child: Container(
@@ -284,7 +292,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: controller.firebasePhoneVal.isEmpty
+                                    colors: controller.firebasePhoneController.text.trim().isEmpty
                                         ? [
                                             AppThemes.getInactiveColor(),
                                             AppThemes.getInactiveColor(),
@@ -295,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ],
                                   ),
                                   borderRadius: BorderRadius.circular(14.r),
-                                  boxShadow: controller.firebasePhoneVal.isEmpty
+                                  boxShadow: controller.firebasePhoneController.text.trim().isEmpty
                                       ? []
                                       : [
                                           BoxShadow(

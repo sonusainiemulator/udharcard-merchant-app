@@ -81,21 +81,20 @@ android {
         debug {
             minifyEnabled false
             shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
     applicationVariants.all { variant ->
-        variant.outputs.all {
+        variant.outputs.all { output ->
             def versionNameStr = variant.versionName ?: flutterVersionName
-            def versionCodeStr = variant.versionCode ?: flutterVersionCode
-            outputFileName = "udharcard-merchant-app-v${versionNameStr}-${versionCodeStr}-${variant.buildType.name}.apk"
+            outputFileName = "udharcard-merchant-app-v${versionNameStr}-${variant.buildType.name}.apk"
         }
     }
 }

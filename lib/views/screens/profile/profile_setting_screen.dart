@@ -14,6 +14,7 @@ import '../../../controllers/verification_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
 import '../../../utils/app_constants.dart';
+import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -415,168 +416,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                     ),
                                   ),
                                   VSpace(25.h),
-                                  ListView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: 8,
-                                    itemBuilder: (context, i) {
-                                      return ListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              Dimensions.kBorderRadius,
-                                        ),
-                                        onTap: () {
-                                          if (i == 0) {
-                                            Get.toNamed(
-                                              RoutesName.editProfileScreen,
-                                            );
-                                          } else if (i == 1) {
-                                            Get.toNamed(
-                                              RoutesName
-                                                  .notificationPermissionScreen,
-                                            );
-                                          } else if (i == 2) {
-                                            Get.toNamed(
-                                              RoutesName.changePasswordScreen,
-                                            );
-                                          } else if (i == 3) {
-                                            Get.toNamed(
-                                              RoutesName.qrCodeScreen,
-                                            );
-                                          } else if (i == 4) {
-                                            Get.find<VerificationController>()
-                                                .getVerificationList();
-                                            Get.toNamed(
-                                              RoutesName.verificationListScreen,
-                                            );
-                                          } else if (i == 5) {
-                                            Get.find<VerificationController>()
-                                                .getTwoFa();
-                                            Get.toNamed(
-                                              RoutesName
-                                                  .twoFaVerificationScreen,
-                                            );
-                                          } else if (i == 6) {
-                                            Get.toNamed(
-                                              RoutesName.deleteAccountScreen,
-                                            );
-                                          } else {
-                                            buildLogoutDialog(
-                                              context,
-                                              t,
-                                              storedLanguage,
-                                            );
-                                          }
-                                        },
-                                        leading: Container(
-                                          height: i == 2 ? 38.h : 36.h,
-                                          width: i == 2 ? 38.h : 36.h,
-                                          padding: EdgeInsets.all(10.h),
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              18.r,
-                                            ),
-                                            color: AppThemes.getDarkBgColor(),
-                                          ),
-                                          child:
-                                              i == 0
-                                                  ? Image.asset(
-                                                    "$rootImageDir/profile_edit.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 1
-                                                  ? Image.asset(
-                                                    "$rootImageDir/notification.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 2
-                                                  ? Image.asset(
-                                                    "$rootImageDir/lock_main.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 3
-                                                  ? Image.asset(
-                                                    "$rootImageDir/qr_payment.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 4
-                                                  ? Image.asset(
-                                                    "$rootImageDir/verification.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 5
-                                                  ? Image.asset(
-                                                    "$rootImageDir/2fa.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : i == 6
-                                                  ? Image.asset(
-                                                    "$rootImageDir/delete_account.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  )
-                                                  : Image.asset(
-                                                    "$rootImageDir/log_out.png",
-                                                    color:
-                                                        AppThemes.getIconBlackColor(),
-                                                  ),
-                                        ),
-                                        title: Text(
-                                          i == 0
-                                              ? storedLanguage['Edit Profile'] ??
-                                                  "Edit Profile"
-                                              : i == 1
-                                              ? storedLanguage['Notification'] ??
-                                                  "Notification"
-                                              : i == 2
-                                              ? storedLanguage['Change Password'] ??
-                                                  "Change Password"
-                                              : i == 3
-                                              ? storedLanguage['QR Code'] ??
-                                                  "QR Code"
-                                              : i == 4
-                                              ? storedLanguage['Identity Verification'] ??
-                                                  "Identity Verification"
-                                              : i == 5
-                                              ? storedLanguage['2FA Security'] ??
-                                                  "2FA Security"
-                                              : i == 6
-                                              ? storedLanguage['Delete Account'] ??
-                                                  "Delete Account"
-                                              : storedLanguage['Log Out'] ??
-                                                  "Log Out",
-                                          style: t.displayMedium,
-                                        ),
-                                        trailing:
-                                            i == 7
-                                                ? const SizedBox.shrink()
-                                                : Container(
-                                                  height: 36.h,
-                                                  width: 36.h,
-                                                  padding: EdgeInsets.all(10.h),
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          6.r,
-                                                        ),
-                                                    color:
-                                                        AppThemes.getDarkBgColor(),
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.arrow_forward_ios,
-                                                    size: 16.h,
-                                                  ),
-                                                ),
-                                      );
-                                    },
+                                  _buildProfileSettingsList(
+                                    context,
+                                    t,
+                                    storedLanguage,
+                                    profileController,
                                   ),
                                 ],
                               ),
@@ -590,6 +434,380 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileSettingsList(
+    BuildContext context,
+    TextTheme t,
+    dynamic storedLanguage,
+    ProfileController profileController,
+  ) {
+    final List<_ProfileMenuItem> items = [
+      _ProfileMenuItem(
+        title: storedLanguage['Edit Profile'] ?? "Edit Profile",
+        imageAsset: "$rootImageDir/profile_edit.png",
+        onTap: () => Get.toNamed(RoutesName.editProfileScreen),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Merchant UPI Address'] ?? "Merchant UPI Address",
+        iconData: Icons.account_balance_wallet_outlined,
+        subtitle: profileController.merchantUpiId != null &&
+                profileController.merchantUpiId!.isNotEmpty
+            ? profileController.merchantUpiId
+            : "Add personal/shop UPI ID",
+        onTap: () => _showUpiAddressBottomSheet(context, profileController),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Upload QR Code'] ?? "Upload QR Code",
+        imageAsset: "$rootImageDir/qr_payment.png",
+        subtitle: profileController.customQrCodePath != null
+            ? "Merchant QR Uploaded"
+            : "Upload store QR image",
+        onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
+        iconData: Icons.cloud_sync_rounded,
+        badgeText: "Coming Soon",
+        onTap: () => _showGoogleDriveComingSoonSheet(context),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Notification'] ?? "Notification",
+        imageAsset: "$rootImageDir/notification.png",
+        onTap: () => Get.toNamed(RoutesName.notificationPermissionScreen),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Identity Verification'] ?? "Identity Verification",
+        imageAsset: "$rootImageDir/verification.png",
+        onTap: () {
+          Get.find<VerificationController>().getVerificationList();
+          Get.toNamed(RoutesName.verificationListScreen);
+        },
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['2FA Security'] ?? "2FA Security",
+        imageAsset: "$rootImageDir/2fa.png",
+        onTap: () {
+          Get.find<VerificationController>().getTwoFa();
+          Get.toNamed(RoutesName.twoFaVerificationScreen);
+        },
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Delete Account'] ?? "Delete Account",
+        imageAsset: "$rootImageDir/delete_account.png",
+        onTap: () => Get.toNamed(RoutesName.deleteAccountScreen),
+      ),
+      _ProfileMenuItem(
+        title: storedLanguage['Log Out'] ?? "Log Out",
+        imageAsset: "$rootImageDir/log_out.png",
+        isLogout: true,
+        onTap: () => buildLogoutDialog(context, t, storedLanguage),
+      ),
+    ];
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      separatorBuilder: (context, index) => VSpace(4.h),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return ListTile(
+          contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: Dimensions.kBorderRadius,
+          ),
+          onTap: item.onTap,
+          leading: Container(
+            height: 38.h,
+            width: 38.h,
+            padding: EdgeInsets.all(9.h),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18.r),
+              color: AppThemes.getDarkBgColor(),
+            ),
+            child: item.iconData != null
+                ? Icon(
+                    item.iconData,
+                    size: 20.h,
+                    color: AppThemes.getIconBlackColor(),
+                  )
+                : Image.asset(
+                    item.imageAsset!,
+                    color: AppThemes.getIconBlackColor(),
+                  ),
+          ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: t.displayMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (item.badgeText != null) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade700.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: Colors.amber.shade700, width: 1.w),
+                  ),
+                  child: Text(
+                    item.badgeText!,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          subtitle: item.subtitle != null
+              ? Text(
+                  item.subtitle!,
+                  style: t.bodySmall?.copyWith(
+                    color: AppThemes.getBlack50Color(),
+                    fontSize: 11.sp,
+                  ),
+                )
+              : null,
+          trailing: item.isLogout
+              ? const SizedBox.shrink()
+              : Container(
+                  height: 32.h,
+                  width: 32.h,
+                  padding: EdgeInsets.all(8.h),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6.r),
+                    color: AppThemes.getDarkBgColor(),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14.h,
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
+  void _showUpiAddressBottomSheet(
+    BuildContext context,
+    ProfileController profileController,
+  ) {
+    final TextEditingController upiCtrl = TextEditingController(
+      text: profileController.merchantUpiId ?? '',
+    );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
+            left: 20.w,
+            right: 20.w,
+            top: 24.h,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Merchant UPI Address",
+                    style: context.t.displayMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18.sp,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  )
+                ],
+              ),
+              VSpace(10.h),
+              Text(
+                "Add your UPI ID (e.g., shop@upi or 9876543210@paytm) so customers can send payments directly to your UPI handle.",
+                style: context.t.displaySmall?.copyWith(
+                  color: AppThemes.getParagraphColor(),
+                ),
+              ),
+              VSpace(20.h),
+              TextField(
+                controller: upiCtrl,
+                style: context.t.displayMedium,
+                decoration: InputDecoration(
+                  hintText: "Enter UPI ID (e.g. name@upi)",
+                  prefixIcon: Icon(Icons.qr_code, color: AppColors.mainColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  filled: true,
+                  fillColor: AppThemes.getFillColor(),
+                ),
+              ),
+              VSpace(24.h),
+              Row(
+                children: [
+                  if (profileController.merchantUpiId != null &&
+                      profileController.merchantUpiId!.isNotEmpty) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.redAccent),
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                        ),
+                        onPressed: () {
+                          profileController.removeMerchantUpiId();
+                          Navigator.pop(context);
+                        },
+                        child: Text(
+                          "Remove",
+                          style: TextStyle(color: Colors.redAccent, fontSize: 14.sp),
+                        ),
+                      ),
+                    ),
+                    HSpace(12.w),
+                  ],
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.mainColor,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (upiCtrl.text.trim().isEmpty) {
+                          Helpers.showSnackBar(msg: "Please enter a valid UPI ID");
+                          return;
+                        }
+                        profileController.saveMerchantUpiId(upiCtrl.text.trim());
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        "Save UPI ID",
+                        style: TextStyle(
+                          color: AppColors.blackColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              VSpace(10.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showGoogleDriveComingSoonSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 24.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: AppColors.mainColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.cloud_sync_rounded,
+                    size: 48.r,
+                    color: AppColors.mainColor,
+                  ),
+                ),
+                VSpace(16.h),
+                Text(
+                  "Google Drive Backup",
+                  style: context.t.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                VSpace(8.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade700.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: Colors.amber.shade700),
+                  ),
+                  child: Text(
+                    "Coming Soon",
+                    style: TextStyle(
+                      color: Colors.amber.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
+                VSpace(16.h),
+                Text(
+                  "Automated Google Drive cloud backup for your shop ledgers and customer transaction history will be available in the upcoming release!",
+                  textAlign: TextAlign.center,
+                  style: context.t.displayMedium?.copyWith(
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(24.h),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.mainColor,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      "Got It",
+                      style: TextStyle(
+                        color: AppColors.blackColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -637,4 +855,24 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
       },
     );
   }
+}
+
+class _ProfileMenuItem {
+  final String title;
+  final String? imageAsset;
+  final IconData? iconData;
+  final String? subtitle;
+  final String? badgeText;
+  final bool isLogout;
+  final VoidCallback onTap;
+
+  _ProfileMenuItem({
+    required this.title,
+    this.imageAsset,
+    this.iconData,
+    this.subtitle,
+    this.badgeText,
+    this.isLogout = false,
+    required this.onTap,
+  });
 }

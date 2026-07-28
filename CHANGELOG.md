@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.15] - 2026-07-28
+
+### 🐛 Bug Fixes
+- **Login Error Banner**: Fixed the issue where old login error messages persisted when opening the login screens or coming back to them. Added state clearing in `initState` and set up automatic error clearing as soon as the user starts correcting/typing their number.
+- **Error Formatting**: Replaced raw Firebase exceptions (such as `[ TOO_SHORT ]`) with readable, user-friendly messages.
+
+---
+
+## [1.0.14] - 2026-07-28
+
+### ✨ UI/UX Improvements
+- **Numeric Keyboard & Constraints**: Restricted all mobile number input fields to open the numeric keyboard only. Enforced digits-only input and restricted length to exactly 10 digits to prevent users from accidentally typing country codes twice.
+
+---
+
+## [1.0.13] - 2026-07-28
+
+### 🐛 Bug Fixes
+- **OTP Login Buttons**: Fixed a bug where "Send OTP via SMS" and "Send OTP via WhatsApp" buttons remained in a disabled state when autofilling or copy-pasting numbers. Added direct text editing controller listeners to ensure buttons instantly enable on any input changes.
+
+---
+
 ## [1.0.12] - 2026-07-28
 
 ### ✨ UI/UX Improvements

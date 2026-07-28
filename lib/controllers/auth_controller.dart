@@ -16,6 +16,25 @@ class AuthController extends GetxController {
 
   bool isLoading = false;
 
+  @override
+  void onInit() {
+    super.onInit();
+    firebasePhoneController.addListener(() {
+      firebasePhoneVal = firebasePhoneController.text.trim();
+      loginErrorMessage = null;
+      update();
+    });
+  }
+
+  @override
+  void onClose() {
+    firebasePhoneController.dispose();
+    firebaseOtpController.dispose();
+    userNameEditingController.dispose();
+    signInPassEditingController.dispose();
+    super.onClose();
+  }
+
   // -----------------------sign in--------------------------
   TextEditingController userNameEditingController = TextEditingController();
   TextEditingController signInPassEditingController = TextEditingController();
@@ -287,6 +306,7 @@ class AuthController extends GetxController {
     firebasePhoneVal = "";
     firebaseOtpVal = "";
     firebaseVerificationId = null;
+    loginErrorMessage = null;
   }
 
   Future sendFirebaseOtp(String phoneNumber) async {
@@ -305,9 +325,15 @@ class AuthController extends GetxController {
         },
         verificationFailed: (FirebaseAuthException e) {
           isLoading = false;
-          loginErrorMessage = e.message ?? 'Verification failed';
+          String errorMsg = e.message ?? 'Verification failed';
+          if (errorMsg.contains('TOO_SHORT') || e.code == 'invalid-phone-number') {
+            errorMsg = 'Please enter a valid 10-digit mobile number.';
+          } else if (errorMsg.contains('blocked')) {
+            errorMsg = 'This phone number has been blocked due to too many requests. Please try again later.';
+          }
+          loginErrorMessage = errorMsg;
           update();
-          Helpers.showSnackBar(msg: e.message ?? 'Verification failed', title: "Error!");
+          Helpers.showSnackBar(msg: errorMsg, title: "Error!");
         },
         codeSent: (String verificationId, int? resendToken) {
           isLoading = false;

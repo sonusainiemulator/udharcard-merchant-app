@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:paysecure/config/app_colors.dart';
@@ -22,6 +23,14 @@ class FirebasePhoneLoginScreen extends StatefulWidget {
 }
 
 class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<AuthController>().clearFirebaseOtpController();
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
@@ -116,7 +125,11 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                               ],
                             ),
                           ),
-                          keyboardType: TextInputType.phone,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
                           autofillHints: const [AutofillHints.telephoneNumber],
                           controller: controller.firebasePhoneController,
                           onChanged: (v) {
@@ -131,16 +144,16 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                           child: AppButton(
                             text: storedLanguage['Send OTP via SMS'] ?? "Send OTP via SMS",
                             isLoading: controller.isLoading,
-                            bgColor: controller.firebasePhoneVal.isEmpty
+                            bgColor: controller.firebasePhoneController.text.trim().isEmpty
                                 ? AppThemes.getInactiveColor()
                                 : AppColors.mainColor,
-                            onTap: controller.firebasePhoneVal.isEmpty
+                            onTap: controller.firebasePhoneController.text.trim().isEmpty
                                 ? null
                                 : controller.isLoading
                                 ? null
                                 : () async {
                                     Helpers.hideKeyboard();
-                                    await controller.sendFirebaseOtp(controller.firebasePhoneVal);
+                                    await controller.sendFirebaseOtp(controller.firebasePhoneController.text.trim());
                                   },
                           ),
                         ),
@@ -150,10 +163,10 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                           child: AppButton(
                             text: storedLanguage['Send OTP via WhatsApp (Coming Soon)'] ?? "Send OTP via WhatsApp (Coming Soon)",
                             isLoading: false,
-                            bgColor: controller.firebasePhoneVal.isEmpty
+                            bgColor: controller.firebasePhoneController.text.trim().isEmpty
                                 ? AppThemes.getInactiveColor()
                                 : const Color(0xFF25D366), // WhatsApp Green
-                            onTap: controller.firebasePhoneVal.isEmpty
+                            onTap: controller.firebasePhoneController.text.trim().isEmpty
                                 ? null
                                 : () {
                                     Helpers.hideKeyboard();
