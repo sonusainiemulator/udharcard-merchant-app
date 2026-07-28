@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.16] - 2026-07-29
+
+### 🚀 Features & Enhancements
+- **Merchant Profile Updates**: Added Google Drive Backup (Coming Soon) option, Merchant UPI Address management (persisted & used for dynamic payments), and direct Upload QR Code option. Removed Change Password option.
+- **Voice Entry Fixes**: Fixed Android microphone permission (`RECORD_AUDIO`) and iOS permissions (`NSMicrophoneUsageDescription`), improved offline Hinglish/English NLP parsing (`"Ramesh 500 udhar diya"`), and added direct "Post to Udhar" button on voice transaction cards.
+- **KYC Feature Documentation**: Created comprehensive step-by-step KYC architecture and workflow documentation (`docs/KYC_DOCUMENTATION.md`).
+
+---
+
 ## [1.0.15] - 2026-07-28
 
 ### 🐛 Bug Fixes
