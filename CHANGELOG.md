@@ -9,8 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.18] - 2026-07-29
 
-### ✨ UI/UX Redesign
-- **Simplified Profile Settings Layout**: Redesigned the profile screen with a clean hero profile header, sleek segmented theme mode selector (`Auto`/`Dark`/`Light`), and organized grouped card sections (**Store & Payments**, **Data & Backup**, **Security & Preferences**, **Account**). Removed double-nested containers and noisy dot divider lines.
+### 🎨 Complete Mobbin-Inspired Fintech UI Redesign
+- **Centralized Fintech UI System**: Introduced `FintechUI` component kit (`fintech_ui_kit.dart` & `fintech_auth_widgets.dart`) with modern elevated cards, standardized primary CTA buttons, and high-legibility input fields.
+- **Minimalist Splash Screen**: Redesigned `splash_screen.dart` with a clean white canvas, smooth logo fade & slide entrance animations, and refined typography.
+- **Onboarding Experience**: Redesigned `onbording_screen.dart` with card-encapsulated illustrations, top branding bar, animated pill page indicators, and modern CTA buttons.
+- **Authentication Screens**: Re-architected `login_screen.dart` and `register_screen.dart` into clean, high-security layouts with "+91" mobile number prefixes, alert error banners, and bank-grade trust badges.
+- **Modern Bottom Navigation Bar**: Upgraded `bottom_nav_bar.dart` into a high-elevation, animated soft-pill navigation bar with active tab highlights inspired by top-tier banking apps (Revolut, Stripe, Cash App).
+- **Profile Settings Refinements**: Redesigned profile setting screens with hero header cards, segmented theme selectors, and organized grouped sections.
+- **Automated GitHub Release Pipeline**: Integrated versioned APK artifact naming (`udharcard-merchant-app-v1.0.18-release.apk` & `udharcard-merchant-app-v1.0.18-debug.apk`) and automated uploads to GitHub Release `v1.0.18`.
 
 ---
 
