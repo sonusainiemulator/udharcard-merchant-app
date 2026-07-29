@@ -106,322 +106,174 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           : const SizedBox(),
                 ),
                 body: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Column(
                     children: [
-                      // HEADER PORTION
-                      GestureDetector(
-                        onTap: () {
-                          if (Get.find<ProfileController>().userPhoto != '') {
-                            Get.to(
-                              () => Scaffold(
-                                appBar: const CustomAppBar(title: ""),
-                                body: PhotoView(
-                                  imageProvider: NetworkImage(
-                                    Get.find<ProfileController>().userPhoto,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: Container(
-                          height: 110.h,
-                          width: 110.h,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24.r),
-                            border: Border.all(
-                              color: AppColors.mainColor,
-                              width: 4.h,
-                            ),
-                            color: AppColors.imageBgColor,
-                            image:
-                                Get.find<ProfileController>().isLoading ||
-                                        Get.find<ProfileController>()
-                                                .userPhoto ==
-                                            ''
-                                    ? DecorationImage(
-                                      image: AssetImage(
-                                        "$rootImageDir/avatar.webp",
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
-                                    : DecorationImage(
-                                      image: CachedNetworkImageProvider(
-                                        Get.find<ProfileController>().userPhoto,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
+                      // ── Profile Hero Header ────────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+                            width: 0.5,
                           ),
                         ),
-                      ),
-                      VSpace(12.h),
-                      Text(
-                        Get.find<ProfileController>().isLoading
-                            ? ""
-                            : Get.find<ProfileController>().userName,
-                        style: t.bodyLarge,
-                      ),
-                      VSpace(5.h),
-                      Text(
-                        Get.find<ProfileController>().isLoading
-                            ? ""
-                            : storedLanguage['Joined At'] ??
-                                "Joined At " +
-                                            Get.find<ProfileController>()
-                                                .join_date ==
-                                        "null" ||
-                                    Get.find<ProfileController>().join_date ==
-                                        ""
-                            ? ""
-                            : DateFormat('d MMMM y').format(
-                              DateTime.parse(
-                                Get.find<ProfileController>().join_date,
-                              ),
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: t.bodySmall?.copyWith(
-                          color: AppThemes.getBlack50Color(),
-                        ),
-                      ),
-
-                      VSpace(35.h),
-
-                      // FOOTER PORTION
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 32.h,
-                          horizontal: 20.w,
-                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 12.h,
-                                  height: 12.h,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.mainColor,
-                                      width: 2.h,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Container(
-                                    height: 2.h,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          AppColors
-                                              .mainColor, // E5F788 with 100% opacity
-                                          AppColors.mainColor.withValues(
-                                            alpha: 0,
-                                          ), // E5F788 with 0% opacity
-                                        ],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
+                            GestureDetector(
+                              onTap: () {
+                                if (Get.find<ProfileController>().userPhoto != '') {
+                                  Get.to(
+                                    () => Scaffold(
+                                      appBar: const CustomAppBar(title: ""),
+                                      body: PhotoView(
+                                        imageProvider: NetworkImage(
+                                          Get.find<ProfileController>().userPhoto,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Text(
-                                  storedLanguage['Theme Mode'] ?? "Theme Mode",
-                                  style: context.t.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Container(
-                                    height: 2.h,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          AppColors.mainColor.withValues(
-                                            alpha: 0,
-                                          ), // E5F788 with 0% opacity
-                                          AppColors
-                                              .mainColor, // E5F788 with 100% opacity
-                                        ],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  width: 12.h,
-                                  height: 12.h,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.mainColor,
-                                      width: 2.h,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            VSpace(16.h),
-                            Container(
-                              height: 48.h,
-                              width: double.maxFinite,
-                              padding: EdgeInsets.all(6.h),
-                              decoration: BoxDecoration(
-                                color: AppThemes.getFillColor(),
-                                borderRadius: Dimensions.kBorderRadius,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                  );
+                                }
+                              },
+                              child: Stack(
                                 children: [
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: Dimensions.kBorderRadius,
-                                      onTap: () {
-                                        appController.selectedIndex = 0;
-                                        appController.onChanged(null);
-                                        appController.update();
-                                      },
-                                      child: Ink(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 6.h,
-                                          horizontal: 35.w,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              appController.selectedIndex == 0
-                                                  ? Get.isDarkMode
-                                                      ? AppColors.darkBgColor
-                                                      : AppColors.whiteColor
-                                                  : Colors.transparent,
-                                          borderRadius:
-                                              Dimensions.kBorderRadius,
-                                        ),
-                                        child: Text(
-                                          storedLanguage['Auto'] ?? "Auto",
-                                          style: context.t.bodyMedium?.copyWith(
-                                            fontSize: 14.sp,
-                                            color:
-                                                appController.selectedIndex == 0
-                                                    ? AppColors.blackColor
-                                                    : Get.isDarkMode
-                                                    ? AppColors.whiteColor
-                                                    : AppColors.blackColor,
-                                          ),
-                                        ),
+                                  Container(
+                                    height: 90.h,
+                                    width: 90.h,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.mainColor,
+                                        width: 3.h,
                                       ),
+                                      color: AppColors.imageBgColor,
+                                      image: Get.find<ProfileController>().isLoading ||
+                                              Get.find<ProfileController>().userPhoto == ''
+                                          ? DecorationImage(
+                                              image: AssetImage("$rootImageDir/avatar.webp"),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : DecorationImage(
+                                              image: CachedNetworkImageProvider(
+                                                Get.find<ProfileController>().userPhoto,
+                                              ),
+                                              fit: BoxFit.cover,
+                                            ),
                                     ),
                                   ),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: Dimensions.kBorderRadius,
-                                      onTap: () {
-                                        appController.selectedIndex = 1;
-                                        appController.onChanged(true);
-                                        appController.update();
-                                      },
-                                      child: Ink(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 6.h,
-                                          horizontal: 35.w,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              appController.selectedIndex == 1
-                                                  ? Get.isDarkMode
-                                                      ? AppColors.darkBgColor
-                                                      : AppColors.whiteColor
-                                                  : Colors.transparent,
-                                          borderRadius:
-                                              Dimensions.kBorderRadius,
-                                        ),
-                                        child: Text(
-                                          storedLanguage['On'] ?? "On",
-                                          style: context.t.bodyMedium?.copyWith(
-                                            fontSize: 14.sp,
-                                            color:
-                                                appController.selectedIndex == 1
-                                                    ? AppColors.whiteColor
-                                                    : Get.isDarkMode
-                                                    ? AppColors.whiteColor
-                                                    : AppColors.blackColor,
-                                          ),
-                                        ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: EdgeInsets.all(4.h),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.mainColor,
+                                        shape: BoxShape.circle,
                                       ),
-                                    ),
-                                  ),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: Dimensions.kBorderRadius,
-                                      onTap: () {
-                                        appController.selectedIndex = 2;
-                                        appController.onChanged(false);
-                                        appController.update();
-                                      },
-                                      child: Ink(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 6.h,
-                                          horizontal: 35.w,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              appController.selectedIndex == 2
-                                                  ? AppColors.whiteColor
-                                                  : Colors.transparent,
-                                          borderRadius:
-                                              Dimensions.kBorderRadius,
-                                        ),
-                                        child: Text(
-                                          storedLanguage['Off'] ?? "Off",
-                                          style: context.t.bodyMedium?.copyWith(
-                                            fontSize: 14.sp,
-                                            color:
-                                                appController.selectedIndex == 2
-                                                    ? AppColors.blackColor
-                                                    : Get.isDarkMode
-                                                    ? AppColors.whiteColor
-                                                    : AppColors.blackColor,
-                                          ),
-                                        ),
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        size: 16.sp,
+                                        color: AppColors.blackColor,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            VSpace(40.h),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24.w,
-                                vertical: 20.h,
+                            VSpace(12.h),
+                            Text(
+                              Get.find<ProfileController>().isLoading
+                                  ? ""
+                                  : Get.find<ProfileController>().userName,
+                              style: t.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18.sp,
                               ),
-                              decoration: BoxDecoration(
-                                color: AppThemes.getFillColor(),
-                                borderRadius: Dimensions.kBorderRadius,
+                            ),
+                            VSpace(4.h),
+                            Text(
+                              Get.find<ProfileController>().isLoading
+                                  ? ""
+                                  : (Get.find<ProfileController>().join_date != "null" &&
+                                          Get.find<ProfileController>().join_date.isNotEmpty)
+                                      ? "Member since ${DateFormat('MMM yyyy').format(DateTime.parse(Get.find<ProfileController>().join_date))}"
+                                      : "Active Merchant Account",
+                              style: t.bodySmall?.copyWith(
+                                color: AppThemes.getBlack50Color(),
+                                fontSize: 12.sp,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    storedLanguage['Profile Settings'] ??
-                                        "Profile Settings",
-                                    style: t.bodyLarge?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 20.sp,
-                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      VSpace(16.h),
+
+                      // ── Appearance / Theme Switcher Card ───────────────────
+                      Container(
+                        padding: EdgeInsets.all(16.h),
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.brightness_6_outlined, size: 18.sp, color: AppColors.mainColor),
+                                HSpace(8.w),
+                                Text(
+                                  storedLanguage['Theme Mode'] ?? "Theme Mode",
+                                  style: t.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.sp,
                                   ),
-                                  VSpace(25.h),
-                                  _buildProfileSettingsList(
-                                    context,
-                                    t,
-                                    storedLanguage,
-                                    profileController,
+                                ),
+                              ],
+                            ),
+                            VSpace(12.h),
+                            Container(
+                              height: 42.h,
+                              padding: EdgeInsets.all(4.h),
+                              decoration: BoxDecoration(
+                                color: Get.isDarkMode ? AppColors.darkBgColor : AppColors.black10.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Row(
+                                children: [
+                                  _buildSegmentTab(
+                                    label: storedLanguage['Auto'] ?? "Auto",
+                                    isSelected: appController.selectedIndex == 0,
+                                    onTap: () {
+                                      appController.selectedIndex = 0;
+                                      appController.onChanged(null);
+                                      appController.update();
+                                    },
+                                  ),
+                                  _buildSegmentTab(
+                                    label: storedLanguage['Dark'] ?? "Dark",
+                                    isSelected: appController.selectedIndex == 1,
+                                    onTap: () {
+                                      appController.selectedIndex = 1;
+                                      appController.onChanged(true);
+                                      appController.update();
+                                    },
+                                  ),
+                                  _buildSegmentTab(
+                                    label: storedLanguage['Light'] ?? "Light",
+                                    isSelected: appController.selectedIndex == 2,
+                                    onTap: () {
+                                      appController.selectedIndex = 2;
+                                      appController.onChanged(false);
+                                      appController.update();
+                                    },
                                   ),
                                 ],
                               ),
@@ -429,6 +281,132 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           ],
                         ),
                       ),
+                      VSpace(16.h),
+
+                      // ── Section 1: Store & Payments ───────────────────────
+                      _buildGroupedSection(
+                        title: storedLanguage['Store & Payments'] ?? "Store & Payments",
+                        items: [
+                          _ProfileMenuItem(
+                            title: storedLanguage['Edit Profile'] ?? "Edit Profile",
+                            iconData: Icons.person_outline_rounded,
+                            onTap: () => Get.toNamed(RoutesName.editProfileScreen),
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Merchant UPI Address'] ?? "Merchant UPI Address",
+                            iconData: Icons.account_balance_wallet_outlined,
+                            subtitle: profileController.merchantUpiId != null &&
+                                    profileController.merchantUpiId!.isNotEmpty
+                                ? profileController.merchantUpiId
+                                : "Add personal/shop UPI ID",
+                            onTap: () => _showUpiAddressBottomSheet(context, profileController),
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Upload QR Code'] ?? "Upload QR Code",
+                            iconData: Icons.qr_code_scanner_rounded,
+                            subtitle: profileController.customQrCodePath != null
+                                ? "Merchant QR Uploaded"
+                                : "Upload store QR image",
+                            onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
+                          ),
+                        ],
+                        t: t,
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 2: Data & Backup ──────────────────────────
+                      _buildGroupedSection(
+                        title: storedLanguage['Data & Backup'] ?? "Data & Backup",
+                        items: [
+                          _ProfileMenuItem(
+                            title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
+                            iconData: Icons.upload_file_rounded,
+                            subtitle: "Save JSON backup to phone/share",
+                            onTap: () => UdharController.to.exportLedgerBackup(),
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Restore Backup'] ?? "Restore Backup",
+                            iconData: Icons.download_for_offline_rounded,
+                            subtitle: "Restore customer ledgers from backup file",
+                            onTap: () => UdharController.to.importLedgerBackup(),
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
+                            iconData: Icons.cloud_sync_rounded,
+                            badgeText: "Coming Soon",
+                            onTap: () => _showGoogleDriveComingSoonSheet(context),
+                          ),
+                        ],
+                        t: t,
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 3: Security & Preferences ───────────────
+                      _buildGroupedSection(
+                        title: storedLanguage['Security & Preferences'] ?? "Security & Preferences",
+                        items: [
+                          _ProfileMenuItem(
+                            title: storedLanguage['Notification'] ?? "Notification",
+                            iconData: Icons.notifications_none_rounded,
+                            onTap: () => Get.toNamed(RoutesName.notificationPermissionScreen),
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Identity Verification'] ?? "Identity Verification",
+                            iconData: Icons.verified_user_outlined,
+                            onTap: () {
+                              Get.find<VerificationController>().getVerificationList();
+                              Get.toNamed(RoutesName.verificationListScreen);
+                            },
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['2FA Security'] ?? "2FA Security",
+                            iconData: Icons.security_outlined,
+                            onTap: () {
+                              Get.find<VerificationController>().getTwoFa();
+                              Get.toNamed(RoutesName.twoFaVerificationScreen);
+                            },
+                          ),
+                          _ProfileMenuItem(
+                            title: storedLanguage['Delete Account'] ?? "Delete Account",
+                            iconData: Icons.delete_outline_rounded,
+                            onTap: () => Get.toNamed(RoutesName.deleteAccountScreen),
+                          ),
+                        ],
+                        t: t,
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 4: Log Out ─────────────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: AppColors.redColor.withValues(alpha: 0.3),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: ListTile(
+                          onTap: () => buildLogoutDialog(context, t, storedLanguage),
+                          leading: Container(
+                            height: 36.h,
+                            width: 36.h,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.redColor.withValues(alpha: 0.1),
+                            ),
+                            child: Icon(Icons.logout_rounded, color: AppColors.redColor, size: 20.sp),
+                          ),
+                          title: Text(
+                            storedLanguage['Log Out'] ?? "Log Out",
+                            style: t.bodyMedium?.copyWith(
+                              color: AppColors.redColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      VSpace(30.h),
                     ],
                   ),
                 ),
@@ -440,175 +418,160 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     );
   }
 
-  Widget _buildProfileSettingsList(
-    BuildContext context,
-    TextTheme t,
-    dynamic storedLanguage,
-    ProfileController profileController,
-  ) {
-    final List<_ProfileMenuItem> items = [
-      _ProfileMenuItem(
-        title: storedLanguage['Edit Profile'] ?? "Edit Profile",
-        imageAsset: "$rootImageDir/profile_edit.png",
-        onTap: () => Get.toNamed(RoutesName.editProfileScreen),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Merchant UPI Address'] ?? "Merchant UPI Address",
-        iconData: Icons.account_balance_wallet_outlined,
-        subtitle: profileController.merchantUpiId != null &&
-                profileController.merchantUpiId!.isNotEmpty
-            ? profileController.merchantUpiId
-            : "Add personal/shop UPI ID",
-        onTap: () => _showUpiAddressBottomSheet(context, profileController),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Upload QR Code'] ?? "Upload QR Code",
-        imageAsset: "$rootImageDir/qr_payment.png",
-        subtitle: profileController.customQrCodePath != null
-            ? "Merchant QR Uploaded"
-            : "Upload store QR image",
-        onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
-        iconData: Icons.upload_file_rounded,
-        subtitle: "Export JSON backup of customer ledgers",
-        onTap: () => UdharController.to.exportLedgerBackup(),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Restore Backup'] ?? "Restore Backup",
-        iconData: Icons.download_for_offline_rounded,
-        subtitle: "Restore customer ledgers from backup file",
-        onTap: () => UdharController.to.importLedgerBackup(),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
-        iconData: Icons.cloud_sync_rounded,
-        badgeText: "Coming Soon",
-        onTap: () => _showGoogleDriveComingSoonSheet(context),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Notification'] ?? "Notification",
-        imageAsset: "$rootImageDir/notification.png",
-        onTap: () => Get.toNamed(RoutesName.notificationPermissionScreen),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Identity Verification'] ?? "Identity Verification",
-        imageAsset: "$rootImageDir/verification.png",
-        onTap: () {
-          Get.find<VerificationController>().getVerificationList();
-          Get.toNamed(RoutesName.verificationListScreen);
-        },
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['2FA Security'] ?? "2FA Security",
-        imageAsset: "$rootImageDir/2fa.png",
-        onTap: () {
-          Get.find<VerificationController>().getTwoFa();
-          Get.toNamed(RoutesName.twoFaVerificationScreen);
-        },
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Delete Account'] ?? "Delete Account",
-        imageAsset: "$rootImageDir/delete_account.png",
-        onTap: () => Get.toNamed(RoutesName.deleteAccountScreen),
-      ),
-      _ProfileMenuItem(
-        title: storedLanguage['Log Out'] ?? "Log Out",
-        imageAsset: "$rootImageDir/log_out.png",
-        isLogout: true,
-        onTap: () => buildLogoutDialog(context, t, storedLanguage),
-      ),
-    ];
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      separatorBuilder: (context, index) => VSpace(4.h),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: Dimensions.kBorderRadius,
+  Widget _buildSegmentTab({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10.r),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
           ),
-          onTap: item.onTap,
-          leading: Container(
-            height: 38.h,
-            width: 38.h,
-            padding: EdgeInsets.all(9.h),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18.r),
-              color: AppThemes.getDarkBgColor(),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? (Get.isDarkMode ? AppColors.whiteColor : AppColors.blackColor)
+                  : AppColors.black50,
             ),
-            child: item.iconData != null
-                ? Icon(
-                    item.iconData,
-                    size: 20.h,
-                    color: AppThemes.getIconBlackColor(),
-                  )
-                : Image.asset(
-                    item.imageAsset!,
-                    color: AppThemes.getIconBlackColor(),
-                  ),
           ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: t.displayMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedSection({
+    required String title,
+    required List<_ProfileMenuItem> items,
+    required TextTheme t,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppThemes.getFillColor(),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 14.h, bottom: 6.h),
+            child: Text(
+              title.toUpperCase(),
+              style: t.bodySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 11.sp,
+                color: AppColors.mainColor,
+                letterSpacing: 0.8,
               ),
-              if (item.badgeText != null) ...[
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade700.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(color: Colors.amber.shade700, width: 1.w),
-                  ),
-                  child: Text(
-                    item.badgeText!,
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
-          subtitle: item.subtitle != null
-              ? Text(
-                  item.subtitle!,
-                  style: t.bodySmall?.copyWith(
-                    color: AppThemes.getBlack50Color(),
-                    fontSize: 11.sp,
-                  ),
-                )
-              : null,
-          trailing: item.isLogout
-              ? const SizedBox.shrink()
-              : Container(
-                  height: 32.h,
-                  width: 32.h,
-                  padding: EdgeInsets.all(8.h),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              indent: 52.w,
+              endIndent: 16.w,
+              color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.3),
+            ),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+                onTap: item.onTap,
+                leading: Container(
+                  height: 36.h,
+                  width: 36.h,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6.r),
-                    color: AppThemes.getDarkBgColor(),
+                    shape: BoxShape.circle,
+                    color: AppColors.mainColor.withValues(alpha: 0.12),
                   ),
-                  child: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14.h,
-                  ),
+                  child: item.iconData != null
+                      ? Icon(item.iconData, size: 20.sp, color: AppColors.blackColor)
+                      : (item.imageAsset != null
+                          ? Center(
+                              child: Image.asset(
+                                item.imageAsset!,
+                                height: 18.sp,
+                                width: 18.sp,
+                                color: AppColors.blackColor,
+                              ),
+                            )
+                          : Icon(Icons.tune, size: 20.sp, color: AppColors.blackColor)),
                 ),
-        );
-      },
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: t.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                    ),
+                    if (item.badgeText != null) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade700.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                        ),
+                        child: Text(
+                          item.badgeText!,
+                          style: TextStyle(
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                subtitle: item.subtitle != null
+                    ? Text(
+                        item.subtitle!,
+                        style: t.bodySmall?.copyWith(
+                          color: AppThemes.getBlack50Color(),
+                          fontSize: 11.sp,
+                        ),
+                      )
+                    : null,
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20.sp,
+                  color: AppColors.black30,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

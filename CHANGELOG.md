@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.18] - 2026-07-29
+
+### ✨ UI/UX Redesign
+- **Simplified Profile Settings Layout**: Redesigned the profile screen with a clean hero profile header, sleek segmented theme mode selector (`Auto`/`Dark`/`Light`), and organized grouped card sections (**Store & Payments**, **Data & Backup**, **Security & Preferences**, **Account**). Removed double-nested containers and noisy dot divider lines.
+
+---
+
+## [1.0.17] - 2026-07-29
+
+### 🚀 Core Production Features
+- **One-Tap WhatsApp Payment Reminder**: Added direct WhatsApp payment collection button with personalized Hinglish message and dynamic UPI payment URL.
+- **Phonebook Contact Import**: Integrated `flutter_contacts` to import customer name and 10-digit mobile number directly from device contacts.
+- **Local Ledger Backup & Restore**: Built JSON export & restore capability for all customer credit ledgers, transactions, and merchant settings via `share_plus` and `file_picker`.
+
+---
+
 ## [1.0.16] - 2026-07-29
 
 ### 🚀 Features & Enhancements
