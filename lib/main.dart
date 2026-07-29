@@ -35,6 +35,7 @@ void main() async {
   }
   await initHive();
   _initializeApp();
+  Get.put(AppController(), permanent: true);
   runApp(const MyApp());
 }
 
