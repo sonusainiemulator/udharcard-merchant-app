@@ -2,18 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import '../../../../config/app_colors.dart';
-import '../../../config/dimensions.dart';
-import '../../../controllers/auth_controller.dart';
-import '../../../themes/themes.dart';
-import '../../../utils/app_constants.dart';
-import '../../../utils/services/helpers.dart';
-import '../../../utils/services/localstorage/hive.dart';
-import '../../../utils/services/localstorage/keys.dart';
-import '../../widgets/app_button.dart';
-import '../../widgets/app_textfield.dart';
-import '../../widgets/custom_appbar.dart';
-import '../../widgets/spacing.dart';
+import 'package:paysecure/config/app_colors.dart';
+import 'package:paysecure/controllers/auth_controller.dart';
+import 'package:paysecure/utils/services/helpers.dart';
+import 'package:paysecure/utils/services/localstorage/hive.dart';
+import 'package:paysecure/utils/services/localstorage/keys.dart';
+import 'package:paysecure/views/widgets/fintech_auth_widgets.dart';
 
 class OtpScreen extends StatelessWidget {
   const OtpScreen({super.key});
@@ -21,269 +15,152 @@ class OtpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AuthController controller = Get.find<AuthController>();
-    TextTheme t = Theme.of(context).textTheme;
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
-    return GetBuilder<AuthController>(builder: (_) {
-      return Scaffold(
-          appBar: CustomAppBar(
-            title: storedLanguage['Verify Email'] ?? 'Veify Email',
-            actions: [],
-          ),
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: Dimensions.kDefaultPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 70.h),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GetBuilder<AuthController>(
+      builder: (_) {
+        final isFilled = controller.otpVal1.isNotEmpty &&
+            controller.otpVal2.isNotEmpty &&
+            controller.otpVal3.isNotEmpty &&
+            controller.otpVal4.isNotEmpty &&
+            controller.otpVal5.isNotEmpty;
+
+        return FintechAuthPage(
+          eyebrow: 'Security Check',
+          title: storedLanguage['Verify Email'] ?? 'Verify Email',
+          subtitle:
+              storedLanguage['Enter the 5 digits code that you received on your email'] ??
+              'Enter the 5-digit security code sent to your email address.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 5-Digit PIN Boxes
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(5, (index) {
+                  final controllers = [
+                    controller.otpEditingController1,
+                    controller.otpEditingController2,
+                    controller.otpEditingController3,
+                    controller.otpEditingController4,
+                    controller.otpEditingController5,
+                  ];
+                  return Container(
+                    height: 54.h,
+                    width: 50.w,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF101828) : const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(14.r),
+                      border: Border.all(
+                        color: controllers[index].text.isNotEmpty
+                            ? AppColors.mainColor
+                            : const Color(0xFFD0D5DD),
+                        width: controllers[index].text.isNotEmpty ? 1.6 : 1.0,
+                      ),
+                    ),
                     child: Center(
-                      child: Image.asset(
-                        "$rootImageDir/email_verify_header.png",
-                        height: 200.h,
-                        fit: BoxFit.cover,
+                      child: TextField(
+                        controller: controllers[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF101828),
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(1),
+                        ],
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (v) {
+                          if (index == 0) controller.otpVal1 = v;
+                          if (index == 1) controller.otpVal2 = v;
+                          if (index == 2) controller.otpVal3 = v;
+                          if (index == 3) controller.otpVal4 = v;
+                          if (index == 4) controller.otpVal5 = v;
+
+                          if (v.length == 1 && index < 4) {
+                            FocusScope.of(context).nextFocus();
+                          } else if (v.isEmpty && index > 0) {
+                            FocusScope.of(context).previousFocus();
+                          } else if (v.length == 1 && index == 4) {
+                            Helpers.hideKeyboard();
+                          }
+                          controller.update();
+                        },
                       ),
                     ),
-                  ),
-                  VSpace(60.h),
-                  Center(
-                    child: Text(
-                      'Enter the 5 digits code that you\nreceived on your email',
-                      textAlign: TextAlign.center,
-                      style: t.displayMedium?.copyWith(
-                          color: AppThemes.getParagraphColor(), height: 1.75),
+                  );
+                }),
+              ),
+              SizedBox(height: 24.h),
+
+              // Resend Code Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    storedLanguage['Don\'t receive any code?'] ??
+                        "Didn't receive code?",
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF98A2B3) : const Color(0xFF667085),
+                      fontSize: 13.sp,
                     ),
                   ),
-                  VSpace(48.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          padding: EdgeInsets.only(top: 3.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border(
-                              bottom: BorderSide(
-                                  color: AppColors.mainColor, width: 4.h),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppTextField(
-                              controller: controller.otpEditingController1,
-                              onChanged: (v) {
-                                controller.otpVal1 = v;
-                                if (v.length == 1) {
-                                  FocusManager.instance.primaryFocus
-                                      ?.nextFocus();
-                                }
-                              },
-                              keyboardType: TextInputType.number,
-                              contentPadding: EdgeInsets.zero,
-                              textAlign: TextAlign.center,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          padding: EdgeInsets.only(top: 3.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border(
-                              bottom: BorderSide(
-                                  color: AppColors.mainColor, width: 4.h),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppTextField(
-                              controller: controller.otpEditingController2,
-                              onChanged: (v) {
-                                controller.otpVal2 = v;
-                                if (v.length == 1) {
-                                  FocusManager.instance.primaryFocus
-                                      ?.nextFocus();
-                                }
-                                controller.update();
-                              },
-                              keyboardType: TextInputType.number,
-                              contentPadding: EdgeInsets.zero,
-                              textAlign: TextAlign.center,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          padding: EdgeInsets.only(top: 3.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border(
-                              bottom: BorderSide(
-                                  color: AppColors.mainColor, width: 4.h),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppTextField(
-                              controller: controller.otpEditingController3,
-                              onChanged: (v) {
-                                controller.otpVal3 = v;
-                                if (v.length == 1) {
-                                  FocusManager.instance.primaryFocus
-                                      ?.nextFocus();
-                                }
-                                controller.update();
-                              },
-                              keyboardType: TextInputType.number,
-                              contentPadding: EdgeInsets.zero,
-                              textAlign: TextAlign.center,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          padding: EdgeInsets.only(top: 3.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border(
-                              bottom: BorderSide(
-                                  color: AppColors.mainColor, width: 4.h),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppTextField(
-                              controller: controller.otpEditingController4,
-                              onChanged: (v) {
-                                controller.otpVal4 = v;
-                                if (v.length == 1) {
-                                  FocusManager.instance.primaryFocus
-                                      ?.nextFocus();
-                                }
-                                controller.update();
-                              },
-                              keyboardType: TextInputType.number,
-                              contentPadding: EdgeInsets.zero,
-                              textAlign: TextAlign.center,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          height: 48.h,
-                          width: 48.h,
-                          padding: EdgeInsets.only(top: 3.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border(
-                              bottom: BorderSide(
-                                  color: AppColors.mainColor, width: 4.h),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppTextField(
-                              controller: controller.otpEditingController5,
-                              onChanged: (v) {
-                                controller.otpVal5 = v;
-                                if (v.length == 1) {
-                                  Helpers.hideKeyboard();
-                                }
-                                controller.update();
-                              },
-                              keyboardType: TextInputType.number,
-                              contentPadding: EdgeInsets.zero,
-                              textAlign: TextAlign.center,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(1),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  VSpace(40.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        storedLanguage['Don\'t receive any code?'] ??
-                            "Don’t receive any code?",
-                        style: t.displayMedium
-                            ?.copyWith(color: AppThemes.getParagraphColor()),
+                  SizedBox(width: 6.w),
+                  if (controller.isStartTimer)
+                    Text(
+                      "${controller.counter}s",
+                      style: TextStyle(
+                        color: AppColors.mainColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.sp,
                       ),
-                      controller.isStartTimer
-                          ? HSpace(10.w)
-                          : TextButton(
-                              onPressed: () async {
-                                controller.startTimer();
-                                await controller.forgotPass(
-                                    isFromOtpPage: true);
-                              },
-                              child: Text(
-                                storedLanguage['Resend Code'] ?? "Resend Code",
-                                style: t.bodyMedium,
-                              ),
-                            ),
-                      controller.isStartTimer == false
-                          ? const SizedBox()
-                          : Text("${controller.counter}s",
-                              style: t.displayMedium
-                                  ?.copyWith(color: AppColors.mainColor)),
-                    ],
-                  ),
-                  VSpace(40.h),
-                  AppButton(
-                    text: storedLanguage['Continue'] ?? "Continue",
-                    isLoading: controller.isLoading ? true : false,
-                    bgColor: controller.otpVal1.isEmpty ||
-                            controller.otpVal2.isEmpty ||
-                            controller.otpVal3.isEmpty ||
-                            controller.otpVal4.isEmpty ||
-                            controller.otpVal5.isEmpty
-                        ? AppThemes.getInactiveColor()
-                        : AppColors.mainColor,
-                    onTap: controller.otpVal1.isEmpty ||
-                            controller.otpVal2.isEmpty ||
-                            controller.otpVal3.isEmpty ||
-                            controller.otpVal4.isEmpty ||
-                            controller.otpVal5.isEmpty
-                        ? null
-                        : controller.isLoading
-                            ? null
-                            : () async {
-                                Helpers.hideKeyboard();
-                                await controller.geCode();
-                              },
-                  ),
+                    )
+                  : TextButton(
+                      onPressed: () async {
+                        controller.startTimer();
+                        await controller.forgotPass(isFromOtpPage: true);
+                      },
+                      child: Text(
+                        storedLanguage['Resend Code'] ?? "Resend Code",
+                        style: TextStyle(
+                          color: AppColors.mainColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.sp,
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ));
-    });
+              SizedBox(height: 20.h),
+
+              // Error banner if any
+              if (controller.loginErrorMessage != null)
+                FintechErrorMessage(
+                  message: controller.loginErrorMessage!,
+                ),
+
+              // Primary Action
+              FintechPrimaryButton(
+                label: storedLanguage['Continue'] ?? "Continue",
+                isLoading: controller.isLoading,
+                onPressed: isFilled
+                    ? () async {
+                        Helpers.hideKeyboard();
+                        await controller.geCode();
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
