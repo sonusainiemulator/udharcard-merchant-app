@@ -1,11 +1,10 @@
-import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:paysecure/controllers/app_controller.dart';
 import 'package:paysecure/utils/app_constants.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:get/get.dart';
-import 'package:paysecure/views/widgets/mediaquery_extension.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../config/app_colors.dart';
@@ -23,26 +22,39 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   AppController appController = Get.find<AppController>();
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+  String _appVersion = '';
+
   @override
   void initState() {
+    super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
-    )..repeat(reverse: true);
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _fadeAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<double>(begin: 20.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _controller.forward();
+    _loadAppVersion();
 
     Future.delayed(const Duration(seconds: 3), () {
       final token = HiveHelp.read(Keys.token);
-      final isLoggedIn = (token != null && token.toString().isNotEmpty) ||
+      final isLoggedIn =
+          (token != null && token.toString().isNotEmpty) ||
           FirebaseAuth.instance.currentUser != null;
 
       if (isLoggedIn) {
@@ -54,8 +66,13 @@ class _SplashScreenState extends State<SplashScreen>
       }
     });
     AppController.to.getBasicCtrl();
+  }
 
-    super.initState();
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _appVersion = packageInfo.version);
+    }
   }
 
   @override
@@ -67,155 +84,124 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: context.mQuery.width,
-        height: context.mQuery.height,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xff0D2247), // Deep navy
-              Color(0xff1B3A6B), // Navy (brand primary)
-              Color(0xff2E5FA3), // Medium blue
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      backgroundColor: AppColors.whiteColor,
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Minimalist background
+          Positioned.fill(
+            child: Container(color: AppColors.whiteColor),
           ),
-        ),
-        child: SizedBox(
-          width: context.mQuery.width,
-          height: context.mQuery.height,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              // Decorative background glow circles
-              Positioned(
-                top: -60.h,
-                right: -60.w,
-                child: Container(
-                  width: 220.h,
-                  height: 220.h,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xffF5A623).withValues(alpha: .08),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -40.h,
-                left: -40.w,
-                child: Container(
-                  width: 180.h,
-                  height: 180.h,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xffF5A623).withValues(alpha: .06),
-                  ),
-                ),
-              ),
-              // Main content - Logo + text
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animated logo container
-                  AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Opacity(
-                          opacity: _fadeAnimation.value,
-                          child: Container(
-                            width: 200.h,
-                            height: 200.h,
-                            padding: EdgeInsets.all(24.h),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.whiteColor.withValues(alpha: .12),
-                              border: Border.all(
-                                color: Color(0xffF5A623).withValues(alpha: .4),
-                                width: 2.h,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0xffF5A623).withValues(alpha: .2),
-                                  blurRadius: 40,
-                                  spreadRadius: 5,
-                                ),
-                              ],
+          
+          // Main content
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, _slideAnimation.value),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Premium App Logo
+                      Container(
+                        width: 100.w,
+                        height: 100.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.whiteColor,
+                          borderRadius: BorderRadius.circular(28.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.blackColor.withValues(alpha: 0.06),
+                              blurRadius: 24,
+                              offset: const Offset(0, 12),
                             ),
-                            child: Image.asset(
-                              "$rootImageDir/app_logo.png",
-                              fit: BoxFit.contain,
-                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(20.w),
+                          child: Image.asset(
+                            "$rootImageDir/app_logo.png",
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 32.h),
-                  // Animated brand name
-                  AnimatedTextKit(
-                    animatedTexts: [
-                      ColorizeAnimatedText(
-                        'Udhar Card',
-                        speed: Duration(milliseconds: 400),
-                        textStyle: context.t.titleLarge!.copyWith(
-                          fontSize: 38.sp,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
+                      ),
+                      SizedBox(height: 32.h),
+                      
+                      // App Name
+                      Text(
+                        'UDHCARD',
+                        style: context.t.titleLarge?.copyWith(
+                          fontSize: 32.sp,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.blackColor,
+                          letterSpacing: 0.5,
                         ),
-                        colors: [
-                          Color(0xffF5A623),  // Gold
-                          AppColors.whiteColor,
-                          Color(0xffF5A623),  // Gold
-                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      
+                      // Tagline
+                      Text(
+                        'Merchant Dashboard',
+                        style: context.t.bodyMedium?.copyWith(
+                          color: AppColors.black50,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
-                    isRepeatingAnimation: false,
-                  ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    'MERCHANT',
-                    style: context.t.titleMedium?.copyWith(
-                      color: Color(0xffF5A623),
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 6.0,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    'Fast. Simple. Secure.',
-                    style: context.t.bodyMedium?.copyWith(
-                      color: AppColors.whiteColor.withValues(alpha: .7),
-                      fontSize: 16.sp,
-                      letterSpacing: 2.0,
-                    ),
-                  ),
-                ],
-              ),
-              // Bottom loading indicator
-              Positioned(
-                bottom: 60.h,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: SizedBox(
-                    width: 32.h,
-                    height: 32.h,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xffF5A623).withValues(alpha: .8),
-                      ),
-                    ),
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        ),
+          
+          // Footer
+          Positioned(
+            bottom: 40.h,
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Column(
+                    children: [
+                      // Loading Indicator
+                      SizedBox(
+                        width: 20.w,
+                        height: 20.w,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.mainColor,
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+                      Text(
+                        'Trust & Secure',
+                        style: context.t.bodySmall?.copyWith(
+                          color: AppColors.black50,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      if (_appVersion.isNotEmpty) ...[
+                        SizedBox(height: 4.h),
+                        Text(
+                          'v$_appVersion',
+                          style: context.t.bodySmall?.copyWith(
+                            color: AppColors.black30,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ]
+                    ],
+                  ),
+                );
+              }
+            ),
+          ),
+        ],
       ),
     );
   }

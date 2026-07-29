@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,17 +21,24 @@ class BottomNavBar extends StatefulWidget {
 
 class appCtrlBottomNavBarState extends State<BottomNavBar> {
   final Connectivity appCtrlconnectivity = Connectivity();
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+
   @override
   void initState() {
-    appCtrlconnectivity.onConnectivityChanged.listen(
-      Get.find<AppController>().updateConnectionStatus,
-    );
-    Get.put(PushNotificationController()).getPushNotificationConfig();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      Get.put(ProfileController()).getProfile();
-      Get.put(AppController()).getDashboard();
-    });
     super.initState();
+    _connectivitySubscription = appCtrlconnectivity.onConnectivityChanged
+        .listen(Get.find<AppController>().updateConnectionStatus);
+    Get.find<PushNotificationController>().getPushNotificationConfig();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      Get.find<ProfileController>().getProfile();
+      Get.find<AppController>().getDashboard();
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -38,6 +47,7 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
       builder: (appCtrl) {
         return GetBuilder<BottomNavController>(
           builder: (controller) {
+            final isDark = appCtrl.isDarkMode();
             return PopScope(
               canPop: false,
               onPopInvokedWithResult: (didPop, result) {
@@ -45,146 +55,62 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
                 return PopApp.onWillPop();
               },
               child: Scaffold(
-                body: controller.currentScreen,
-                bottomNavigationBar: SafeArea(
-                  child: Container(
-                    height: 84.h,
-                    padding: EdgeInsets.only(
-                      top: 33.h,
-                      left: 24.w,
-                      right: 24.w,
-                    ),
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              appCtrl.isDarkMode() == true
-                                  ? AppColors.darkBgColor
-                                  : Colors.grey.shade100,
-                          blurRadius: 10,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                      image: DecorationImage(
-                        colorFilter: ColorFilter.mode(
-                          appCtrl.isDarkMode() == true
-                              ? AppColors.darkCardColor
-                              : AppColors.whiteColor,
-                          BlendMode.srcATop,
-                        ),
-                        image: AssetImage("$rootImageDir/bottom_nav_shape.png"),
-                        fit: BoxFit.cover,
+                body: IndexedStack(
+                  index: controller.selectedIndex,
+                  children: controller.screens,
+                ),
+                bottomNavigationBar: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1D2939) : Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        InkResponse(
-                          onTap: () {
-                            controller.changeScreen(0);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.only(
-                              left: 10.w,
-                              right: 10.w,
-                              top: 10.h,
-                              bottom: 10.h,
-                            ),
-                            child: Image.asset(
-                              controller.selectedIndex == 0
-                                  ? "$rootImageDir/home1.png"
-                                  : "$rootImageDir/home.png",
-                              height: 24.h,
-                              color:
-                                  controller.selectedIndex == 0
-                                      ? Get.isDarkMode
-                                          ? AppColors.mainColor
-                                          : AppColors.blackColor
-                                      : appCtrl.isDarkMode() == true
-                                      ? AppColors.whiteColor
-                                      : AppColors.black50,
-                              fit: BoxFit.cover,
-                            ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Container(
+                      height: 64.h,
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildNavItem(
+                            index: 0,
+                            label: 'Home',
+                            activeIcon: "$rootImageDir/home1.png",
+                            inactiveIcon: "$rootImageDir/home.png",
+                            controller: controller,
+                            isDark: isDark,
                           ),
-                        ),
-                        InkResponse(
-                          onTap: () {
-                            controller.changeScreen(1);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.zero,
-                            child: Image.asset(
-                              controller.selectedIndex == 1
-                                  ? "$rootImageDir/wallet1.png"
-                                  : "$rootImageDir/wallet.png",
-                              height:
-                                  controller.selectedIndex == 1 ? 28.h : 26.h,
-                              color:
-                                  controller.selectedIndex == 1
-                                      ? Get.isDarkMode
-                                          ? AppColors.mainColor
-                                          : AppColors.blackColor
-                                      : appCtrl.isDarkMode() == true
-                                      ? AppColors.whiteColor
-                                      : AppColors.black50,
-                              fit: BoxFit.cover,
-                            ),
+                          _buildNavItem(
+                            index: 1,
+                            label: 'Udhar',
+                            activeIcon: "$rootImageDir/wallet1.png",
+                            inactiveIcon: "$rootImageDir/wallet.png",
+                            controller: controller,
+                            isDark: isDark,
                           ),
-                        ),
-                        InkResponse(
-                          onTap: () {
-                            controller.changeScreen(2);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.zero,
-                            child: Image.asset(
-                              "$rootImageDir/transaction.png",
-                              height: 22.h,
-                              color:
-                                  controller.selectedIndex == 2
-                                      ? Get.isDarkMode
-                                          ? AppColors.mainColor
-                                          : AppColors.blackColor
-                                      : appCtrl.isDarkMode() == true
-                                      ? AppColors.whiteColor
-                                      : AppColors.black50,
-                              fit:
-                                  controller.selectedIndex == 2
-                                      ? BoxFit.fitWidth
-                                      : BoxFit.cover,
-                            ),
+                          _buildNavItem(
+                            index: 2,
+                            label: 'Transactions',
+                            activeIcon: "$rootImageDir/transaction.png",
+                            inactiveIcon: "$rootImageDir/transaction.png",
+                            controller: controller,
+                            isDark: isDark,
                           ),
-                        ),
-                        InkResponse(
-                          onTap: () {
-                            controller.changeScreen(3);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.only(
-                              left: 10.w,
-                              right: 10.w,
-                              top: 10.h,
-                              bottom: 10.h,
-                            ),
-                            child: Image.asset(
-                              controller.selectedIndex == 3
-                                  ? "$rootImageDir/person2.png"
-                                  : "$rootImageDir/person.png",
-                              height:
-                                  controller.selectedIndex == 3 ? 20.h : 23.h,
-                              color:
-                                  controller.selectedIndex == 3
-                                      ? Get.isDarkMode
-                                          ? AppColors.mainColor
-                                          : AppColors.blackColor
-                                      : appCtrl.isDarkMode() == true
-                                      ? AppColors.whiteColor
-                                      : AppColors.black50,
-                              fit: BoxFit.cover,
-                            ),
+                          _buildNavItem(
+                            index: 3,
+                            label: 'Profile',
+                            activeIcon: "$rootImageDir/person2.png",
+                            inactiveIcon: "$rootImageDir/person.png",
+                            controller: controller,
+                            isDark: isDark,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -193,6 +119,55 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required String label,
+    required String activeIcon,
+    required String inactiveIcon,
+    required BottomNavController controller,
+    required bool isDark,
+  }) {
+    final isSelected = controller.selectedIndex == index;
+    final activeColor = AppColors.mainColor;
+    final inactiveColor = isDark ? const Color(0xFF98A2B3) : const Color(0xFF667085);
+
+    return InkWell(
+      onTap: () => controller.changeScreen(index),
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              isSelected ? activeIcon : inactiveIcon,
+              height: 22.h,
+              color: isSelected ? activeColor : inactiveColor,
+              fit: BoxFit.contain,
+            ),
+            if (isSelected) ...[
+              SizedBox(width: 8.w),
+              Text(
+                label,
+                style: TextStyle(
+                  color: activeColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.sp,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

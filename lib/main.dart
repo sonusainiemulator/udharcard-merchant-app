@@ -48,8 +48,8 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
-  Widget build(BuildContext context) {
-    // add edge to edge mode to remove the system UI overlays
+  void initState() {
+    super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -57,7 +57,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         systemNavigationBarColor: Colors.transparent,
       ),
     );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     // Create a custom 404 error page to replace Flutter's default red error screen.
     ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
       String errorString = errorDetails.exceptionAsString();
@@ -94,8 +97,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
           initialBinding: InitBindings(),
-          themeMode: Get.put(AppController()).themeManager(),
+          themeMode: Get.find<AppController>().themeManager(),
           initialRoute: RoutesName.INITIAL,
+          defaultTransition: Transition.cupertino,
+          transitionDuration: const Duration(milliseconds: 220),
           getPages: RouteHelper.routes(),
           builder: (BuildContext context, Widget? widget) {
             return widget ?? Container(child: Text("Widget is null"));

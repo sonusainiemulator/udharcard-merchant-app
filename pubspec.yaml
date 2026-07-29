@@ -85,6 +85,7 @@ dependencies:
   share_plus: ^10.1.4
   confetti: ^0.8.0
   animated_text_kit: ^4.2.2
+  package_info_plus: ^8.3.0
   avatar_glow:
     git:
       url: https://github.com/apgapg/avatar_glow

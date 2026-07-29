@@ -13,8 +13,18 @@ import '../utils/services/localstorage/keys.dart';
 
 class AuthController extends GetxController {
   static AuthController get to => Get.find<AuthController>();
+  static const authSubmissionUpdateId = 'authSubmission';
 
   bool isLoading = false;
+  bool _isOtpRequestInProgress = false;
+  bool _isCompletingAuthentication = false;
+
+  void _notifyAuthSubmission() {
+    // Keep existing auth screens reactive while limiting the costly form rebuild
+    // to the small submission area on the login and registration pages.
+    update();
+    update([authSubmissionUpdateId]);
+  }
 
   @override
   void onInit() {
@@ -22,7 +32,6 @@ class AuthController extends GetxController {
     firebasePhoneController.addListener(() {
       firebasePhoneVal = firebasePhoneController.text.trim();
       loginErrorMessage = null;
-      update();
     });
   }
 
@@ -77,10 +86,12 @@ class AuthController extends GetxController {
           Get.offAllNamed(RoutesName.bottomNavBar);
           clearSignInController();
         } else {
-          loginErrorMessage = data['message']?.toString() ?? 'Invalid credentials';
+          loginErrorMessage =
+              data['message']?.toString() ?? 'Invalid credentials';
         }
       } else {
-        loginErrorMessage = data['message']?.toString() ?? 'Invalid credentials';
+        loginErrorMessage =
+            data['message']?.toString() ?? 'Invalid credentials';
       }
     } catch (e) {
       isLoading = false;
@@ -88,7 +99,6 @@ class AuthController extends GetxController {
     }
     update();
   }
-
 
   //------------------------forgot password----------------------
   TextEditingController forgotPassEmailEditingController =
@@ -233,7 +243,8 @@ class AuthController extends GetxController {
   TextEditingController phoneEditingController = TextEditingController();
   TextEditingController shopNameEditingController = TextEditingController();
   TextEditingController passwordEditingController = TextEditingController();
-  TextEditingController confirmPasswordEditingController = TextEditingController();
+  TextEditingController confirmPasswordEditingController =
+      TextEditingController();
 
   String nameVal = "";
   String emailVal = "";
@@ -284,7 +295,9 @@ class AuthController extends GetxController {
           clearRegisterController();
         }
       } else {
-        Helpers.showSnackBar(msg: data['message']?.toString() ?? 'Registration failed');
+        Helpers.showSnackBar(
+          msg: data['message']?.toString() ?? 'Registration failed',
+        );
       }
     } catch (e) {
       isLoading = false;
@@ -300,22 +313,33 @@ class AuthController extends GetxController {
   String firebaseOtpVal = "";
   String? firebaseVerificationId;
 
-  clearFirebaseOtpController() {
+  clearFirebaseOtpController({bool resetFlow = true}) {
     firebasePhoneController.clear();
     firebaseOtpController.clear();
     firebasePhoneVal = "";
     firebaseOtpVal = "";
     firebaseVerificationId = null;
     loginErrorMessage = null;
+    if (resetFlow) {
+      _isOtpRequestInProgress = false;
+      _isCompletingAuthentication = false;
+    }
   }
 
   Future sendFirebaseOtp(String phoneNumber) async {
+    if (_isOtpRequestInProgress || _isCompletingAuthentication) return;
+    if (phoneNumber.trim().length != 10) {
+      loginErrorMessage = 'Enter a valid 10-digit mobile number.';
+      _notifyAuthSubmission();
+      return;
+    }
     if (!phoneNumber.startsWith('+')) {
       phoneNumber = '+91$phoneNumber';
     }
+    _isOtpRequestInProgress = true;
     isLoading = true;
     loginErrorMessage = null;
-    update();
+    _notifyAuthSubmission();
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumber,
@@ -324,42 +348,57 @@ class AuthController extends GetxController {
           await _signInWithFirebaseCredential(credential);
         },
         verificationFailed: (FirebaseAuthException e) {
+          _isOtpRequestInProgress = false;
           isLoading = false;
           String errorMsg = e.message ?? 'Verification failed';
-          if (errorMsg.contains('TOO_SHORT') || e.code == 'invalid-phone-number') {
+          if (errorMsg.contains('TOO_SHORT') ||
+              e.code == 'invalid-phone-number') {
             errorMsg = 'Please enter a valid 10-digit mobile number.';
           } else if (errorMsg.contains('blocked')) {
-            errorMsg = 'This phone number has been blocked due to too many requests. Please try again later.';
+            errorMsg =
+                'This phone number has been blocked due to too many requests. Please try again later.';
           }
           loginErrorMessage = errorMsg;
-          update();
+          _notifyAuthSubmission();
           Helpers.showSnackBar(msg: errorMsg, title: "Error!");
         },
         codeSent: (String verificationId, int? resendToken) {
+          _isOtpRequestInProgress = false;
           isLoading = false;
           firebaseVerificationId = verificationId;
           loginErrorMessage = null;
-          update();
-          Helpers.showSnackBar(msg: "Verification code sent to $phoneNumber", title: "Success");
-          Get.toNamed(RoutesName.firebaseOtpVerifyScreen);
+          _notifyAuthSubmission();
+          if (_isCompletingAuthentication) return;
+          Helpers.showSnackBar(
+            msg: "Verification code sent to $phoneNumber",
+            title: "Success",
+          );
+          if (Get.currentRoute != RoutesName.firebaseOtpVerifyScreen) {
+            Get.toNamed(RoutesName.firebaseOtpVerifyScreen);
+          }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           firebaseVerificationId = verificationId;
         },
       );
     } catch (e) {
+      _isOtpRequestInProgress = false;
       isLoading = false;
       loginErrorMessage = 'Failed to send OTP: $e';
-      update();
+      _notifyAuthSubmission();
       Helpers.showSnackBar(msg: 'Failed to send OTP: $e', title: "Error!");
     }
   }
 
   Future verifyFirebaseOtp() async {
-    if (firebaseVerificationId == null || firebaseOtpVal.isEmpty) return;
+    if (firebaseVerificationId == null ||
+        firebaseOtpVal.isEmpty ||
+        _isCompletingAuthentication) {
+      return;
+    }
     isLoading = true;
     loginErrorMessage = null;
-    update();
+    _notifyAuthSubmission();
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: firebaseVerificationId!,
@@ -369,36 +408,49 @@ class AuthController extends GetxController {
     } catch (e) {
       isLoading = false;
       loginErrorMessage = 'Invalid OTP or verification failed.';
-      update();
-      Helpers.showSnackBar(msg: 'Invalid OTP or verification failed.', title: "Error!");
+      _notifyAuthSubmission();
+      Helpers.showSnackBar(
+        msg: 'Invalid OTP or verification failed.',
+        title: "Error!",
+      );
     }
   }
 
   Future _signInWithFirebaseCredential(PhoneAuthCredential credential) async {
+    if (_isCompletingAuthentication) return;
+    _isCompletingAuthentication = true;
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
       if (userCredential.user != null) {
         String? token = await userCredential.user!.getIdToken();
         token ??= "firebase_auth_token_${userCredential.user!.uid}";
-        
+
         // Persist merchant session permanently into local storage
         HiveHelp.write(Keys.token, token);
         HiveHelp.write(Keys.isNewUser, false);
         HiveHelp.write(Keys.isRemember, true);
         HiveHelp.write(Keys.userId, userCredential.user!.uid);
-        if (userCredential.user?.phoneNumber != null && userCredential.user!.phoneNumber!.isNotEmpty) {
+        if (userCredential.user?.phoneNumber != null &&
+            userCredential.user!.phoneNumber!.isNotEmpty) {
           HiveHelp.write(Keys.userName, userCredential.user!.phoneNumber);
         }
-        
+
         isLoading = false;
-        update();
+        _notifyAuthSubmission();
         Get.offAllNamed(RoutesName.bottomNavBar);
-        clearFirebaseOtpController();
+        clearFirebaseOtpController(resetFlow: false);
         clearRegisterController();
+      } else {
+        _isCompletingAuthentication = false;
+        isLoading = false;
+        loginErrorMessage = 'Unable to complete sign in. Please try again.';
+        _notifyAuthSubmission();
       }
     } catch (e) {
+      _isCompletingAuthentication = false;
       isLoading = false;
-      update();
+      _notifyAuthSubmission();
       Helpers.showSnackBar(msg: 'Sign in failed: $e');
     }
   }
@@ -411,7 +463,11 @@ class AuthController extends GetxController {
       // Stub: Here we will use GoogleSignIn to get the auth credentials,
       // and send it to our backend to authenticate the merchant.
       await Future.delayed(const Duration(seconds: 1));
-      Helpers.showSnackBar(msg: 'Google Sign-In is not fully configured yet. Backend integration required.', title: 'Coming Soon');
+      Helpers.showSnackBar(
+        msg:
+            'Google Sign-In is not fully configured yet. Backend integration required.',
+        title: 'Coming Soon',
+      );
     } catch (e) {
       loginErrorMessage = 'Google Sign-In failed: $e';
     } finally {
@@ -427,7 +483,11 @@ class AuthController extends GetxController {
       // Stub: Here we will use SignInWithApple to get the auth credentials,
       // and send it to our backend to authenticate the merchant.
       await Future.delayed(const Duration(seconds: 1));
-      Helpers.showSnackBar(msg: 'Apple Sign-In is not fully configured yet. Backend integration required.', title: 'Coming Soon');
+      Helpers.showSnackBar(
+        msg:
+            'Apple Sign-In is not fully configured yet. Backend integration required.',
+        title: 'Coming Soon',
+      );
     } catch (e) {
       loginErrorMessage = 'Apple Sign-In failed: $e';
     } finally {
