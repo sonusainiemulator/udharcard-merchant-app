@@ -5,13 +5,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:paysecure/config/app_colors.dart';
+import 'package:paysecure/config/dimensions.dart';
 import 'package:paysecure/controllers/app_controller.dart';
 import 'package:paysecure/controllers/auth_controller.dart';
-import 'package:paysecure/controllers/notification_controller.dart';
+import 'package:paysecure/controllers/push_notification_controller.dart';
 import 'package:paysecure/controllers/profile_controller.dart';
 import 'package:paysecure/controllers/transaction_controller.dart';
 import 'package:paysecure/controllers/udhar_controller.dart';
 import 'package:paysecure/routes/routes_name.dart';
+import 'package:paysecure/themes/themes.dart';
 import 'package:paysecure/utils/app_constants.dart';
 import 'package:paysecure/utils/services/helpers.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
@@ -19,6 +21,7 @@ import 'package:paysecure/utils/services/localstorage/keys.dart';
 import 'package:paysecure/views/screens/udhar/customer_ledger_screen.dart';
 import 'package:paysecure/views/screens/udhar/select_user_sheet.dart';
 import 'package:paysecure/views/widgets/custom_appbar.dart';
+import 'package:paysecure/views/widgets/spacing.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,6 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       Helpers.showSnackBar(msg: "Could not launch WhatsApp for $phone", title: "Error");
     }
+  }
+
+  void _navigateToLedger(Map<String, dynamic> userMap) {
+    final id = (userMap['id'] ?? userMap['user_id'] ?? '').toString();
+    final name = (userMap['name'] ?? userMap['customer_name'] ?? 'Customer').toString();
+    Get.to(() => CustomerLedgerScreen(customerId: id, customerName: name));
   }
 
   @override
@@ -154,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   onPressed: () {
                     notiCtrl.isNotiSeen();
-                    Get.toNamed(RoutesName.pushNotificationScreen);
+                    Get.toNamed(RoutesName.notificationScreen);
                   },
                   icon: Container(
                     padding: EdgeInsets.all(8.r),
@@ -339,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () async {
                         final selected = await SelectUserSheet.show(context);
                         if (selected != null) {
-                          Get.to(() => CustomerLedgerScreen(customer: selected));
+                          _navigateToLedger(selected);
                         }
                       },
                     ),
@@ -355,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () async {
                         final selected = await SelectUserSheet.show(context);
                         if (selected != null) {
-                          Get.to(() => CustomerLedgerScreen(customer: selected));
+                          _navigateToLedger(selected);
                         }
                       },
                     ),
@@ -394,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () async {
                       final selected = await SelectUserSheet.show(context);
                       if (selected != null) {
-                        Get.to(() => CustomerLedgerScreen(customer: selected));
+                        _navigateToLedger(selected);
                       }
                     },
                     icon: const Icon(Icons.people_alt_outlined, size: 16),
@@ -414,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: isDark ? const Color(0xFF1D2939) : Colors.white,
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
-                    color: isDark ? const Color(0xFF344054) : const Color(0xFFE4E7EC),
+                    color: isDark ? const Color(0xFF344054) : const Color(0xFFEAECF0),
                   ),
                 ),
                 child: TextField(
@@ -528,9 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
 
                       return InkWell(
-                        onTap: () {
-                          Get.to(() => CustomerLedgerScreen(customer: Map<String, dynamic>.from(customer)));
-                        },
+                        onTap: () => _navigateToLedger(Map<String, dynamic>.from(customer)),
                         borderRadius: BorderRadius.circular(16.r),
                         child: Container(
                           padding: EdgeInsets.all(14.r),
@@ -706,4 +713,82 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+Widget buildTransactionLoader({
+  int? itemCount = 5,
+  bool? isReverseColor = false,
+}) {
+  return ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: itemCount,
+    itemBuilder: (context, i) {
+      return Container(
+        width: double.maxFinite,
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: isReverseColor == true
+              ? AppThemes.getFillColor()
+              : AppThemes.getDarkCardColor(),
+          borderRadius: Dimensions.kBorderRadius,
+          border: Border.all(
+            color: AppThemes.borderColor(),
+            width: Dimensions.appThinBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40.h,
+              height: 40.h,
+              padding: EdgeInsets.all(10.h),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                color: Get.isDarkMode
+                    ? AppColors.darkBgColor
+                    : isReverseColor == true
+                        ? AppColors.whiteColor
+                        : AppColors.fillColorColor,
+              ),
+            ),
+            HSpace(10.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 10.h,
+                    width: double.maxFinite,
+                    decoration: BoxDecoration(
+                      color: Get.isDarkMode
+                          ? AppColors.darkBgColor
+                          : isReverseColor == true
+                              ? AppColors.whiteColor
+                              : AppColors.fillColorColor,
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  VSpace(5.h),
+                  Container(
+                    height: 10.h,
+                    width: 100.w,
+                    decoration: BoxDecoration(
+                      color: Get.isDarkMode
+                          ? AppColors.darkBgColor
+                          : isReverseColor == true
+                              ? AppColors.whiteColor
+                              : AppColors.fillColorColor,
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
