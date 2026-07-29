@@ -122,7 +122,8 @@ class OtpScreen extends StatelessWidget {
                         fontSize: 13.sp,
                       ),
                     )
-                  : TextButton(
+                  else
+                    TextButton(
                       onPressed: () async {
                         controller.startTimer();
                         await controller.forgotPass(isFromOtpPage: true);
