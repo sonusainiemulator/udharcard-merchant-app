@@ -41,8 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canContinue =
-        _authController.firebasePhoneController.text.trim().length == 10;
+    final phoneText = _authController.firebasePhoneController.text.trim();
+    final canContinue = phoneText.length >= 7;
 
     return FintechAuthPage(
       eyebrow: 'Merchant access',
@@ -55,12 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             FintechTextField(
               label: 'Mobile number',
-              hint: 'Enter 10-digit mobile number',
+              hint: 'Enter mobile number',
               controller: _authController.firebasePhoneController,
               keyboardType: TextInputType.phone,
               inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                LengthLimitingTextInputFormatter(15),
               ],
               autofillHints: const [AutofillHints.telephoneNumber],
               textInputAction: TextInputAction.done,

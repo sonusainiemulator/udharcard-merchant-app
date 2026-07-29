@@ -328,13 +328,14 @@ class AuthController extends GetxController {
 
   Future sendFirebaseOtp(String phoneNumber) async {
     if (_isOtpRequestInProgress || _isCompletingAuthentication) return;
-    if (phoneNumber.trim().length != 10) {
-      loginErrorMessage = 'Enter a valid 10-digit mobile number.';
+    String formattedPhone = phoneNumber.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (formattedPhone.length < 7) {
+      loginErrorMessage = 'Enter a valid mobile number.';
       _notifyAuthSubmission();
       return;
     }
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+91$phoneNumber';
+    if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+91$formattedPhone';
     }
     _isOtpRequestInProgress = true;
     isLoading = true;
@@ -342,7 +343,7 @@ class AuthController extends GetxController {
     _notifyAuthSubmission();
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: formattedPhone,
         verificationCompleted: (PhoneAuthCredential credential) async {
           // Auto-resolution (Android only)
           await _signInWithFirebaseCredential(credential);
@@ -351,16 +352,17 @@ class AuthController extends GetxController {
           _isOtpRequestInProgress = false;
           isLoading = false;
           String errorMsg = e.message ?? 'Verification failed';
-          if (errorMsg.contains('TOO_SHORT') ||
-              e.code == 'invalid-phone-number') {
-            errorMsg = 'Please enter a valid 10-digit mobile number.';
-          } else if (errorMsg.contains('blocked')) {
+          if (e.code == 'invalid-phone-number') {
+            errorMsg = 'Please enter a valid mobile number.';
+          } else if (e.code == 'too-many-requests' || errorMsg.contains('blocked')) {
             errorMsg =
                 'This phone number has been blocked due to too many requests. Please try again later.';
+          } else if (e.code == 'app-not-authorized' || e.code == 'invalid-app-credential') {
+            errorMsg = 'App not authorized in Firebase. Check SHA-1/SHA-256 in Firebase Console.';
           }
           loginErrorMessage = errorMsg;
           _notifyAuthSubmission();
-          Helpers.showSnackBar(msg: errorMsg, title: "Error!");
+          Helpers.showSnackBar(msg: errorMsg, title: "Firebase (${e.code})");
         },
         codeSent: (String verificationId, int? resendToken) {
           _isOtpRequestInProgress = false;
@@ -370,7 +372,7 @@ class AuthController extends GetxController {
           _notifyAuthSubmission();
           if (_isCompletingAuthentication) return;
           Helpers.showSnackBar(
-            msg: "Verification code sent to $phoneNumber",
+            msg: "Verification code sent to $formattedPhone",
             title: "Success",
           );
           if (Get.currentRoute != RoutesName.firebaseOtpVerifyScreen) {
