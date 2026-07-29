@@ -8,7 +8,7 @@ import 'package:paysecure/config/app_colors.dart';
 import 'package:paysecure/config/dimensions.dart';
 import 'package:paysecure/controllers/app_controller.dart';
 import 'package:paysecure/controllers/auth_controller.dart';
-import 'package:paysecure/controllers/push_notification_controller.dart';
+import 'package:paysecure/notification_service/notification_controller.dart';
 import 'package:paysecure/controllers/profile_controller.dart';
 import 'package:paysecure/controllers/transaction_controller.dart';
 import 'package:paysecure/controllers/udhar_controller.dart';
