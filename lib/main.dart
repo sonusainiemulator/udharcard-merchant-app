@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:paysecure/firebase_options.dart';
@@ -117,9 +116,7 @@ _initializeApp() async {
   } catch (e) {
     throw Exception('Error loading .env file: $e');
   }
-  Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? 'DEFAULT_KEY';
   await Future.wait([
-    Stripe.instance.applySettings(),
     LocalNotificationService().initNotification(),
     Future.delayed(const Duration(milliseconds: 400)),
   ]);
