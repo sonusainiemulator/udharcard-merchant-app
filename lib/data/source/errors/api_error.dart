@@ -24,15 +24,12 @@ class ApiResponse {
           return response;
 
         case 401:
-          if (FirebaseAuth.instance.currentUser == null && (HiveHelp.read(Keys.token) == null || HiveHelp.read(Keys.token).toString().isEmpty)) {
+          if (FirebaseAuth.instance.currentUser == null &&
+              (HiveHelp.read(Keys.token) == null || HiveHelp.read(Keys.token).toString().isEmpty)) {
             Get.offAll(() => const LoginScreen());
           }
-          return _logError(
-            STATUS_CODE,
-            URL,
-            'The user is unauthorized. Please log in to continue.',
-            response.body,
-          );
+          if (kDebugMode) print('⚠️ 401 Unauthorized: $URL');
+          return response;
 
         case 404:
           return _logError(
