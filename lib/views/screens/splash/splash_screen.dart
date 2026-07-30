@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                       
                       // App Name
                       Text(
-                        'UDHCARD',
+                        'UdharCard',
                         style: context.t.titleLarge?.copyWith(
                           fontSize: 32.sp,
                           fontWeight: FontWeight.w800,

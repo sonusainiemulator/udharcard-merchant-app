@@ -92,7 +92,7 @@ class FintechAuthPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'UDHCARD',
+                                  'UdharCard',
                                   style: TextStyle(
                                     color:
                                         isDark
@@ -104,7 +104,7 @@ class FintechAuthPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Merchant finance',
+                                  'Udhar Khatabook App',
                                   style: TextStyle(
                                     color: bodyColor,
                                     fontSize: 12.sp,

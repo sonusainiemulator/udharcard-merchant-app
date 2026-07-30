@@ -44,6 +44,46 @@ class FintechUI {
     );
   }
 
+  /// A modern, secondary outlined action button.
+  static Widget outlinedButton({
+    required String text,
+    required VoidCallback onPressed,
+    bool isLoading = false,
+    double? width,
+  }) {
+    return SizedBox(
+      width: width ?? double.infinity,
+      height: 56.h,
+      child: OutlinedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.mainColor,
+          side: BorderSide(color: AppColors.mainColor, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          elevation: 0,
+        ),
+        child: isLoading
+            ? SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.mainColor,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Text(
+                text,
+                style: Styles.bodyLarge.copyWith(
+                  color: AppColors.mainColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+
   /// A modern text field with a clean label above it.
   static Widget inputField({
     required String label,

@@ -57,7 +57,7 @@ class _OnbordingScreenState extends State<OnbordingScreen> {
                       ),
                       SizedBox(width: 10.w),
                       Text(
-                        'UDHCARD',
+                        'UdharCard',
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w800,
@@ -189,23 +189,37 @@ class _OnbordingScreenState extends State<OnbordingScreen> {
                   ),
                   SizedBox(height: 28.h),
 
-                  // Action Button
-                  FintechUI.primaryButton(
-                    text: currentIndex == onBordingDataList.length - 1
-                        ? (storedLanguage['Get Started'] ?? "Get Started")
-                        : (storedLanguage['Next'] ?? "Next"),
-                    onPressed: () {
-                      if (currentIndex == onBordingDataList.length - 1) {
-                        HiveHelp.write(Keys.isNewUser, false);
-                        Get.offAllNamed(RoutesName.loginScreen);
-                      } else {
+                  // Action Buttons
+                  if (currentIndex == onBordingDataList.length - 1)
+                    Column(
+                      children: [
+                        FintechUI.primaryButton(
+                          text: storedLanguage['Create merchant account'] ?? "Create merchant account",
+                          onPressed: () {
+                            HiveHelp.write(Keys.isNewUser, false);
+                            Get.offAllNamed(RoutesName.registerScreen);
+                          },
+                        ),
+                        SizedBox(height: 12.h),
+                        FintechUI.outlinedButton(
+                          text: storedLanguage['Log in'] ?? "Log in",
+                          onPressed: () {
+                            HiveHelp.write(Keys.isNewUser, false);
+                            Get.offAllNamed(RoutesName.loginScreen);
+                          },
+                        ),
+                      ],
+                    )
+                  else
+                    FintechUI.primaryButton(
+                      text: storedLanguage['Next'] ?? "Next",
+                      onPressed: () {
                         controller.nextPage(
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.easeInOut,
                         );
-                      }
-                    },
-                  ),
+                      },
+                    ),
                 ],
               ),
             ),

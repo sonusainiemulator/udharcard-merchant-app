@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontSize: 13.sp,
                     ),
                     children: const [
-                      TextSpan(text: 'New to UDHCARD? '),
+                      TextSpan(text: 'New to UdharCard? '),
                       TextSpan(
                         text: 'Create merchant account',
                         style: TextStyle(
