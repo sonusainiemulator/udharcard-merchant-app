@@ -101,11 +101,14 @@ class _SplashScreenState extends State<SplashScreen>
                 opacity: _fadeAnimation.value,
                 child: Transform.translate(
                   offset: Offset(0, _slideAnimation.value),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Premium App Logo
-                      Container(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Premium App Logo
+                        Container(
                         width: 100.w,
                         height: 100.w,
                         decoration: BoxDecoration(
@@ -160,12 +163,15 @@ class _SplashScreenState extends State<SplashScreen>
           // Footer
           Positioned(
             bottom: 40.h,
+            left: 0,
+            right: 0,
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
                 return Opacity(
                   opacity: _fadeAnimation.value,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Loading Indicator
                       SizedBox(
