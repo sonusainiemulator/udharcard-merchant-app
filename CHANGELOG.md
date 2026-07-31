@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.23] - 2026-07-31
+
+### 📱 Layout & Safe Area Improvements
+- **Bottom Safe Area Inset Padding**: Added safe area inset bottom padding across all modal bottom sheets (`Add Customer Sheet`, `Edit Limit Sheet`, `Select Customer Sheet`, `Reminder Modals`) and `Add Udhar Screen`, preventing buttons and text fields from being clipped on edge-to-edge gesture navigation displays.
+- **Motorola & Android 15 Real Device Compatibility**: Optimized deployment and UI rendering for modern Android devices (including Motorola Edge 40 Neo).
+
+---
+
+## [1.0.22] - 2026-07-31
+
+### ⚡ Instant Profile Rendering & Backend Deployment
+- **Instant Local Hive Fallback**: Implemented local storage fallback in `ProfileController` so merchant profile details (Name, Email, Phone) appear instantly upon signup or app launch.
+- **Backend Patch Package**: Bundled updated Laravel backend controllers (`AuthController.php`, `CustomerUdharController.php`, `UdharController.php`, `User.php`, `api.php`) into `backend_patch_files.zip` for manual server deployment.
+
+---
+
 ## [1.0.21] - 2026-07-31
 
 ### 📱 Mobile Number Constraints
