@@ -91,19 +91,32 @@ class ProfileController extends GetxController {
   _getInfo(Profile? data) {
     try {
       userId = data == null ? '' : data.id.toString();
-      userName = data == null ? '' : data.username ?? "";
-      userEmail = data == null ? '' : data.email ?? '';
+      String fetchedName = (data?.name ?? data?.username ?? '').toString().trim();
+      userName = fetchedName.isNotEmpty
+          ? fetchedName
+          : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString();
+      userEmail = (data?.email ?? '').toString().isNotEmpty
+          ? data!.email!
+          : (HiveHelp.read(Keys.userEmail) ?? '').toString();
       join_date = data == null ? '' : data.created_at.toString();
       userPhoto = data == null ? '' : data.profilePicture ?? "";
       fNameEditingController.text = data == null ? '' : data.firstname ?? "";
       lNameEditingController.text = data == null ? '' : data.lastname ?? "";
 
-      HiveHelp.write(Keys.userFullName, data?.name);
-      HiveHelp.write(Keys.userEmail, data?.email);
-      HiveHelp.write(Keys.userEmail, data?.email);
-      HiveHelp.write(Keys.userPhone, data?.phone);
-      userNameEditingController.text = data == null ? '' : data.username ?? "";
-      phoneNumberEditingController.text = data == null ? '' : data.phone ?? "";
+      if (data?.name != null && data!.name!.isNotEmpty) {
+        HiveHelp.write(Keys.userFullName, data.name);
+      }
+      if (data?.email != null && data!.email!.isNotEmpty) {
+        HiveHelp.write(Keys.userEmail, data.email);
+      }
+      if (data?.phone != null && data!.phone!.isNotEmpty) {
+        HiveHelp.write(Keys.userPhone, data.phone);
+      }
+
+      userNameEditingController.text = userName;
+      phoneNumberEditingController.text = (data?.phone ?? '').toString().isNotEmpty
+          ? data!.phone!
+          : (HiveHelp.read(Keys.userPhone) ?? '').toString();
       cityEditingController.text = data == null ? '' : data.city ?? "";
       stateEditingController.text = data == null ? '' : data.state ?? "";
       addrEditingController.text = data == null ? '' : data.address_one ?? "";
@@ -309,8 +322,25 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadLocalProfileInfo();
     loadCustomQrCode();
     loadMerchantUpiId();
+  }
+
+  void loadLocalProfileInfo() {
+    String hiveName = (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim();
+    if (hiveName.isNotEmpty) {
+      userName = hiveName;
+    }
+    String hiveEmail = (HiveHelp.read(Keys.userEmail) ?? '').toString().trim();
+    if (hiveEmail.isNotEmpty) {
+      userEmail = hiveEmail;
+    }
+    String hivePhone = (HiveHelp.read(Keys.userPhone) ?? '').toString().trim();
+    if (hivePhone.isNotEmpty) {
+      phoneNumberEditingController.text = hivePhone;
+    }
+    update();
   }
 
   void loadCustomQrCode() {
