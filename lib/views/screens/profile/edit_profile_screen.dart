@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -21,7 +20,6 @@ import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_custom_dropdown.dart';
 import '../../widgets/custom_appbar.dart';
-import '../../widgets/custom_textfield.dart';
 import '../../widgets/spacing.dart';
 
 // ignore: must_be_immutable
@@ -40,6 +38,7 @@ class EditProfileScreen extends StatelessWidget {
           builder: (appController) {
             var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
             return Scaffold(
+              backgroundColor: AppThemes.getDarkBgColor(),
               appBar: CustomAppBar(
                 isReverseIconBgColor: true,
                 title: storedLanguage['Edit Profile'] ?? "Edit Profile",
@@ -53,353 +52,405 @@ class EditProfileScreen extends StatelessWidget {
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Padding(
-                    padding: Dimensions.kDefaultPadding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: Dimensions.screenHeight * .05),
-                        Center(
-                          child: GestureDetector(
-                            onTap: () {
-                              if (Get.find<ProfileController>().userPhoto !=
-                                  '') {
-                                Get.to(
-                                  () => Scaffold(
-                                    appBar: const CustomAppBar(title: ""),
-                                    body: PhotoView(
-                                      imageProvider: NetworkImage(
-                                        Get.find<ProfileController>().userPhoto,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              height: 110.h,
-                              width: 110.h,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24.r),
-                                border: Border.all(
-                                  color:
-                                      Get.isDarkMode
-                                          ? AppColors.darkCardColor
-                                          : AppColors.mainColor,
-                                  width: 4.h,
-                                ),
-                                color: AppColors.imageBgColor,
-                                image:
-                                    Get.find<ProfileController>().isLoading ||
-                                            Get.find<ProfileController>()
-                                                    .userPhoto ==
-                                                ''
-                                        ? DecorationImage(
-                                          image: AssetImage(
-                                            "$rootImageDir/avatar.webp",
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                        : DecorationImage(
-                                          image: CachedNetworkImageProvider(
-                                            Get.find<ProfileController>()
-                                                .userPhoto,
-                                          ),
-                                          fit: BoxFit.cover,
-                                        ),
-                              ),
-                              alignment: Alignment.bottomRight,
-                              child: Stack(
-                                alignment: Alignment.bottomRight,
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Positioned(
-                                    bottom: -9.h,
-                                    right: -8.w,
-                                    child: InkResponse(
-                                      onTap: () async {
-                                        await showbottomsheet(
-                                          context,
-                                          storedLanguage,
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.all(8.h),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.mainColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.camera_alt_outlined,
-                                          color: AppColors.blackColor,
-                                          size: 20.h,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Profile Photo Header ────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Get.isDarkMode
+                                  ? AppColors.black70
+                                  : AppColors.borderColor.withValues(alpha: 0.3),
+                              width: 0.8,
                             ),
                           ),
                         ),
-                        profileController.isLoading
-                            ? Helpers.appLoader()
-                            : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                VSpace(40.h),
-                                Text(
-                                  storedLanguage['First Name'] ?? "First Name",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  isBorderColor: true,
-                                  hintext:
-                                      storedLanguage['Enter First Name'] ??
-                                      "Enter First Name",
-                                  controller:
-                                      profileController.fNameEditingController,
-                                  contentPadding: EdgeInsets.only(left: 20.w),
-                                ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['Last Name'] ?? "Last Name",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  isBorderColor: true,
-                                  hintext:
-                                      storedLanguage['Enter Last Name'] ??
-                                      "Enter Last Name",
-                                  controller:
-                                      profileController.lNameEditingController,
-                                  contentPadding: EdgeInsets.only(left: 20.w),
-                                ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['Username'] ?? "Username",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  isBorderColor: true,
-                                  hintext:
-                                      storedLanguage['Username'] ?? "Username",
-                                  controller:
-                                      profileController
-                                          .userNameEditingController,
-                                  contentPadding: EdgeInsets.only(left: 20.w),
-                                ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['Phone Number'] ??
-                                      "Phone Number",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                Row(
+                        padding: EdgeInsets.symmetric(vertical: 28.h),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (profileController.userPhoto != '') {
+                                    Get.to(
+                                      () => Scaffold(
+                                        appBar: const CustomAppBar(title: ""),
+                                        body: PhotoView(
+                                          imageProvider: NetworkImage(
+                                            profileController.userPhoto,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Stack(
                                   children: [
                                     Container(
-                                      height: Dimensions.textFieldHeight,
+                                      height: 100.h,
+                                      width: 100.h,
                                       decoration: BoxDecoration(
-                                        borderRadius: Dimensions.kBorderRadius,
+                                        shape: BoxShape.circle,
                                         border: Border.all(
-                                          color:
-                                              AppThemes.getSliderInactiveColor(),
-                                          width: 1,
+                                          color: AppColors.mainColor,
+                                          width: 3.h,
                                         ),
-                                      ),
-                                      child: CountryCodePicker(
-                                        padding: EdgeInsets.zero,
-                                        dialogBackgroundColor:
-                                            AppThemes.getDarkCardColor(),
-                                        dialogTextStyle: t.bodyMedium?.copyWith(
-                                          fontSize: 16.sp,
-                                        ),
-                                        flagWidth: 29.w,
-                                        textStyle: t.displayMedium,
-                                        onChanged: (CountryCode countryCode) {
-                                          profileController.countryCode =
-                                              countryCode.code!;
-                                          profileController.phoneCode =
-                                              countryCode.dialCode!;
-                                          profileController.countryName =
-                                              countryCode.name!;
-                                        },
-                                        initialSelection:
-                                            '${profileController.countryCode}',
-                                        showCountryOnly: false,
-                                        showOnlyCountryWhenClosed: false,
-                                        alignLeft: false,
+                                        color: AppColors.imageBgColor,
+                                        image: profileController.isLoading ||
+                                                profileController.userPhoto == ''
+                                            ? DecorationImage(
+                                                image: AssetImage(
+                                                  "$rootImageDir/avatar.webp",
+                                                ),
+                                                fit: BoxFit.cover,
+                                              )
+                                            : DecorationImage(
+                                                image: CachedNetworkImageProvider(
+                                                  profileController.userPhoto,
+                                                ),
+                                                fit: BoxFit.cover,
+                                              ),
                                       ),
                                     ),
-                                    HSpace(16.w),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        isBorderColor: true,
-                                        hintext:
-                                            storedLanguage['Enter Number'] ??
-                                            "Enter Number",
-                                        controller:
-                                            profileController
-                                                .phoneNumberEditingController,
-                                        contentPadding: EdgeInsets.only(
-                                          left: 20.w,
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: GestureDetector(
+                                        onTap: () async {
+                                          await showbottomsheet(
+                                            context,
+                                            storedLanguage,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.all(8.h),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.mainColor,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: AppThemes.getDarkBgColor(),
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.camera_alt_rounded,
+                                            color: AppColors.blackColor,
+                                            size: 16.h,
+                                          ),
                                         ),
-                                        keyboardType: TextInputType.phone,
-                                        inputFormatters: <TextInputFormatter>[
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                VSpace(24.h),
-                                if (profileController.languageList.isNotEmpty)
-                                  Text(
-                                    storedLanguage['Preferred Language'] ??
-                                        "Preferred Language",
-                                    style: t.displayMedium,
-                                  ),
-                                if (profileController.languageList.isNotEmpty)
-                                  VSpace(10.h),
-                                if (profileController.languageList.isNotEmpty)
-                                  Container(
-                                    height: 50.h,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color:
-                                            AppThemes.getSliderInactiveColor(),
+                              ),
+                              VSpace(12.h),
+                              Text(
+                                profileController.isLoading
+                                    ? ""
+                                    : profileController.userName,
+                                style: t.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17.sp,
+                                ),
+                              ),
+                              VSpace(4.h),
+                              Text(
+                                profileController.userEmail,
+                                style: t.bodySmall?.copyWith(
+                                  color: AppThemes.getBlack50Color(),
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // ── Form Fields ─────────────────────────────────────
+                      profileController.isLoading
+                          ? Padding(
+                              padding: EdgeInsets.only(top: 40.h),
+                              child: Helpers.appLoader(),
+                            )
+                          : Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 20.h,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ── Name Card ─────────────────────────
+                                  _buildSectionCard(
+                                    title: "Personal Info",
+                                    children: [
+                                      // First Name
+                                      _buildFieldLabel(
+                                        storedLanguage['First Name'] ?? "First Name",
+                                        t,
                                       ),
-                                      borderRadius: Dimensions.kBorderRadius,
-                                    ),
-                                    child: AppCustomDropDown(
-                                      height: 46.h,
-                                      width: double.infinity,
-                                      items:
-                                          profileController.languageList
-                                              .map((e) => e.name)
-                                              .toList(),
-                                      selectedValue:
-                                          selectedLanguageVal ??
-                                          profileController.selectedLanguage,
-                                      onChanged: (value) async {
-                                        selectedLanguageVal = value;
-                                        Language selectedList =
-                                            await profileController.languageList
-                                                .firstWhere(
-                                                  (e) =>
-                                                      e.name.toString() ==
-                                                      value.toString(),
-                                                );
-                                        profileController.selectedLanguageId =
-                                            selectedList.id.toString();
-                                        profileController.isLanguageSelected =
-                                            true;
-                                        profileController.update();
-                                      },
-                                      hint:
-                                          storedLanguage['Select Language'] ??
-                                          "Select Language",
-                                      selectedStyle: t.displayMedium,
-                                    ),
+                                      VSpace(8.h),
+                                      _buildTextField(
+                                        controller: profileController.fNameEditingController,
+                                        hint: storedLanguage['Enter First Name'] ?? "Enter First Name",
+                                        prefixIcon: Icons.person_outline_rounded,
+                                        t: t,
+                                      ),
+                                      VSpace(16.h),
+                                      // Last Name
+                                      _buildFieldLabel(
+                                        storedLanguage['Last Name'] ?? "Last Name",
+                                        t,
+                                      ),
+                                      VSpace(8.h),
+                                      _buildTextField(
+                                        controller: profileController.lNameEditingController,
+                                        hint: storedLanguage['Enter Last Name'] ?? "Enter Last Name",
+                                        prefixIcon: Icons.person_outline_rounded,
+                                        t: t,
+                                      ),
+                                    ],
                                   ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['City'] ?? "City",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  isBorderColor: true,
-                                  hintext:
-                                      storedLanguage['Enter City'] ??
-                                      "Enter City",
-                                  controller:
-                                      profileController.cityEditingController,
-                                  contentPadding: EdgeInsets.only(left: 20.w),
-                                ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['State'] ?? "State",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  isBorderColor: true,
-                                  hintext:
-                                      storedLanguage['Enter State'] ??
-                                      "Enter State",
-                                  controller:
-                                      profileController.stateEditingController,
-                                  contentPadding: EdgeInsets.only(left: 20.w),
-                                ),
-                                VSpace(24.h),
-                                Text(
-                                  storedLanguage['Address'] ?? "Address",
-                                  style: t.displayMedium,
-                                ),
-                                VSpace(10.h),
-                                CustomTextField(
-                                  contentPadding: EdgeInsets.only(
-                                    left: 20.w,
-                                    bottom: 0.h,
-                                    top: 10.h,
+                                  VSpace(16.h),
+
+                                  // ── Phone Card ────────────────────────
+                                  _buildSectionCard(
+                                    title: storedLanguage['Contact'] ?? "Contact",
+                                    children: [
+                                      _buildFieldLabel(
+                                        storedLanguage['Phone Number'] ?? "Phone Number",
+                                        t,
+                                      ),
+                                      VSpace(8.h),
+                                      // India fixed phone field
+                                      Container(
+                                        height: 52.h,
+                                        decoration: BoxDecoration(
+                                          color: Get.isDarkMode
+                                              ? AppColors.darkBgColor
+                                              : AppColors.black10.withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          border: Border.all(
+                                            color: AppThemes.getSliderInactiveColor(),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            // India fixed prefix
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 12.w),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    "🇮🇳",
+                                                    style: TextStyle(fontSize: 20.sp),
+                                                  ),
+                                                  HSpace(6.w),
+                                                  Text(
+                                                    "+91",
+                                                    style: t.bodyMedium?.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14.sp,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              width: 1,
+                                              height: 28.h,
+                                              color: AppThemes.getSliderInactiveColor(),
+                                            ),
+                                            Expanded(
+                                              child: TextField(
+                                                controller: profileController.phoneNumberEditingController,
+                                                keyboardType: TextInputType.phone,
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter.digitsOnly,
+                                                  LengthLimitingTextInputFormatter(10),
+                                                ],
+                                                style: t.bodyMedium?.copyWith(fontSize: 14.sp),
+                                                decoration: InputDecoration(
+                                                  hintText: storedLanguage['Enter Number'] ?? "Enter 10-digit number",
+                                                  hintStyle: t.bodySmall?.copyWith(
+                                                    color: AppColors.textFieldHintColor,
+                                                    fontSize: 13.sp,
+                                                  ),
+                                                  border: InputBorder.none,
+                                                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  alignment: Alignment.topLeft,
-                                  isBorderColor: true,
-                                  isPrefixIcon: false,
-                                  controller:
-                                      profileController.addrEditingController,
-                                  hintext:
-                                      storedLanguage['Enter Address'] ??
-                                      "Enter Address",
-                                ),
-                                VSpace(24.h),
-                                Material(
-                                  color: Colors.transparent,
-                                  child: AppButton(
-                                    isLoading:
-                                        profileController.isUpdateProfile
-                                            ? true
-                                            : false,
-                                    onTap: () async {
-                                      try {
-                                        Helpers.hideKeyboard();
-                                        if (profileController
-                                                .isLanguageSelected ==
-                                            true) {
-                                          await appController
-                                              .getLanguageListBuyId(
-                                                id:
-                                                    profileController
-                                                        .selectedLanguageId,
-                                              );
-                                          await profileController
-                                              .validateEditProfile(context);
-                                        } else if (profileController
-                                                .isLanguageSelected ==
-                                            false) {
-                                          await profileController
-                                              .validateEditProfile(context);
+                                  VSpace(16.h),
+
+                                  // ── Language Card ─────────────────────
+                                  if (profileController.languageList.isNotEmpty)
+                                    _buildSectionCard(
+                                      title: storedLanguage['Preferences'] ?? "Preferences",
+                                      children: [
+                                        _buildFieldLabel(
+                                          storedLanguage['Preferred Language'] ?? "Preferred Language",
+                                          t,
+                                        ),
+                                        VSpace(8.h),
+                                        Container(
+                                          height: 52.h,
+                                          decoration: BoxDecoration(
+                                            color: Get.isDarkMode
+                                                ? AppColors.darkBgColor
+                                                : AppColors.black10.withValues(alpha: 0.06),
+                                            borderRadius: BorderRadius.circular(12.r),
+                                            border: Border.all(
+                                              color: AppThemes.getSliderInactiveColor(),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: AppCustomDropDown(
+                                            height: 50.h,
+                                            width: double.infinity,
+                                            items: profileController.languageList
+                                                .map((e) => e.name)
+                                                .toList(),
+                                            selectedValue:
+                                                selectedLanguageVal ??
+                                                profileController.selectedLanguage,
+                                            onChanged: (value) async {
+                                              selectedLanguageVal = value;
+                                              Language selectedList =
+                                                  await profileController.languageList
+                                                      .firstWhere(
+                                                        (e) => e.name.toString() == value.toString(),
+                                                      );
+                                              profileController.selectedLanguageId =
+                                                  selectedList.id.toString();
+                                              profileController.isLanguageSelected = true;
+                                              profileController.update();
+                                            },
+                                            hint: storedLanguage['Select Language'] ?? "Select Language",
+                                            selectedStyle: t.displayMedium,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  if (profileController.languageList.isNotEmpty) VSpace(16.h),
+
+                                  // ── Address Card ──────────────────────
+                                  _buildSectionCard(
+                                    title: storedLanguage['Address Details'] ?? "Address Details",
+                                    children: [
+                                      _buildFieldLabel(
+                                        storedLanguage['City'] ?? "City",
+                                        t,
+                                      ),
+                                      VSpace(8.h),
+                                      _buildTextField(
+                                        controller: profileController.cityEditingController,
+                                        hint: storedLanguage['Enter City'] ?? "Enter City",
+                                        prefixIcon: Icons.location_city_outlined,
+                                        t: t,
+                                      ),
+                                      VSpace(16.h),
+                                      _buildFieldLabel(
+                                        storedLanguage['State'] ?? "State",
+                                        t,
+                                      ),
+                                      VSpace(8.h),
+                                      _buildTextField(
+                                        controller: profileController.stateEditingController,
+                                        hint: storedLanguage['Enter State'] ?? "Enter State",
+                                        prefixIcon: Icons.map_outlined,
+                                        t: t,
+                                      ),
+                                      VSpace(16.h),
+                                      _buildFieldLabel(
+                                        storedLanguage['Address'] ?? "Address",
+                                        t,
+                                      ),
+                                      VSpace(8.h),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Get.isDarkMode
+                                              ? AppColors.darkBgColor
+                                              : AppColors.black10.withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          border: Border.all(
+                                            color: AppThemes.getSliderInactiveColor(),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: TextField(
+                                          controller: profileController.addrEditingController,
+                                          maxLines: 3,
+                                          style: t.bodyMedium?.copyWith(fontSize: 14.sp),
+                                          decoration: InputDecoration(
+                                            hintText: storedLanguage['Enter Address'] ?? "Enter Address",
+                                            hintStyle: t.bodySmall?.copyWith(
+                                              color: AppColors.textFieldHintColor,
+                                              fontSize: 13.sp,
+                                            ),
+                                            prefixIcon: Padding(
+                                              padding: EdgeInsets.only(bottom: 44.h),
+                                              child: Icon(
+                                                Icons.home_outlined,
+                                                color: AppColors.mainColor,
+                                                size: 20.sp,
+                                              ),
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(
+                                              horizontal: 12.w,
+                                              vertical: 14.h,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  VSpace(24.h),
+
+                                  // ── Update Button ─────────────────────
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: AppButton(
+                                      isLoading: profileController.isUpdateProfile ? true : false,
+                                      onTap: () async {
+                                        try {
+                                          Helpers.hideKeyboard();
+                                          // Set India phone code fixed
+                                          profileController.phoneCode = '+91';
+                                          profileController.countryCode = 'IN';
+                                          profileController.countryName = 'India';
+                                          if (profileController.isLanguageSelected == true) {
+                                            await appController.getLanguageListBuyId(
+                                              id: profileController.selectedLanguageId,
+                                            );
+                                            await profileController.validateEditProfile(context);
+                                          } else {
+                                            await profileController.validateEditProfile(context);
+                                          }
+                                        } catch (e) {
+                                          Helpers.showSnackBar(msg: e.toString());
                                         }
-                                      } catch (e) {
-                                        Helpers.showSnackBar(msg: e.toString());
-                                      }
-                                    },
-                                    text:
-                                        storedLanguage['Update Profile'] ??
-                                        'Update Profile',
+                                      },
+                                      text: storedLanguage['Update Profile'] ?? 'Update Profile',
+                                    ),
                                   ),
-                                ),
-                                VSpace(65.h),
-                              ],
+                                  VSpace(40.h),
+                                ],
+                              ),
                             ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -410,105 +461,215 @@ class EditProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildSectionCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.h),
+      decoration: BoxDecoration(
+        color: AppThemes.getFillColor(),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: Get.isDarkMode
+              ? AppColors.black70
+              : AppColors.borderColor.withValues(alpha: 0.5),
+          width: 0.6,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.mainColor,
+              letterSpacing: 0.8,
+            ),
+          ),
+          VSpace(14.h),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label, TextTheme t) {
+    return Text(
+      label,
+      style: t.bodySmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontSize: 12.sp,
+        color: AppThemes.getBlack50Color(),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData prefixIcon,
+    required TextTheme t,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Container(
+      height: 52.h,
+      decoration: BoxDecoration(
+        color: Get.isDarkMode
+            ? AppColors.darkBgColor
+            : AppColors.black10.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: AppThemes.getSliderInactiveColor(),
+          width: 1,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        style: t.bodyMedium?.copyWith(fontSize: 14.sp),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: t.bodySmall?.copyWith(
+            color: AppColors.textFieldHintColor,
+            fontSize: 13.sp,
+          ),
+          prefixIcon: Icon(prefixIcon, color: AppColors.mainColor, size: 20.sp),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
+        ),
+      ),
+    );
+  }
+
   Future<dynamic> showbottomsheet(BuildContext context, storedLanguage) {
     return showModalBottomSheet(
       context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
       builder: (BuildContext context) {
         return GetBuilder<AppController>(
           builder: (_) {
             return GetBuilder<ProfileController>(
               builder: (profileController) {
-                return SizedBox(
-                  height: context.mQuery.height * 0.2,
-                  width: double.infinity,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      SizedBox(height: 10.h),
-                      GestureDetector(
-                        onTap: () async {
-                          Get.back();
-                          profileController.pickImage(
-                            ImageSource.camera,
-                            context,
-                          );
-                        },
-                        child: Container(
-                          height: 80.h,
-                          width: 150.w,
+                return SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 20.w),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 36.w,
+                          height: 4.h,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: AppThemes.getDarkBgColor(),
-                            border: Border.all(
-                              color: AppColors.mainColor,
-                              width: .2,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.camera_alt,
-                                size: 35.h,
-                                color:
-                                    Get.isDarkMode
-                                        ? AppColors.whiteColor
-                                        : AppColors.black50,
-                              ),
-                              Text(
-                                storedLanguage['Pick from Camera'] ??
-                                    'Pick from Camera',
-                                style: context.t.bodySmall?.copyWith(
-                                  color: AppThemes.getIconBlackColor(),
-                                ),
-                              ),
-                            ],
+                            color: AppColors.black30,
+                            borderRadius: BorderRadius.circular(4.r),
                           ),
                         ),
-                      ),
-                      SizedBox(width: 10.w),
-                      GestureDetector(
-                        onTap: () async {
-                          Get.back();
-                          profileController.pickImage(
-                            ImageSource.gallery,
-                            context,
-                          );
-                        },
-                        child: Container(
-                          height: 80.h,
-                          width: 150.w,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: AppThemes.getDarkBgColor(),
-                            border: Border.all(
-                              color: AppColors.mainColor,
-                              width: .2,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.camera,
-                                size: 35.h,
-                                color:
-                                    Get.isDarkMode
-                                        ? AppColors.whiteColor
-                                        : AppColors.black50,
-                              ),
-                              Text(
-                                storedLanguage['Pick from Gallery'] ??
-                                    'Pick from Gallery',
-                                style: context.t.bodySmall?.copyWith(
-                                  color: AppThemes.getIconBlackColor(),
-                                ),
-                              ),
-                            ],
+                        VSpace(16.h),
+                        Text(
+                          storedLanguage['Update Photo'] ?? "Update Photo",
+                          style: context.t.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
                           ),
                         ),
-                      ),
-                    ],
+                        VSpace(20.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () async {
+                                  Get.back();
+                                  profileController.pickImage(
+                                    ImageSource.camera,
+                                    context,
+                                  );
+                                },
+                                child: Container(
+                                  height: 80.h,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    color: AppColors.mainColor.withValues(alpha: 0.12),
+                                    border: Border.all(
+                                      color: AppColors.mainColor.withValues(alpha: 0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.camera_alt_rounded,
+                                        size: 32.h,
+                                        color: AppColors.mainColor,
+                                      ),
+                                      VSpace(6.h),
+                                      Text(
+                                        storedLanguage['Camera'] ?? 'Camera',
+                                        style: context.t.bodySmall?.copyWith(
+                                          color: AppColors.mainColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            HSpace(12.w),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () async {
+                                  Get.back();
+                                  profileController.pickImage(
+                                    ImageSource.gallery,
+                                    context,
+                                  );
+                                },
+                                child: Container(
+                                  height: 80.h,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    color: AppColors.mainColor.withValues(alpha: 0.12),
+                                    border: Border.all(
+                                      color: AppColors.mainColor.withValues(alpha: 0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.photo_library_rounded,
+                                        size: 32.h,
+                                        color: AppColors.mainColor,
+                                      ),
+                                      VSpace(6.h),
+                                      Text(
+                                        storedLanguage['Gallery'] ?? 'Gallery',
+                                        style: context.t.bodySmall?.copyWith(
+                                          color: AppColors.mainColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        VSpace(8.h),
+                      ],
+                    ),
                   ),
                 );
               },

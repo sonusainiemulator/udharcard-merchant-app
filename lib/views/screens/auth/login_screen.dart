@@ -8,41 +8,12 @@ import '../../../routes/routes_name.dart';
 import '../../../utils/services/helpers.dart';
 import '../../widgets/fintech_auth_widgets.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  late final AuthController _authController;
-
-  @override
-  void initState() {
-    super.initState();
-    _authController = Get.find<AuthController>();
-    _authController.firebasePhoneController.addListener(_refreshForm);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authController.clearFirebaseOtpController();
-      if (mounted) setState(() {});
-    });
-  }
-
-  void _refreshForm() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _authController.firebasePhoneController.removeListener(_refreshForm);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final phoneText = _authController.firebasePhoneController.text.trim();
-    final canContinue = phoneText.length == 10;
+    final AuthController authController = Get.find<AuthController>();
 
     return FintechAuthPage(
       eyebrow: 'Merchant access',
@@ -56,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
             FintechTextField(
               label: 'Mobile number',
               hint: 'Enter 10-digit mobile number',
-              controller: _authController.firebasePhoneController,
+              controller: authController.firebasePhoneController,
               keyboardType: TextInputType.phone,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
@@ -88,30 +59,32 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 18.h),
             GetBuilder<AuthController>(
               id: AuthController.authSubmissionUpdateId,
-              builder:
-                  (controller) => Column(
-                    children: [
-                      if (controller.loginErrorMessage != null)
-                        FintechErrorMessage(
-                          message: controller.loginErrorMessage!,
-                        ),
-                      FintechPrimaryButton(
-                        label: 'Continue with OTP',
-                        isLoading: controller.isLoading,
-                        onPressed:
-                            canContinue
-                                ? () async {
-                                  Helpers.hideKeyboard();
-                                  await controller.sendFirebaseOtp(
-                                    controller.firebasePhoneController.text
-                                        .trim(),
-                                    isLogin: true,
-                                  );
-                                }
-                                : null,
-                      ),
-                    ],
+              builder: (controller) => Column(
+                children: [
+                  if (controller.loginErrorMessage != null)
+                    FintechErrorMessage(
+                      message: controller.loginErrorMessage!,
+                    ),
+                  FintechPrimaryButton(
+                    label: 'Continue with OTP',
+                    isLoading: controller.isLoading,
+                    onPressed: () async {
+                      Helpers.hideKeyboard();
+                      final phone =
+                          controller.firebasePhoneController.text.trim();
+                      if (phone.length < 10) {
+                        controller.loginErrorMessage =
+                            'Please enter a valid 10-digit mobile number.';
+                        controller.update(
+                          [AuthController.authSubmissionUpdateId],
+                        );
+                        return;
+                      }
+                      await controller.sendFirebaseOtp(phone, isLogin: true);
+                    },
                   ),
+                ],
+              ),
             ),
             SizedBox(height: 16.h),
             Row(

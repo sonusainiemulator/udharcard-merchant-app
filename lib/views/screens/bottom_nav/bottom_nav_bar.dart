@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/bottom_nav_controller.dart';
-import '../../../controllers/profile_controller.dart';
 import '../../../notification_service/notification_controller.dart';
 import '../../../utils/app_constants.dart';
 import '../../../utils/services/pop_app.dart';
@@ -29,10 +28,6 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
     _connectivitySubscription = appCtrlconnectivity.onConnectivityChanged
         .listen(Get.find<AppController>().updateConnectionStatus);
     Get.find<PushNotificationController>().getPushNotificationConfig();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      Get.find<ProfileController>().getProfile();
-      Get.find<AppController>().getDashboard();
-    });
   }
 
   @override

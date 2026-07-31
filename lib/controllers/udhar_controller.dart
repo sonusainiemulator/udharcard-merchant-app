@@ -148,12 +148,23 @@ class UdharController extends GetxController {
   // ─────────────────────────────────────────────────────────────
 
   Future<void> fetchUsers() async {
-    isUsersLoading = true;
-    update();
+    if (isUsersLoading) return;
+
+    // Load from cache first to avoid blank screen / flickering
+    final cached = HiveHelp.read('cached_users');
+    if (cached != null && cached is List && cached.isNotEmpty) {
+      usersList = List<dynamic>.from(cached);
+      filteredUsers = List.from(usersList);
+    }
+
+    if (usersList.isEmpty) {
+      isUsersLoading = true;
+      update();
+    }
+
     await checkConnection();
 
     if (isOffline) {
-      final cached = HiveHelp.read('cached_users');
       if (cached != null) {
         usersList = List<dynamic>.from(cached);
       } else {
@@ -546,7 +557,22 @@ class UdharController extends GetxController {
   // ─────────────────────────────────────────────────────────────
 
   Future<void> fetchCustomerLedger(String customerId, {bool showLoading = true}) async {
-    if (showLoading) {
+    if (isLedgerLoading) return;
+
+    // Load from cache first to avoid blank screen / flickering
+    final cached = HiveHelp.read('cached_ledger_$customerId');
+    if (cached != null) {
+      ledgerTransactions = List<dynamic>.from(cached['transactions'] ?? []);
+      currentOutstandingBalance =
+          double.tryParse(cached['outstanding_balance']?.toString() ?? '0') ??
+          0.0;
+      currentCreditLimit =
+          double.tryParse(cached['credit_limit']?.toString() ?? '5000') ??
+          5000.0;
+      _applyLedgerDateFilter();
+    }
+
+    if (showLoading && ledgerTransactions.isEmpty) {
       isLedgerLoading = true;
       update();
     }
@@ -562,7 +588,6 @@ class UdharController extends GetxController {
     }
 
     if (isOffline) {
-      final cached = HiveHelp.read('cached_ledger_$customerId');
       if (cached != null) {
         ledgerTransactions = List<dynamic>.from(cached['transactions'] ?? []);
         currentOutstandingBalance =
@@ -627,9 +652,7 @@ class UdharController extends GetxController {
     }
 
     _applyLedgerDateFilter();
-    if (showLoading) {
-      isLedgerLoading = false;
-    }
+    isLedgerLoading = false;
     update();
   }
 

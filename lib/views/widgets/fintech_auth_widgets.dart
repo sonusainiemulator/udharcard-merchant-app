@@ -220,29 +220,7 @@ class FintechAuthPage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: 6.h),
-                      FutureBuilder<PackageInfo>(
-                        future: PackageInfo.fromPlatform().catchError((_) => PackageInfo(
-                          appName: '',
-                          packageName: '',
-                          version: '',
-                          buildNumber: '',
-                          buildSignature: '',
-                        )),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data!.version.isNotEmpty) {
-                            return Center(
-                              child: Text(
-                                'v${snapshot.data!.version}',
-                                style: TextStyle(
-                                  color: bodyColor.withValues(alpha: .5),
-                                  fontSize: 11.sp,
-                                ),
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
+                      const _AppVersionText(),
                     ],
                   ),
                 ),
@@ -433,6 +411,53 @@ class FintechErrorMessage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Caches the [PackageInfo] future so it is never recreated on parent rebuilds.
+class _AppVersionText extends StatefulWidget {
+  const _AppVersionText();
+
+  @override
+  State<_AppVersionText> createState() => _AppVersionTextState();
+}
+
+class _AppVersionTextState extends State<_AppVersionText> {
+  late final Future<PackageInfo> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = PackageInfo.fromPlatform().catchError(
+      (_) => PackageInfo(
+        appName: '',
+        packageName: '',
+        version: '',
+        buildNumber: '',
+        buildSignature: '',
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PackageInfo>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data!.version.isNotEmpty) {
+          return Center(
+            child: Text(
+              'v${snapshot.data!.version}',
+              style: TextStyle(
+                color: const Color(0xFF667085).withValues(alpha: .5),
+                fontSize: 11.sp,
+              ),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }

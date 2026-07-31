@@ -131,21 +131,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           message: controller.loginErrorMessage!,
                         ),
                       FintechPrimaryButton(
-                        label: 'Verify mobile number',
+                        label: 'Verify mobile number & Register',
                         isLoading: controller.isLoading,
-                        onPressed:
-                            canContinue
-                                ? () async {
-                                  Helpers.hideKeyboard();
-                                  controller.firebasePhoneController.text =
-                                      controller.phoneEditingController.text
-                                          .trim();
-                                  await controller.sendFirebaseOtp(
-                                    controller.phoneEditingController.text
-                                        .trim(),
-                                  );
-                                }
-                                : null,
+                        onPressed: () async {
+                          Helpers.hideKeyboard();
+                          final name = _authController.nameEditingController.text.trim();
+                          final shop = _authController.shopNameEditingController.text.trim();
+                          final phone = _authController.phoneEditingController.text.trim();
+
+                          if (name.isEmpty) {
+                            controller.loginErrorMessage = 'Please enter your full name.';
+                            controller.update([AuthController.authSubmissionUpdateId]);
+                            return;
+                          }
+                          if (shop.isEmpty) {
+                            controller.loginErrorMessage = 'Please enter your business or shop name.';
+                            controller.update([AuthController.authSubmissionUpdateId]);
+                            return;
+                          }
+                          if (phone.length < 10) {
+                            controller.loginErrorMessage = 'Please enter a valid 10-digit mobile number.';
+                            controller.update([AuthController.authSubmissionUpdateId]);
+                            return;
+                          }
+
+                          controller.firebasePhoneController.text = phone;
+                          await controller.sendFirebaseOtp(phone, isLogin: false);
+                        },
                       ),
                     ],
                   ),

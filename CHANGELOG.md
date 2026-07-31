@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.26] - 2026-08-01
+
+### 🐛 Login Screen — Flickering Fix
+- **Root Cause Eliminated**: Converted `LoginScreen` from `StatefulWidget` to `StatelessWidget` — removed `TextEditingController.addListener(_refreshForm)` + `setState()` that was causing the entire login screen to `build()` on every single keystroke typed in the phone number field.
+- **Scoped Rebuild Only**: The only dynamic section (Continue button loading state + error message banner) is wrapped in `GetBuilder<AuthController>` with a scoped ID `authSubmissionUpdateId` — typing in the phone field now triggers **zero** screen-wide rebuilds.
+- **FutureBuilder Flicker Fix**: Extracted `PackageInfo.fromPlatform()` from inline `FintechAuthPage` (`StatelessWidget`) into a dedicated `_AppVersionText` `StatefulWidget` — future is now initialized once in `initState` and never restarted on parent rebuilds.
+- **Removed Stale `initState` Code**: Removed `clearFirebaseOtpController()` + postFrameCallback `setState` that ran every time the login screen was pushed onto the navigator stack.
+- **Zero Logic Regression**: All login functionality unchanged — phone validation, OTP dispatch via `sendFirebaseOtp`, error message display, and navigation to Register screen all work identically.
+
+---
+
+## [1.0.25] - 2026-08-01
+
+
+### 🎨 Edit Profile UI Overhaul
+- **Redesigned Edit Profile Screen**: Complete UI rewrite with modern card-based sectioned layout — Personal Info, Contact, Preferences, and Address Details cards replacing plain flat fields.
+- **Username Field Hidden**: Removed username input from Edit Profile UI; username field no longer shown to merchant.
+- **Name Fields Simplified**: "First Name" and "Last Name" shown as two clean separate labelled fields inside a single card section.
+- **India Fixed as Default Country Code**: Replaced the full `CountryCodePicker` dropdown with a static India 🇮🇳 +91 prefix — country code is now hardcoded to India and sent as `+91`/`IN` on profile update.
+- **Improved Profile Photo Header**: Circular avatar with `mainColor` border, inline name + email subtitle, and camera overlay button.
+- **Better Photo Picker Sheet**: Redesigned camera/gallery bottom sheet with card-style buttons and icons.
+- **Validation Update**: Removed username-required validation from `ProfileController.validateEditProfile()`; only First Name, Last Name, and Phone are required.
+- **Default Country Reset**: `ProfileController` now defaults `countryCode = 'IN'`, `phoneCode = '+91'`, `countryName = 'India'` instead of US.
+
+### 🐛 Add Customer Sheet — Save Button Fix
+- **Sticky Save Button**: `Save Customer` button is now always visible above the keyboard — restructured sheet to use a `Column` with `mainAxisSize: min` so the button never gets pushed off-screen when keyboard appears.
+- **Fields Cleared on Open**: `nameCtrl`, `phoneCtrl`, `emailCtrl`, `limitCtrl` are all cleared when the sheet opens, preventing stale data from previous sessions.
+- **Loading State**: Button shows `CircularProgressIndicator` icon + "Saving..." label while `isAddingCustomer` is true, and disables itself to prevent double-submit.
+- **Keyboard Dismiss on Save**: `FocusScope.unfocus()` called before `addCustomer()` so keyboard closes cleanly on save tap.
+- **Refactored to StatelessWidget**: Sheet content extracted to `_AddCustomerSheetContent` `StatelessWidget` so `GetBuilder<UdharController>` properly rebuilds the button's loading state.
+- **Input Formatters**: Phone number field now enforces digits-only with max 15 characters; credit limit enforces digits-only.
+
+---
+
 ## [1.0.24] - 2026-07-31
+
 
 ### 🎨 Premium Fintech UI & Typography Overhaul
 - **Redesigned Merchant UPI Address Modal Sheet**: Fixed oversized headline typography (`displaySmall`/`displayMedium`) to clean, legible `bodyMedium` (`13.sp` with `1.4` height) and `18.sp` bold title.

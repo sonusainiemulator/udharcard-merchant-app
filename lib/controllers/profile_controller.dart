@@ -34,10 +34,8 @@ class ProfileController extends GetxController {
       Helpers.showSnackBar(msg: 'First Name is required');
     } else if (lNameEditingController.text.isEmpty) {
       Helpers.showSnackBar(msg: 'Last Name is required');
-    } else if (userNameEditingController.text.isEmpty) {
-      Helpers.showSnackBar(msg: 'User Name is required');
     } else if (phoneNumberEditingController.text.isEmpty) {
-      Helpers.showSnackBar(msg: 'Phone Nubmer is required');
+      Helpers.showSnackBar(msg: 'Phone Number is required');
     } else {
       await updateProfile(context);
     }
@@ -55,36 +53,48 @@ class ProfileController extends GetxController {
   String selectedLanguageId = "1";
   bool isLanguageSelected = false;
   String userEmail = "";
-  String countryCode = 'US';
-  String phoneCode = '+1';
-  String countryName = 'United States';
+  String countryCode = 'IN';
+  String phoneCode = '+91';
+  String countryName = 'India';
   String qrLink = '';
   Future getProfile({bool? isFromRefreshIndicator = false}) async {
-    if (isFromRefreshIndicator == false) isLoading = true;
-    update();
-    http.Response response = await ProfileRepo.getProfile();
-    profileList.clear();
-    languageList.clear();
-    countryList.clear();
-    if (isFromRefreshIndicator == false) isLoading = false;
-    update();
-    var data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      if (data['status'] == 'success') {
-        qrLink = data['message']['userProfile']['qr_link'] ?? "";
-        HiveHelp.write(Keys.baseCurrency, data['message']['base_currency'] ?? "");
-        profileList.add(ProfileModel.fromJson(data).message!.userProfile!);
-        languageList.addAll(ProfileModel.fromJson(data).message!.languages!);
-        countryList.addAll(ProfileModel.fromJson(data).message!.countries!);
-        if (profileList.isNotEmpty) {
-          var data = profileList[0];
-          _getInfo(data); 
+    if (isLoading) return;
+
+    if (profileList.isEmpty && isFromRefreshIndicator == false) {
+      isLoading = true;
+      update();
+    }
+
+    try {
+      http.Response response = await ProfileRepo.getProfile();
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          profileList.clear();
+          languageList.clear();
+          countryList.clear();
+
+          qrLink = data['message']['userProfile']['qr_link'] ?? "";
+          HiveHelp.write(Keys.baseCurrency, data['message']['base_currency'] ?? "");
+          profileList.add(ProfileModel.fromJson(data).message!.userProfile!);
+          languageList.addAll(ProfileModel.fromJson(data).message!.languages!);
+          countryList.addAll(ProfileModel.fromJson(data).message!.countries!);
+          if (profileList.isNotEmpty) {
+            var profileData = profileList[0];
+            _getInfo(profileData); 
+          }
+        } else {
+          ApiStatus.checkStatus(data['status'], data['message']);
         }
       } else {
-        ApiStatus.checkStatus(data['status'], data['message']);
+        var data = jsonDecode(response.body);
+        Helpers.showSnackBar(msg: '${data['message']}');
       }
-    } else {
-      Helpers.showSnackBar(msg: '${data['message']}');
+    } catch (e) {
+      debugPrint("Error fetching profile: $e");
+    } finally {
+      isLoading = false;
+      update();
     }
   }
 

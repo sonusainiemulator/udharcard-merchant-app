@@ -87,24 +87,25 @@ class AppController extends GetxController {
   List<dash.Recipient> recipientList = [];
   bool isGettingDashboard = false;
   Future getDashboard() async {
-    isGettingDashboard = true;
-    update();
+    if (isGettingDashboard) return;
+
+    if (walletList.isEmpty && recipientList.isEmpty) {
+      isGettingDashboard = true;
+      update();
+    }
     try {
       http.Response response = await AppControllerRepo.getDashboard();
-      isGettingDashboard = false;
-      walletList.clear();
-      recipientList.clear();
-      update();
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         if (data['status'] == 'success') {
+          walletList.clear();
+          recipientList.clear();
           walletList.addAll(
             wallet.WalletModel.fromJson(data).message!.wallets!,
           );
           recipientList.addAll(
             dash.DashboardModel.fromJson(data).message!.recipients!,
           );
-          update();
         } else {
           Helpers.showSnackBar(
             msg: data['message']?.toString() ?? 'Unable to load dashboard',
@@ -114,9 +115,9 @@ class AppController extends GetxController {
         Helpers.showSnackBar(msg: 'Unable to load dashboard');
       }
     } catch (_) {
+      // Keep existing data or handle error
+    } finally {
       isGettingDashboard = false;
-      walletList.clear();
-      recipientList.clear();
       update();
     }
   }
@@ -125,27 +126,35 @@ class AppController extends GetxController {
   List<basicCtrl.Service> basicCtrlList = [];
   bool isGettingBasicCtrl = false;
   Future getBasicCtrl() async {
-    isGettingBasicCtrl = true;
-    update();
-    http.Response response = await AppControllerRepo.getBasicCtrl();
-    isGettingBasicCtrl = false;
-    basicCtrlList.clear();
-    update();
-    var data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      if (data['status'] == 'success') {
-        if (data['message'] != null && data['message']['service'] != null) {
-          basicCtrlList.add(
-            basicCtrl.BasicCtrlModel.fromJson(data).message!.service!,
-          );
-        }
+    if (isGettingBasicCtrl) return;
 
-        update();
+    if (basicCtrlList.isEmpty) {
+      isGettingBasicCtrl = true;
+      update();
+    }
+    try {
+      http.Response response = await AppControllerRepo.getBasicCtrl();
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          basicCtrlList.clear();
+          if (data['message'] != null && data['message']['service'] != null) {
+            basicCtrlList.add(
+              basicCtrl.BasicCtrlModel.fromJson(data).message!.service!,
+            );
+          }
+        } else {
+          ApiStatus.checkStatus(data['status'], data['message']);
+        }
       } else {
-        ApiStatus.checkStatus(data['status'], data['message']);
+        var data = jsonDecode(response.body);
+        Helpers.showSnackBar(msg: '${data['message']}');
       }
-    } else {
-      Helpers.showSnackBar(msg: '${data['message']}');
+    } catch (_) {
+      // Keep existing basicCtrlList or handle error
+    } finally {
+      isGettingBasicCtrl = false;
+      update();
     }
   }
 }
