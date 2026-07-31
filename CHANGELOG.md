@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.24] - 2026-07-31
+
+### 🎨 Premium Fintech UI & Typography Overhaul
+- **Redesigned Merchant UPI Address Modal Sheet**: Fixed oversized headline typography (`displaySmall`/`displayMedium`) to clean, legible `bodyMedium` (`13.sp` with `1.4` height) and `18.sp` bold title.
+- **Enhanced Safe Area Insets**: Added top drag handle indicator and padded `bottom` to `MediaQuery.of(context).viewInsets.bottom + 16.h + MediaQuery.of(context).padding.bottom`, preventing system soft navigation buttons (`< o |||`) from overlapping the **Save UPI ID** primary button.
+
+---
+
 ## [1.0.23] - 2026-07-31
 
 ### 📱 Layout & Safe Area Improvements

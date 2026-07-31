@@ -587,114 +587,146 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
       isScrollControlled: true,
       backgroundColor: AppThemes.getDarkCardColor(),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
-            left: 20.w,
-            right: 20.w,
-            top: 24.h,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Merchant UPI Address",
-                    style: context.t.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18.sp,
+        return SafeArea(
+          bottom: true,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16.h + MediaQuery.of(context).padding.bottom,
+              left: 20.w,
+              right: 20.w,
+              top: 16.h,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  )
-                ],
-              ),
-              VSpace(10.h),
-              Text(
-                "Add your UPI ID (e.g., shop@upi or 9876543210@paytm) so customers can send payments directly to your UPI handle.",
-                style: context.t.displaySmall?.copyWith(
-                  color: AppThemes.getParagraphColor(),
                 ),
-              ),
-              VSpace(20.h),
-              TextField(
-                controller: upiCtrl,
-                style: context.t.displayMedium,
-                decoration: InputDecoration(
-                  hintText: "Enter UPI ID (e.g. name@upi)",
-                  prefixIcon: Icon(Icons.qr_code, color: AppColors.mainColor),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
+                VSpace(16.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Merchant UPI Address",
+                      style: context.t.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18.sp,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close, size: 20.sp),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    )
+                  ],
+                ),
+                VSpace(10.h),
+                Text(
+                  "Add your UPI ID (e.g., shop@upi or 9876543210@paytm) so customers can send payments directly to your UPI handle.",
+                  style: context.t.bodyMedium?.copyWith(
+                    color: AppThemes.getParagraphColor(),
+                    fontSize: 13.sp,
+                    height: 1.4,
                   ),
-                  filled: true,
-                  fillColor: AppThemes.getFillColor(),
                 ),
-              ),
-              VSpace(24.h),
-              Row(
-                children: [
-                  if (profileController.merchantUpiId != null &&
-                      profileController.merchantUpiId!.isNotEmpty) ...[
+                VSpace(18.h),
+                TextField(
+                  controller: upiCtrl,
+                  style: context.t.bodyMedium?.copyWith(fontSize: 15.sp),
+                  decoration: InputDecoration(
+                    hintText: "Enter UPI ID (e.g. name@upi)",
+                    hintStyle: context.t.bodySmall?.copyWith(
+                      color: AppColors.textFieldHintColor,
+                      fontSize: 14.sp,
+                    ),
+                    prefixIcon: Icon(Icons.qr_code_2, color: AppColors.mainColor, size: 22.sp),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(color: AppColors.borderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(color: AppColors.borderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide(color: AppColors.mainColor, width: 1.5),
+                    ),
+                    filled: true,
+                    fillColor: AppThemes.getFillColor(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+                  ),
+                ),
+                VSpace(20.h),
+                Row(
+                  children: [
+                    if (profileController.merchantUpiId != null &&
+                        profileController.merchantUpiId!.isNotEmpty) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.redAccent),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          onPressed: () {
+                            profileController.removeMerchantUpiId();
+                            Navigator.pop(context);
+                          },
+                          child: Text(
+                            "Remove",
+                            style: TextStyle(color: Colors.redAccent, fontSize: 14.sp, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      HSpace(12.w),
+                    ],
                     Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.redAccent),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.mainColor,
                           padding: EdgeInsets.symmetric(vertical: 14.h),
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r),
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
                         ),
                         onPressed: () {
-                          profileController.removeMerchantUpiId();
+                          if (upiCtrl.text.trim().isEmpty) {
+                            Helpers.showSnackBar(msg: "Please enter a valid UPI ID");
+                            return;
+                          }
+                          profileController.saveMerchantUpiId(upiCtrl.text.trim());
                           Navigator.pop(context);
                         },
                         child: Text(
-                          "Remove",
-                          style: TextStyle(color: Colors.redAccent, fontSize: 14.sp),
+                          "Save UPI ID",
+                          style: TextStyle(
+                            color: AppColors.blackColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15.sp,
+                          ),
                         ),
                       ),
                     ),
-                    HSpace(12.w),
                   ],
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.mainColor,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                      ),
-                      onPressed: () {
-                        if (upiCtrl.text.trim().isEmpty) {
-                          Helpers.showSnackBar(msg: "Please enter a valid UPI ID");
-                          return;
-                        }
-                        profileController.saveMerchantUpiId(upiCtrl.text.trim());
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        "Save UPI ID",
-                        style: TextStyle(
-                          color: AppColors.blackColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              VSpace(10.h),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },

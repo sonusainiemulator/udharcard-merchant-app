@@ -13,6 +13,7 @@ import '../../widgets/custom_textfield.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
 import 'customer_ledger_screen.dart';
+import 'add_customer_sheet.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
@@ -72,7 +73,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           floatingActionButton: FloatingActionButton.extended(
             onPressed:
                 () =>
-                    _showAddCustomerSheet(context, controller, storedLanguage),
+                    showAddCustomerSheet(
+                      context: context,
+                      controller: controller,
+                      storedLanguage: storedLanguage,
+                    ),
             backgroundColor: AppColors.mainColor,
             foregroundColor: Colors.white,
             icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -537,122 +542,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     );
   }
 
-  // ── Show Add Customer Sheet ──────────────────────────────────────────
-  void _showAddCustomerSheet(
-    BuildContext context,
-    UdharController controller,
-    Map storedLanguage,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: EdgeInsets.only(
-              left: 20.w,
-              right: 20.w,
-              top: 20.h,
-              bottom: 20.h + MediaQuery.of(context).padding.bottom,
-            ),
-            decoration: BoxDecoration(
-              color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.black30,
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                    ),
-                  ),
-                  VSpace(20.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        storedLanguage['Add Customer'] ?? 'New Customer',
-                        style: context.t.bodyLarge?.copyWith(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Icon(
-                          Icons.close,
-                          color: AppColors.black50,
-                          size: 24.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  VSpace(20.h),
-                  CustomTextField(
-                    hintext: storedLanguage['Name'] ?? 'Customer Name *',
-                    controller: controller.nameCtrl,
-                  ),
-                  VSpace(12.h),
-                  CustomTextField(
-                    hintext: storedLanguage['Phone'] ?? 'Phone Number *',
-                    controller: controller.phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                  ),
-                  VSpace(12.h),
-                  CustomTextField(
-                    hintext: storedLanguage['Email'] ?? 'Email Address (Optional)',
-                    controller: controller.emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  VSpace(12.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomTextField(
-                          hintext: storedLanguage['Credit Limit'] ?? 'Credit Limit (₹)',
-                          controller: controller.limitCtrl,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      HSpace(12.w),
-                      Expanded(
-                        child: CustomTextField(
-                          hintext: storedLanguage['Opening Balance'] ?? 'Opening Bal (₹)',
-                          controller: controller.openingBalanceCtrl,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
-                  VSpace(24.h),
-                  GetBuilder<UdharController>(
-                    builder: (ctrl) => AppButton(
-                      text: storedLanguage['Add Customer'] ?? 'Create Customer',
-                      isLoading: ctrl.isAddingCustomer,
-                      onTap: () => ctrl.addCustomer(),
-                    ),
-                  ),
-                  VSpace(10.h),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+
 
   void _confirmDelete(
     BuildContext context,

@@ -3,11 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
-import '../../../themes/themes.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
+import '../../widgets/app_button.dart';
+import 'add_customer_sheet.dart';
 
 /// A bottom sheet for picking a customer to attach to the udhar entry.
 class SelectUserSheet extends StatelessWidget {
@@ -80,6 +81,25 @@ class SelectUserSheet extends StatelessWidget {
                         ),
                         HSpace(4.w),
                         IconButton(
+                          onPressed: () async {
+                            controller.nameCtrl.clear();
+                            controller.phoneCtrl.clear();
+                            controller.emailCtrl.clear();
+                            controller.limitCtrl.clear();
+                            final newCust = await showAddCustomerSheet(
+                              context: context,
+                              controller: controller,
+                              storedLanguage: storedLanguage,
+                            );
+                            if (newCust != null) {
+                              Get.back(result: newCust);
+                            }
+                          },
+                          icon: Icon(Icons.person_add_alt_1_rounded, size: 22.sp, color: AppColors.mainColor),
+                          tooltip: "Add New Customer",
+                        ),
+                        HSpace(4.w),
+                        IconButton(
                           onPressed: () => Get.back(),
                           icon: Icon(Icons.close,
                               size: 22.sp, color: AppColors.black50),
@@ -137,6 +157,38 @@ class SelectUserSheet extends StatelessWidget {
                                           'No customers found',
                                       style: context.t.bodyMedium
                                           ?.copyWith(color: AppColors.black50),
+                                    ),
+                                    VSpace(16.h),
+                                    AppButton(
+                                      text: storedLanguage['Add Customer'] ?? "Add Customer",
+                                      buttonWidth: 180.w,
+                                      onTap: () async {
+                                        final searchText = controller.searchCtrl.text.trim();
+                                        controller.nameCtrl.clear();
+                                        controller.phoneCtrl.clear();
+                                        controller.emailCtrl.clear();
+                                        controller.limitCtrl.clear();
+
+                                        if (searchText.isNotEmpty) {
+                                          final cleanSearch = searchText.replaceAll(' ', '').replaceAll('-', '');
+                                          if (RegExp(r'^\d+$').hasMatch(cleanSearch)) {
+                                            controller.phoneCtrl.text = searchText;
+                                          } else {
+                                            controller.nameCtrl.text = searchText;
+                                          }
+                                        }
+
+                                        final newCust = await showAddCustomerSheet(
+                                          context: context,
+                                          controller: controller,
+                                          storedLanguage: storedLanguage,
+                                        );
+                                        if (newCust != null) {
+                                          controller.searchCtrl.clear();
+                                          controller.searchUsers('');
+                                          Get.back(result: newCust);
+                                        }
+                                      },
                                     ),
                                   ],
                                 ),

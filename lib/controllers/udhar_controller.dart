@@ -239,7 +239,7 @@ class UdharController extends GetxController {
   // Customer Add / Delete
   // ─────────────────────────────────────────────────────────────
 
-  Future<void> addCustomer() async {
+  Future<Map<String, dynamic>?> addCustomer() async {
     final String name = nameCtrl.text.trim();
     final String phone = phoneCtrl.text.trim().replaceAll(' ', '');
     final String email = emailCtrl.text.trim();
@@ -252,12 +252,12 @@ class UdharController extends GetxController {
 
     if (name.isEmpty || phone.isEmpty) {
       Helpers.showSnackBar(msg: 'Please fill in Name and Phone Number');
-      return;
+      return null;
     }
 
     if (phone.length < 10) {
       Helpers.showSnackBar(msg: 'Please enter a valid phone number');
-      return;
+      return null;
     }
 
     final double? parsedLimit = double.tryParse(creditLimit);
@@ -267,15 +267,17 @@ class UdharController extends GetxController {
         parsedLimit < 0 ||
         parsedOpeningBalance < 0) {
       Helpers.showSnackBar(msg: 'Please enter valid numeric amounts');
-      return;
+      return null;
     }
 
     isAddingCustomer = true;
     update();
     await checkConnection();
 
+    Map<String, dynamic>? resultCustomer;
+
     if (isOffline) {
-      _queueOfflineCustomer(
+      resultCustomer = _queueOfflineCustomer(
         name: name,
         phone: phone,
         email: email,
@@ -286,7 +288,7 @@ class UdharController extends GetxController {
       Helpers.showSnackBar(
         msg: 'Customer saved offline. Will sync when internet is back.',
       );
-      if (Get.context != null) Navigator.of(Get.context!).pop();
+      if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
     } else {
       try {
         final response = await UdharRepo.addCustomer(
@@ -302,11 +304,14 @@ class UdharController extends GetxController {
           Helpers.showSnackBar(
             msg: data?['message'] ?? 'Customer added successfully',
           );
+          if (data?['data'] != null) {
+            resultCustomer = Map<String, dynamic>.from(data!['data']);
+          }
           _resetCustomerForm();
           await fetchUsers();
-          if (Get.context != null) Navigator.of(Get.context!).pop();
+          if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
         } else {
-          _queueOfflineCustomer(
+          resultCustomer = _queueOfflineCustomer(
             name: name,
             phone: phone,
             email: email,
@@ -317,10 +322,10 @@ class UdharController extends GetxController {
           Helpers.showSnackBar(
             msg: 'Customer saved offline. Backend sync pending.',
           );
-          if (Get.context != null) Navigator.of(Get.context!).pop();
+          if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
         }
       } catch (_) {
-        _queueOfflineCustomer(
+        resultCustomer = _queueOfflineCustomer(
           name: name,
           phone: phone,
           email: email,
@@ -331,12 +336,13 @@ class UdharController extends GetxController {
         Helpers.showSnackBar(
           msg: 'Customer saved offline. Backend sync pending.',
         );
-        if (Get.context != null) Navigator.of(Get.context!).pop();
+        if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
       }
     }
 
     isAddingCustomer = false;
     update();
+    return resultCustomer;
   }
 
   void _resetCustomerForm() {
@@ -347,7 +353,7 @@ class UdharController extends GetxController {
     openingBalanceCtrl.clear();
   }
 
-  void _queueOfflineCustomer({
+  Map<String, dynamic> _queueOfflineCustomer({
     required String name,
     required String phone,
     required String email,
@@ -370,17 +376,20 @@ class UdharController extends GetxController {
     });
     HiveHelp.write('offline_customers_queue', queue);
 
-    usersList.insert(0, {
+    final customerMap = {
       "id": localCustId,
       "name": name,
       "email": email,
       "phone": phone,
       "outstanding_balance": openingBalance,
       "credit_limit": creditLimit,
-    });
+    };
+
+    usersList.insert(0, customerMap);
     filteredUsers = List.from(usersList);
     HiveHelp.write('cached_users', usersList);
     update();
+    return customerMap;
   }
 
   Future<void> deleteCustomer(String id) async {
