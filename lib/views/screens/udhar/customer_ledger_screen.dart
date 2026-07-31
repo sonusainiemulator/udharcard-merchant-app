@@ -542,7 +542,12 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
         return StatefulBuilder(
           builder: (context, setStateModal) {
             return Padding(
-              padding: EdgeInsets.all(20.r),
+              padding: EdgeInsets.only(
+                left: 20.r,
+                right: 20.r,
+                top: 20.r,
+                bottom: 20.r + MediaQuery.of(context).padding.bottom,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,7 +732,12 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       ),
       builder: (context) {
         return Container(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 20,
+            bottom: 20 + MediaQuery.of(context).padding.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

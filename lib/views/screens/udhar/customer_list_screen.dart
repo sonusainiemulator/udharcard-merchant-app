@@ -467,7 +467,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Container(
-            padding: EdgeInsets.all(20.w),
+            padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: 20.h + MediaQuery.of(context).padding.bottom,
+            ),
             decoration: BoxDecoration(
               color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
@@ -548,7 +553,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Container(
-            padding: EdgeInsets.only(left: 20.w, right: 20.w, top: 20.h, bottom: 20.h),
+            padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: 20.h,
+              bottom: 20.h + MediaQuery.of(context).padding.bottom,
+            ),
             decoration: BoxDecoration(
               color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
@@ -699,7 +709,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       ),
       builder: (context) {
         return Container(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 20,
+            bottom: 20 + MediaQuery.of(context).padding.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

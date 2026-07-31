@@ -35,6 +35,9 @@ class SelectUserSheet extends StatelessWidget {
           maxChildSize: 0.92,
           builder: (_, scrollController) {
             return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom,
+              ),
               decoration: BoxDecoration(
                 color: Get.isDarkMode
                     ? AppColors.darkBgColor
