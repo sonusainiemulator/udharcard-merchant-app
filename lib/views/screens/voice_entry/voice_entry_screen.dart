@@ -40,6 +40,88 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
     super.dispose();
   }
 
+  Widget _buildFeatureBadge(BuildContext context, String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11.sp,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLangChip(
+      BuildContext context, VoiceEntryController controller, String langCode, String label) {
+    final bool isSelected = controller.talkBackLanguage == langCode;
+    return GestureDetector(
+      onTap: () => controller.changeTalkBackLanguage(langCode),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.mainColor
+              : AppColors.mainColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppColors.whiteColor : AppColors.mainColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTryChip(
+      BuildContext context, VoiceEntryController controller, String phrase) {
+    return GestureDetector(
+      onTap: () {
+        controller.sandboxTextCtrl.text = phrase;
+        controller.parseSentence(phrase);
+      },
+      child: Container(
+        margin: EdgeInsets.only(right: 8.w),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: Get.isDarkMode
+              ? AppColors.darkCardColor
+              : AppColors.fillColorColor,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline,
+                size: 13.sp, color: AppColors.mainColor),
+            HSpace(6.w),
+            Text(
+              phrase,
+              style: context.t.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: AppThemes.getIconBlackColor(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
@@ -72,7 +154,156 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        VSpace(20.h),
+                        VSpace(15.h),
+
+                        // Qoder Voice Key Features Header Banner
+                        Container(
+                          width: double.maxFinite,
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.mainColor.withValues(alpha: .15),
+                                AppColors.greenColor.withValues(alpha: .1),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(color: AppColors.mainColor.withValues(alpha: .3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.graphic_eq, color: AppColors.mainColor, size: 22.sp),
+                                  HSpace(8.w),
+                                  Text(
+                                    "Udhar Voice Assistant",
+                                    style: context.t.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppThemes.getIconBlackColor(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              VSpace(10.h),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8.w,
+                                runSpacing: 6.h,
+                                children: [
+                                  _buildFeatureBadge(context, "🎙️ Hears you", AppColors.mainColor),
+                                  _buildFeatureBadge(context, "🔊 Talks back", AppColors.greenColor),
+                                  _buildFeatureBadge(context, "⚡ Gets it done", Colors.orangeAccent),
+                                ],
+                              ),
+                              VSpace(6.h),
+                              Text(
+                                "Full-duplex real-time voice entry with Talk Back assistant",
+                                style: context.t.bodySmall?.copyWith(
+                                  color: AppColors.black50,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        VSpace(15.h),
+
+                        // Talk Back Feature Control Panel Card
+                        Container(
+                          width: double.maxFinite,
+                          padding: EdgeInsets.all(14.h),
+                          decoration: BoxDecoration(
+                            color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.record_voice_over, color: AppColors.mainColor, size: 22.sp),
+                                      HSpace(8.w),
+                                      Text(
+                                        storedLanguage['Talk Back Feature'] ?? "Talk Back Feature",
+                                        style: context.t.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppThemes.getIconBlackColor(),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Switch(
+                                    value: controller.isTalkBackEnabled,
+                                    activeThumbColor: AppColors.mainColor,
+                                    onChanged: (val) => controller.toggleTalkBack(val),
+                                  ),
+                                ],
+                              ),
+                              if (controller.isTalkBackEnabled) ...[
+                                VSpace(8.h),
+                                Row(
+                                  children: [
+                                    Text(
+                                      "Voice Language: ",
+                                      style: context.t.bodySmall?.copyWith(color: AppColors.black50),
+                                    ),
+                                    HSpace(8.w),
+                                    _buildLangChip(context, controller, "hi-IN", "Hindi"),
+                                    HSpace(6.w),
+                                    _buildLangChip(context, controller, "en-IN", "English"),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        VSpace(15.h),
+
+                        // Talk Back Active (Speaking Response) Indicator Banner
+                        if (controller.isSpeaking) ...[
+                          Container(
+                            width: double.maxFinite,
+                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.greenColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(color: AppColors.greenColor),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.volume_up, color: AppColors.greenColor, size: 24.sp),
+                                    HSpace(10.w),
+                                    Text(
+                                      "Talk Back Active (Speaking...)",
+                                      style: context.t.bodyMedium?.copyWith(
+                                        color: AppColors.greenColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                GestureDetector(
+                                  onTap: () => controller.stopSpeaking(),
+                                  child: Icon(Icons.stop_circle_outlined, color: AppColors.redColor, size: 26.sp),
+                                ),
+                              ],
+                            ),
+                          ),
+                          VSpace(15.h),
+                        ],
                         
                         // Waveform/Speech status banner
                         Text(
@@ -194,6 +425,35 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           ),
                           VSpace(15.h),
                         ],
+
+                        // Try Saying / Asking (Talk Back Suggestions)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Try saying / asking (Talk Back Q&A):",
+                              style: context.t.bodySmall?.copyWith(
+                                color: AppColors.black50,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            VSpace(8.h),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildTryChip(context, controller, "Total balance kitna hai?"),
+                                  _buildTryChip(context, controller, "Ramesh ka balance batao"),
+                                  _buildTryChip(context, controller, "Ramesh ko 500 udhar diye"),
+                                  _buildTryChip(context, controller, "Suresh se 200 mil gaye"),
+                                  _buildTryChip(context, controller, "Help — Tum kya kar sakte ho?"),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        VSpace(15.h),
 
                         // Sandbox fallback input (perfect for testing/emulator)
                         Card(
@@ -336,6 +596,34 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   style: context.t.bodyLarge?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: AppThemes.getIconBlackColor(),
+                                  ),
+                                ),
+                                VSpace(12.h),
+                                // Talk Back / Speak Again Button
+                                GestureDetector(
+                                  onTap: () => controller.speakReply(controller.aiReply),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.greenColor.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20.r),
+                                      border: Border.all(color: AppColors.greenColor),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.volume_up, size: 16.sp, color: AppColors.greenColor),
+                                        HSpace(6.w),
+                                        Text(
+                                          "Speak Again (Talk Back)",
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.greenColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -504,6 +792,33 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                                  ),
                                                ),
                                                HSpace(6.w),
+                                               // Speak (Talk Back) button for transaction
+                                               GestureDetector(
+                                                 onTap: () => controller.talkBackTransaction(tx),
+                                                 child: Container(
+                                                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                                   decoration: BoxDecoration(
+                                                     color: AppColors.greenColor.withValues(alpha: 0.15),
+                                                     borderRadius: BorderRadius.circular(4.r),
+                                                     border: Border.all(color: AppColors.greenColor),
+                                                   ),
+                                                   child: Row(
+                                                     children: [
+                                                       Icon(Icons.volume_up, size: 10.sp, color: AppColors.greenColor),
+                                                       HSpace(2.w),
+                                                       Text(
+                                                         "Speak",
+                                                         style: TextStyle(
+                                                           fontSize: 9.sp,
+                                                           fontWeight: FontWeight.bold,
+                                                           color: AppColors.greenColor,
+                                                         ),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                 ),
+                                               ),
+                                               HSpace(6.w),
                                                GestureDetector(
                                                  onTap: () => controller.postToUdharLedger(tx),
                                                  child: Container(
@@ -551,5 +866,5 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
          );
        },
      );
-   }
- }
+  }
+}

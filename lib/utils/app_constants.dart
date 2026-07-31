@@ -8,6 +8,7 @@ class AppConstants {
   static const String prefix = '/api';
   static const String registerUrl = '/register';
   static const String loginUrl = '/login';
+  static const String checkMerchantUrl = '/merchant/check-exist';
   static const String forgotPassUrl = '/recovery-pass/get-email';
   static const String forgotPassGetCodeUrl = '/recovery-pass/get-code';
   static const String updatePassUrl = '/update-pass';

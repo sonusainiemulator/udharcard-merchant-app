@@ -101,7 +101,7 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                   onPressed: canSubmit
                       ? () async {
                           Helpers.hideKeyboard();
-                          await controller.sendFirebaseOtp(phoneText);
+                          await controller.sendFirebaseOtp(phoneText, isLogin: true);
                         }
                       : null,
                 ),

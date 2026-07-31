@@ -326,7 +326,155 @@ class AuthController extends GetxController {
     }
   }
 
-  Future sendFirebaseOtp(String phoneNumber) async {
+  Future<bool> _checkMerchantAccountExists(String phoneNumber) async {
+    try {
+      String cleanPhone =
+          phoneNumber.trim().replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length > 10) {
+        cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
+      }
+
+      // 1. Try check merchant endpoint first
+      try {
+        http.Response response = await AuthRepo.checkMerchantExist(
+          data: {
+            "phone": cleanPhone,
+            "mobile": cleanPhone,
+            "username": cleanPhone,
+            "type": "merchant",
+          },
+        );
+        if (response.statusCode == 200) {
+          var data = jsonDecode(response.body);
+          if (data['status'] == 'success' ||
+              data['exists'] == true ||
+              data['is_exist'] == true) {
+            return true;
+          }
+          if (data['status'] == 'error' ||
+              data['exists'] == false ||
+              data['is_exist'] == false) {
+            String msg = (data['message'] ?? '').toString().toLowerCase();
+            if (msg.contains('not found') ||
+                msg.contains('not exist') ||
+                msg.contains('does not exist') ||
+                msg.contains('no account') ||
+                msg.contains('invalid') ||
+                msg.contains('register') ||
+                data['exists'] == false ||
+                data['is_exist'] == false) {
+              return false;
+            }
+          }
+        } else if (response.statusCode == 404 || response.statusCode == 422) {
+          try {
+            var data = jsonDecode(response.body);
+            if (data['exists'] == false ||
+                data['status'] == 'error' ||
+                data['message'] != null) {
+              String msg = (data['message'] ?? '').toString().toLowerCase();
+              if (msg.contains('not exist') ||
+                  msg.contains('not found') ||
+                  msg.contains('register') ||
+                  data['exists'] == false) {
+                return false;
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (_) {
+        // Fallthrough if check-exist endpoint is not available
+      }
+
+      // 2. Fallback: check against standard login endpoint
+      http.Response loginResponse = await AuthRepo.login(
+        data: {
+          "username": cleanPhone,
+          "password": "check_existence_dummy_password",
+          "type": "merchant",
+        },
+      );
+
+      if (loginResponse.statusCode == 200 ||
+          loginResponse.statusCode == 404 ||
+          loginResponse.statusCode == 422 ||
+          loginResponse.statusCode == 401) {
+        var data = jsonDecode(loginResponse.body);
+        String msg = (data['message'] ?? '').toString().toLowerCase();
+
+        // If server says user not found / no account / invalid username -> does not exist
+        if (msg.contains('not found') ||
+            msg.contains('not exist') ||
+            msg.contains('does not exist') ||
+            msg.contains('no account') ||
+            msg.contains('invalid username') ||
+            msg.contains('no merchant') ||
+            msg.contains('user not') ||
+            msg.contains('register') ||
+            msg.contains('account not')) {
+          return false;
+        }
+
+        // If server complains about invalid password or wrong password -> account exists!
+        if (msg.contains('password') ||
+            msg.contains('credential') ||
+            data['status'] == 'success') {
+          return true;
+        }
+      }
+
+      // 3. Additional fallback check: if login response returned status error with message indicating no user
+      if (loginResponse.statusCode == 200) {
+        var data = jsonDecode(loginResponse.body);
+        if (data['status'] == 'error') {
+          String msg = (data['message'] ?? '').toString().toLowerCase();
+          if (msg.isNotEmpty && !msg.contains('password')) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } catch (e) {
+      // In case of network exception, allow OTP to proceed so user is not blocked offline
+      return true;
+    }
+  }
+
+  Future<void> saveRegistrationProfileToHiveAndBackend() async {
+    String regName = nameEditingController.text.trim();
+    String regPhone = phoneEditingController.text.trim();
+    String regShop = shopNameEditingController.text.trim();
+    String regEmail = emailEditingController.text.trim();
+
+    if (regName.isEmpty && regShop.isEmpty) return;
+
+    HiveHelp.write(Keys.userFullName, regName);
+    HiveHelp.write(Keys.userPhone, regPhone);
+    HiveHelp.write(Keys.userName, regPhone);
+    HiveHelp.write('shop_name', regShop);
+    if (regEmail.isNotEmpty) {
+      HiveHelp.write(Keys.userEmail, regEmail);
+    }
+
+    try {
+      await AuthRepo.register(
+        data: {
+          "name": regName,
+          "phone": regPhone,
+          "mobile": regPhone,
+          "username": regPhone,
+          "shop_name": regShop,
+          "email": regEmail,
+          "type": "merchant",
+        },
+      );
+    } catch (e) {
+      // Offline fallback: allow onboarding to proceed
+    }
+  }
+
+  Future sendFirebaseOtp(String phoneNumber, {bool isLogin = false}) async {
     if (_isOtpRequestInProgress || _isCompletingAuthentication) return;
     String formattedPhone = phoneNumber.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
     if (formattedPhone.length < 7) {
@@ -341,6 +489,20 @@ class AuthController extends GetxController {
     isLoading = true;
     loginErrorMessage = null;
     _notifyAuthSubmission();
+
+    if (isLogin) {
+      bool accountExists = await _checkMerchantAccountExists(phoneNumber);
+      if (!accountExists) {
+        _isOtpRequestInProgress = false;
+        isLoading = false;
+        loginErrorMessage =
+            'Merchant account does not exist. Please register first.';
+        _notifyAuthSubmission();
+        return;
+      }
+    } else {
+      await saveRegistrationProfileToHiveAndBackend();
+    }
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: formattedPhone,
@@ -436,7 +598,10 @@ class AuthController extends GetxController {
         if (userCredential.user?.phoneNumber != null &&
             userCredential.user!.phoneNumber!.isNotEmpty) {
           HiveHelp.write(Keys.userName, userCredential.user!.phoneNumber);
+          HiveHelp.write(Keys.userPhone, userCredential.user!.phoneNumber);
         }
+
+        await saveRegistrationProfileToHiveAndBackend();
 
         isLoading = false;
         _notifyAuthSubmission();

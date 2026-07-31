@@ -3,6 +3,11 @@ import '../../utils/app_constants.dart';
 import '../source/network/api_client.dart';
 
 class AuthRepo {
+  static Future<http.Response> checkMerchantExist(
+          {required Map<String, dynamic> data}) async =>
+      await ApiClient.post(
+          ENDPOINT_URL: AppConstants.checkMerchantUrl, fields: data);
+
   static Future<http.Response> register(
           {required Map<String, dynamic> data}) async =>
       await ApiClient.post(

@@ -47,6 +47,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('/register/form', 'registerUserForm');
     Route::post('/register', 'registerUser');
     Route::post('/login', 'loginUser');
+    Route::post('/merchant/check-exist', 'checkMerchantExist');
     Route::post('/recovery-pass/get-email', 'getEmailForRecoverPass');
     Route::post('/recovery-pass/get-code', 'getCodeForRecoverPass');
     Route::post('/update-pass', 'updatePass');

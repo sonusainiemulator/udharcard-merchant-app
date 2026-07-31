@@ -28,6 +28,13 @@ class VoiceEntryController extends GetxController {
   bool get isThinking => _assistantState == VoiceAssistantState.thinking;
   bool get isSpeaking => _assistantState == VoiceAssistantState.speaking;
 
+  // Talk Back Feature Controls
+  bool _isTalkBackEnabled = true;
+  bool get isTalkBackEnabled => _isTalkBackEnabled;
+
+  String _talkBackLanguage = "hi-IN";
+  String get talkBackLanguage => _talkBackLanguage;
+
   String _transcribedText = "";
   String get transcribedText => _transcribedText;
 
@@ -46,6 +53,7 @@ class VoiceEntryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadTalkBackSettings();
     initSpeech();
     initTts();
     loadTransactions();
@@ -55,6 +63,33 @@ class VoiceEntryController extends GetxController {
   void onClose() {
     _flutterTts.stop();
     super.onClose();
+  }
+
+  void loadTalkBackSettings() {
+    final savedToggle = HiveHelp.read('voice_talk_back_enabled');
+    if (savedToggle != null) {
+      _isTalkBackEnabled = savedToggle == true;
+    }
+    final savedLang = HiveHelp.read('voice_talk_back_lang');
+    if (savedLang != null && savedLang.toString().isNotEmpty) {
+      _talkBackLanguage = savedLang.toString();
+    }
+  }
+
+  void toggleTalkBack(bool value) {
+    _isTalkBackEnabled = value;
+    HiveHelp.write('voice_talk_back_enabled', value);
+    if (!value && isSpeaking) {
+      stopSpeaking();
+    }
+    update();
+  }
+
+  Future<void> changeTalkBackLanguage(String lang) async {
+    _talkBackLanguage = lang;
+    HiveHelp.write('voice_talk_back_lang', lang);
+    await _flutterTts.setLanguage(lang);
+    update();
   }
 
   Future<void> initSpeech() async {
@@ -81,12 +116,16 @@ class VoiceEntryController extends GetxController {
   }
 
   Future<void> initTts() async {
-    await _flutterTts.setLanguage("hi-IN");
+    await _flutterTts.setLanguage(_talkBackLanguage);
     await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
 
     _flutterTts.setCompletionHandler(() {
+      _changeState(VoiceAssistantState.idle);
+    });
+    _flutterTts.setErrorHandler((err) {
+      if (kDebugMode) print("TTS error: $err");
       _changeState(VoiceAssistantState.idle);
     });
   }
@@ -115,7 +154,7 @@ class VoiceEntryController extends GetxController {
           _transcribedText = val.recognizedWords;
           update();
         },
-        listenFor: const Duration(seconds: 10),
+        listenOptions: SpeechListenOptions(listenFor: const Duration(seconds: 10)),
       );
     } else {
       Helpers.showSnackBar(msg: "Speech recognition unavailable.");
@@ -131,6 +170,11 @@ class VoiceEntryController extends GetxController {
     }
   }
 
+  Future<void> stopSpeaking() async {
+    await _flutterTts.stop();
+    _changeState(VoiceAssistantState.idle);
+  }
+
   void parseSentence(String text) {
     _transcribedText = text;
     _processSpeech();
@@ -144,7 +188,7 @@ class VoiceEntryController extends GetxController {
 
     _changeState(VoiceAssistantState.thinking);
 
-    // Try Gemini AI first, with fallback to local Regex parser
+    // Try Gemini AI first, with fallback to local Regex & Query NLP parser
     bool processedWithAi = false;
     try {
       await dotenv.load();
@@ -156,23 +200,30 @@ class VoiceEntryController extends GetxController {
         );
 
         final prompt = '''
-You are an AI assistant for a merchant's Udhar (credit ledger) app.
-The user speaks in a mix of Hindi and English (Hinglish).
-Extract the following information from the user's speech to record a transaction:
-- Name of the customer (Capitalize first letter).
-- Amount (as a number).
-- Type: "Given" (merchant gave udhar/loan/credit) or "Received" (merchant received payment).
-- Reply: A very short, friendly confirmation message in Roman Hinglish that you will speak back to the user. (e.g. "Okay, Pankaj ko 500 rupaye udhar diye.")
+You are an AI assistant for a merchant's Udhar (credit ledger) app with real-time "Talk Back" voice capabilities.
+The user speaks in Hindi, English, or Hinglish.
+Extract intent and return strictly valid JSON without markdown or backticks.
 
-If the user asks a general question, respond with action "unknown" and say "I can only add transactions right now." in the reply.
-
-Output MUST be strictly valid JSON without any markdown or backticks. Format:
+1. If user wants to ADD a transaction (e.g. "Ramesh ko 500 udhar diye", "Received 300 from Suresh", "Suresh se 200 mile"):
 {
   "action": "add_udhar",
-  "name": "Pankaj",
+  "name": "Customer Name (Capitalized)",
   "amount": 500,
-  "type": "Given",
-  "reply": "Okay, Pankaj ko 500 rupaye udhar diye hai."
+  "type": "Given", // or "Received"
+  "reply": "Okay, Ramesh ko 500 rupaye udhar diye hai."
+}
+
+2. If user asks about BALANCE, TOTAL UDHAR, or CUSTOMER LEDGER (e.g. "Total udhar kitna hai?", "Ramesh ka balance kitna hai?", "Kitne paise lene hai?", "Summary batao"):
+{
+  "action": "query_balance",
+  "name": "Ramesh", // empty string "" if asking total balance
+  "reply": "" // leave empty, will be calculated from live ledger
+}
+
+3. If user asks for HELP, GREETING, or general questions (e.g. "Help", "Tum kya kar sakte ho?", "Hello"):
+{
+  "action": "help",
+  "reply": "Namaste! Main aapka Udhar Voice Assistant hoon. Talk back feature active hai. Aap bol sakte hain: Ramesh ko 500 udhar diye, ya Total balance kitna hai."
 }
 
 User's speech: "$_transcribedText"
@@ -192,6 +243,14 @@ User's speech: "$_transcribedText"
             _aiReply = data['reply'] ?? "Transaction recorded.";
             saveTransaction();
             processedWithAi = true;
+          } else if (data['action'] == 'query_balance') {
+            final targetName = data['name']?.toString();
+            _aiReply = _calculateBalanceReply(targetName);
+            processedWithAi = true;
+          } else if (data['action'] == 'help') {
+            _aiReply = data['reply'] ??
+                "Namaste! Main aapka Udhar Voice Assistant hoon. Talk back feature active hai. Aap bol sakte hain: Ramesh ko 500 udhar diye, ya Total balance kitna hai.";
+            processedWithAi = true;
           }
         }
       }
@@ -199,18 +258,45 @@ User's speech: "$_transcribedText"
       if (kDebugMode) print("Gemini Error, falling back to local NLP: $e");
     }
 
-    // Local Regex NLP Fallback (Offline Mode)
+    // Local Regex NLP Fallback (Offline Mode for Actions & Queries)
     if (!processedWithAi) {
       _processOfflineSpeech(_transcribedText);
     }
 
-    await _speakReply(_aiReply);
+    await speakReply(_aiReply);
   }
 
   void _processOfflineSpeech(String text) {
     String lower = text.toLowerCase();
     
-    // Extract numbers/amount
+    // 1. Check for Query keywords (Talk Back balance & summary queries)
+    final queryWords = ['kitna', 'balance', 'total', 'baki', 'hisab', 'summary', 'query', 'paisa', 'paise', 'lene', 'kaun', 'kiska', 'how much'];
+    final bool isQuery = queryWords.any((w) => lower.contains(w));
+
+    // 2. Check for Help / Greeting keywords
+    final helpWords = ['hello', 'hi', 'help', 'kya kar', 'kaise', 'what can', 'namaste', 'start', 'kya hai'];
+    final bool isHelp = helpWords.any((w) => lower.contains(w));
+
+    if (isQuery) {
+      // Try to extract a customer name if mentioned
+      String cleaned = lower
+          .replaceAll(RegExp(r'\b(kitna|balance|total|baki|hisab|summary|query|paisa|paise|lene|kaun|kiska|hai|ka|ki|ko|se|ne|what|is|my|amount|tell|me)\b'), '')
+          .trim();
+      List<String> words = cleaned.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+      String? matchedName;
+      if (words.isNotEmpty && words.first.length > 2) {
+        matchedName = words.first[0].toUpperCase() + words.first.substring(1);
+      }
+      _aiReply = _calculateBalanceReply(matchedName);
+      return;
+    }
+
+    if (isHelp && !lower.contains("diya") && !lower.contains("mila")) {
+      _aiReply = "Namaste! Main aapka Udhar Voice Assistant hoon. Talk back feature active hai. Aap bol sakte hain: Ramesh ko 500 udhar diye, ya Total balance kitna hai.";
+      return;
+    }
+
+    // 3. Extract numbers/amount for transactions
     final amountMatch = RegExp(r'(\d+)').firstMatch(lower);
     double amount = 0.0;
     if (amountMatch != null) {
@@ -237,7 +323,7 @@ User's speech: "$_transcribedText"
     // Clean text to extract name
     String cleaned = lower
         .replaceAll(RegExp(r'\d+'), '')
-        .replaceAll(RegExp(r'\b(rupaye|rupees|rs|udhar|ko|se|ne|diya|diye|mila|mile|liya|paid|received|gave|given)\b'), '')
+        .replaceAll(RegExp(r'\b(rupaye|rupees|rs|udhar|ko|se|ne|diya|diye|mila|mile|liya|paid|received|gave|given|hai|hain)\b'), '')
         .trim();
 
     List<String> words = cleaned.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
@@ -258,11 +344,114 @@ User's speech: "$_transcribedText"
       }
       saveTransaction();
     } else {
-      _aiReply = "Samajh nahi aaya. Kripya bolo: Ramesh ko 500 udhar diya.";
+      _aiReply = "Samajh nahi aaya. Kripya bolo: Ramesh ko 500 udhar diya, ya Total balance kitna hai.";
     }
   }
 
-  Future<void> _speakReply(String text) async {
+  String _calculateBalanceReply(String? targetName) {
+    try {
+      final cached = HiveHelp.read('cached_users');
+      List<dynamic> users = [];
+      if (cached != null && cached is List) {
+        users = cached;
+      }
+
+      // Check if asking for a specific customer
+      if (targetName != null &&
+          targetName.trim().isNotEmpty &&
+          targetName.toLowerCase() != "unknown" &&
+          targetName.toLowerCase() != "customer") {
+        String queryName = targetName.trim().toLowerCase();
+        
+        double customerBalance = 0.0;
+        bool found = false;
+        String actualName = targetName.trim();
+        
+        for (var u in users) {
+          if (u is Map) {
+            String uName = (u['name'] ?? '').toString();
+            if (uName.toLowerCase().contains(queryName) || queryName.contains(uName.toLowerCase())) {
+              found = true;
+              actualName = uName;
+              customerBalance = double.tryParse(
+                u['outstanding_balance']?.toString() ?? u['balance']?.toString() ?? '0',
+              ) ?? 0.0;
+              break;
+            }
+          }
+        }
+
+        for (var tx in voiceTransactions) {
+          String txName = (tx['name'] ?? '').toString();
+          if (txName.toLowerCase().contains(queryName) || queryName.contains(txName.toLowerCase())) {
+            found = true;
+            if (tx['type'] == 'Given') {
+              customerBalance += (tx['amount'] ?? 0).toDouble();
+            } else if (tx['type'] == 'Received') {
+              customerBalance -= (tx['amount'] ?? 0).toDouble();
+            }
+          }
+        }
+
+        if (!found) {
+          return "$targetName naam ka customer list mein nahi mila, par aap bolkar unka udhar add kar sakte hain.";
+        } else if (customerBalance > 0) {
+          return "$actualName ka kul udhar balance ${customerBalance.toInt()} rupaye baki hai.";
+        } else if (customerBalance < 0) {
+          return "$actualName ke paas aapke ${(-customerBalance).toInt()} rupaye advance jama hain.";
+        } else {
+          return "$actualName ka hisab clear hai, koi udhar baki nahi hai.";
+        }
+      }
+
+      // Total overall balance query
+      double totalBalance = 0.0;
+      int count = 0;
+      for (var u in users) {
+        if (u is Map) {
+          count++;
+          totalBalance += double.tryParse(
+            u['outstanding_balance']?.toString() ?? u['balance']?.toString() ?? '0',
+          ) ?? 0.0;
+        }
+      }
+
+      for (var tx in voiceTransactions) {
+        if (tx['type'] == 'Given') {
+          totalBalance += (tx['amount'] ?? 0).toDouble();
+        } else if (tx['type'] == 'Received') {
+          totalBalance -= (tx['amount'] ?? 0).toDouble();
+        }
+      }
+
+      if (totalBalance > 0) {
+        return "Aapka kul udhar balance ${totalBalance.toInt()} rupaye baki hai. Kul $count customers hain.";
+      } else {
+        return "Aapka koi udhar baki nahi hai. Sabhi hisab clear hain.";
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error calculating balance reply: $e");
+      return "Balance check karne mein error aayi, kripya dobara try karein.";
+    }
+  }
+
+  Future<void> talkBackTransaction(Map<String, dynamic> tx) async {
+    String name = tx['name'] ?? "Unknown";
+    double amt = (tx['amount'] ?? 0).toDouble();
+    bool isRec = tx['type'] == 'Received';
+    String speech = isRec
+        ? "$name se ${amt.toInt()} rupaye mil gaye hai."
+        : "$name ko ${amt.toInt()} rupaye udhar diye hai.";
+    _aiReply = speech;
+    update();
+    await speakReply(speech);
+  }
+
+  Future<void> speakReply(String text) async {
+    if (!_isTalkBackEnabled || text.trim().isEmpty) {
+      _changeState(VoiceAssistantState.idle);
+      return;
+    }
     _changeState(VoiceAssistantState.speaking);
     await _flutterTts.speak(text);
   }

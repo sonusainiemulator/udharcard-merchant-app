@@ -105,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   await controller.sendFirebaseOtp(
                                     controller.firebasePhoneController.text
                                         .trim(),
+                                    isLogin: true,
                                   );
                                 }
                                 : null,

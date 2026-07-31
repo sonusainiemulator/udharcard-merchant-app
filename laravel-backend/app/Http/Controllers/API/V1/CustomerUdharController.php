@@ -21,11 +21,33 @@ class CustomerUdharController extends Controller
     public function merchantsList()
     {
         try {
-            $userId = Auth::id();
+            $user = Auth::user();
+            $userId = $user ? $user->id : Auth::id();
+            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
+            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
+            if (strlen($cleanPhone) > 10) {
+                $cleanPhone = substr($cleanPhone, -10);
+            }
 
-            // Fetch all udhar ledger nodes where customer_user_id matches
+            // AUTO-LINK: Link any UdharCustomer with matching phone where customer_user_id is NULL
+            if (!empty($cleanPhone)) {
+                UdharCustomer::whereNull('customer_user_id')
+                    ->where(function($q) use ($userPhone, $cleanPhone) {
+                        $q->where('phone', $userPhone)
+                          ->orWhere('phone', 'like', '%' . $cleanPhone);
+                    })
+                    ->update(['customer_user_id' => $userId]);
+            }
+
+            // Fetch all udhar ledger nodes where customer_user_id or phone matches
             $ledgers = UdharCustomer::with('merchant')
-                ->where('customer_user_id', $userId)
+                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
+                    $q->where('customer_user_id', $userId);
+                    if (!empty($cleanPhone)) {
+                        $q->orWhere('phone', $userPhone)
+                          ->orWhere('phone', 'like', '%' . $cleanPhone);
+                    }
+                })
                 ->where('status', 1)
                 ->get()
                 ->map(function ($cust) {
@@ -58,15 +80,32 @@ class CustomerUdharController extends Controller
     public function ledgerList($merchantId)
     {
         try {
-            $userId = Auth::id();
+            $user = Auth::user();
+            $userId = $user ? $user->id : Auth::id();
+            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
+            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
+            if (strlen($cleanPhone) > 10) {
+                $cleanPhone = substr($cleanPhone, -10);
+            }
 
             // Find the specific customer record mapping the user to this merchant
-            $customer = UdharCustomer::where('customer_user_id', $userId)
-                ->where('merchant_id', $merchantId)
+            $customer = UdharCustomer::where('merchant_id', $merchantId)
+                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
+                    $q->where('customer_user_id', $userId);
+                    if (!empty($cleanPhone)) {
+                        $q->orWhere('phone', $userPhone)
+                          ->orWhere('phone', 'like', '%' . $cleanPhone);
+                    }
+                })
                 ->first();
 
             if (!$customer) {
                 return response()->json($this->withErrors('No ledger account found with this merchant.'), 404);
+            }
+
+            if ($customer->customer_user_id != $userId) {
+                $customer->customer_user_id = $userId;
+                $customer->save();
             }
 
             $ledgers = UdharLedger::where('customer_id', $customer->id)

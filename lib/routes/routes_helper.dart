@@ -140,6 +140,10 @@ class RouteHelper {
       page: () => const UdharDashboardScreen(),
     ),
     GetPage(
+      name: RoutesName.voiceEntryScreen,
+      page: () => const VoiceEntryScreen(),
+    ),
+    GetPage(
       name: RoutesName.chatLedgerScreen,
       page: () {
         final args = Get.arguments ?? {};

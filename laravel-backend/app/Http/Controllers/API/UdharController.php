@@ -182,10 +182,17 @@ class UdharController extends Controller
         try {
             $merchantId = Auth::id();
 
-            // Find global customer user by phone
-            $customerUser = \App\Models\User::where('phone', $request->phone)
-                ->where('type', 'user')
-                ->first();
+            // Find global customer user by phone with flexible digit matching
+            $cleanPhone = preg_replace('/[^0-9]/', '', $request->phone);
+            if (strlen($cleanPhone) > 10) {
+                $cleanPhone = substr($cleanPhone, -10);
+            }
+            $customerUser = \App\Models\User::where(function ($q) use ($request, $cleanPhone) {
+                $q->where('phone', $request->phone)
+                  ->orWhere('phone', 'like', '%' . $cleanPhone)
+                  ->orWhere('username', $request->phone)
+                  ->orWhere('username', 'like', '%' . $cleanPhone);
+            })->first();
             $customerUserId = $customerUser ? $customerUser->id : null;
 
             $customer = UdharCustomer::create([

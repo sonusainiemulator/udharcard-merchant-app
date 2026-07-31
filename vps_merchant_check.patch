@@ -1,0 +1,60 @@
+--- a/routes/api.php
++++ b/routes/api.php
+@@ -47,6 +47,7 @@ Route::controller(AuthController::class)->group(function () {
+     Route::get('/register/form', 'registerUserForm');
+     Route::post('/register', 'registerUser');
+     Route::post('/login', 'loginUser');
++    Route::post('/merchant/check-exist', 'checkMerchantExist');
+     Route::post('/recovery-pass/get-email', 'getEmailForRecoverPass');
+     Route::post('/recovery-pass/get-code', 'getCodeForRecoverPass');
+     Route::post('/update-pass', 'updatePass');
+--- a/app/Http/Controllers/Api/V1/AuthController.php
++++ b/app/Http/Controllers/Api/V1/AuthController.php
+@@ -15,6 +15,50 @@ class AuthController extends Controller
+ {
++    /**
++     * Check if a merchant account exists for a given phone/username.
++     */
++    public function checkMerchantExist(Request $request)
++    {
++        $phone = $request->phone ?? $request->username ?? $request->mobile ?? '';
++        $phone = trim($phone);
++
++        if (empty($phone)) {
++            return response()->json([
++                'status' => 'error',
++                'exists' => false,
++                'message' => 'Enter a valid mobile number.'
++            ], 422);
++        }
++
++        // Clean phone digits
++        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
++        if (strlen($cleanPhone) > 10) {
++            $cleanPhone = substr($cleanPhone, -10);
++        }
++
++        $exists = \App\Models\User::where(function ($query) use ($cleanPhone, $phone) {
++            $query->where('phone', $phone)
++                  ->orWhere('phone', 'like', '%' . $cleanPhone)
++                  ->orWhere('username', $phone)
++                  ->orWhere('username', 'like', '%' . $cleanPhone);
++        })->where('type', 'merchant')->exists();
++
++        if (!$exists) {
++            return response()->json([
++                'status' => 'error',
++                'exists' => false,
++                'message' => 'Merchant account does not exist. Please register first.'
++            ], 404);
++        }
++
++        return response()->json([
++            'status' => 'success',
++            'exists' => true,
++            'message' => 'Merchant account exists.'
++        ], 200);
++    }
++
+     public function loginUser(Request $request)
+     {

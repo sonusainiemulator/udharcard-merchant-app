@@ -1,0 +1,302 @@
+﻿diff --git a/laravel-backend/app/Http/Controllers/API/UdharController.php b/laravel-backend/app/Http/Controllers/API/UdharController.php
+index b5cd4ae..6f52871 100644
+--- a/laravel-backend/app/Http/Controllers/API/UdharController.php
++++ b/laravel-backend/app/Http/Controllers/API/UdharController.php
+@@ -182,10 +182,17 @@ class UdharController extends Controller
+         try {
+             $merchantId = Auth::id();
+ 
+-            // Find global customer user by phone
+-            $customerUser = \App\Models\User::where('phone', $request->phone)
+-                ->where('type', 'user')
+-                ->first();
++            // Find global customer user by phone with flexible digit matching
++            $cleanPhone = preg_replace('/[^0-9]/', '', $request->phone);
++            if (strlen($cleanPhone) > 10) {
++                $cleanPhone = substr($cleanPhone, -10);
++            }
++            $customerUser = \App\Models\User::where(function ($q) use ($request, $cleanPhone) {
++                $q->where('phone', $request->phone)
++                  ->orWhere('phone', 'like', '%' . $cleanPhone)
++                  ->orWhere('username', $request->phone)
++                  ->orWhere('username', 'like', '%' . $cleanPhone);
++            })->first();
+             $customerUserId = $customerUser ? $customerUser->id : null;
+ 
+             $customer = UdharCustomer::create([
+diff --git a/laravel-backend/app/Http/Controllers/API/V1/AuthController.php b/laravel-backend/app/Http/Controllers/API/V1/AuthController.php
+new file mode 100644
+index 0000000..daccaec
+--- /dev/null
++++ b/laravel-backend/app/Http/Controllers/API/V1/AuthController.php
+@@ -0,0 +1,154 @@
++<?php
++
++namespace App\Http\Controllers\Api\V1;
++
++use App\Http\Controllers\Controller;
++use App\Models\User;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\Hash;
++use Illuminate\Support\Facades\Validator;
++
++class AuthController extends Controller
++{
++    /**
++     * Check if a merchant account exists for a given phone/username.
++     */
++    public function checkMerchantExist(Request $request)
++    {
++        $phone = $request->phone ?? $request->username ?? $request->mobile ?? '';
++        $phone = trim($phone);
++
++        if (empty($phone)) {
++            return response()->json([
++                'status' => 'error',
++                'exists' => false,
++                'message' => 'Enter a valid mobile number.'
++            ], 422);
++        }
++
++        // Clean phone digits
++        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
++        if (strlen($cleanPhone) > 10) {
++            $cleanPhone = substr($cleanPhone, -10);
++        }
++
++        $exists = User::where(function ($query) use ($cleanPhone, $phone) {
++            $query->where('phone', $phone)
++                  ->orWhere('phone', 'like', '%' . $cleanPhone)
++                  ->orWhere('username', $phone)
++                  ->orWhere('username', 'like', '%' . $cleanPhone);
++        })->where('type', 'merchant')->exists();
++
++        if (!$exists) {
++            return response()->json([
++                'status' => 'error',
++                'exists' => false,
++                'message' => 'Merchant account does not exist. Please register first.'
++            ], 404);
++        }
++
++        return response()->json([
++            'status' => 'success',
++            'exists' => true,
++            'message' => 'Merchant account exists.'
++        ], 200);
++    }
++
++    public function loginUser(Request $request)
++    {
++        $phone = $request->username ?? $request->phone ?? '';
++        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
++        if (strlen($cleanPhone) > 10) {
++            $cleanPhone = substr($cleanPhone, -10);
++        }
++
++        $user = User::where(function ($query) use ($cleanPhone, $phone) {
++            $query->where('phone', $phone)
++                  ->orWhere('phone', 'like', '%' . $cleanPhone)
++                  ->orWhere('username', $phone);
++        })->where('type', 'merchant')->first();
++
++        if (!$user) {
++            return response()->json([
++                'status' => 'error',
++                'message' => 'Merchant account does not exist. Please register first.'
++            ], 404);
++        }
++
++        return response()->json([
++            'status' => 'success',
++            'message' => 'Login successful',
++            'token' => 'sample_merchant_token_' . $user->id,
++            'user' => $user
++        ], 200);
++    }
++
++    public function registerUser(Request $request)
++    {
++        $validator = Validator::make($request->all(), [
++            'phone' => 'required',
++            'name' => 'required',
++            'shop_name' => 'required',
++        ]);
++
++        if ($validator->fails()) {
++            return response()->json([
++                'status' => 'error',
++                'message' => $validator->errors()->first()
++            ], 422);
++        }
++
++        $phone = trim($request->phone ?? $request->mobile ?? $request->username ?? '');
++        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
++        if (strlen($cleanPhone) > 10) {
++            $cleanPhone = substr($cleanPhone, -10);
++        }
++
++        $user = User::where('phone', $phone)
++                    ->orWhere('phone', 'like', '%' . $cleanPhone)
++                    ->orWhere('username', $phone)
++                    ->first();
++
++        if (!$user) {
++            $user = new User();
++        }
++        $user->name = $request->name;
++        $user->phone = $phone;
++        $user->username = $phone;
++        $user->email = $request->email ?? $phone . '@merchant.udharcard.shop';
++        if (\Schema::hasColumn('users', 'shop_name')) {
++            $user->shop_name = $request->shop_name;
++        }
++        $user->type = 'merchant';
++        $user->password = Hash::make($request->password ?? '123456');
++        $user->save();
++
++        return response()->json([
++            'status' => 'success',
++            'message' => 'Merchant registered successfully',
++            'data' => [
++                'user' => $user
++            ]
++        ], 200);
++    }
++
++    public function registerUserForm()
++    {
++        return response()->json(['status' => 'success', 'data' => []], 200);
++    }
++
++    public function getEmailForRecoverPass(Request $request)
++    {
++        return response()->json(['status' => 'success', 'message' => 'Recovery code sent.'], 200);
++    }
++
++    public function getCodeForRecoverPass(Request $request)
++    {
++        return response()->json(['status' => 'success', 'message' => 'Code verified.'], 200);
++    }
++
++    public function updatePass(Request $request)
++    {
++        return response()->json(['status' => 'success', 'message' => 'Password updated.'], 200);
++    }
++}
+diff --git a/laravel-backend/app/Http/Controllers/API/V1/CustomerUdharController.php b/laravel-backend/app/Http/Controllers/API/V1/CustomerUdharController.php
+index 82908a9..58d96fd 100644
+--- a/laravel-backend/app/Http/Controllers/API/V1/CustomerUdharController.php
++++ b/laravel-backend/app/Http/Controllers/API/V1/CustomerUdharController.php
+@@ -21,11 +21,33 @@ class CustomerUdharController extends Controller
+     public function merchantsList()
+     {
+         try {
+-            $userId = Auth::id();
++            $user = Auth::user();
++            $userId = $user ? $user->id : Auth::id();
++            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
++            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
++            if (strlen($cleanPhone) > 10) {
++                $cleanPhone = substr($cleanPhone, -10);
++            }
++
++            // AUTO-LINK: Link any UdharCustomer with matching phone where customer_user_id is NULL
++            if (!empty($cleanPhone)) {
++                UdharCustomer::whereNull('customer_user_id')
++                    ->where(function($q) use ($userPhone, $cleanPhone) {
++                        $q->where('phone', $userPhone)
++                          ->orWhere('phone', 'like', '%' . $cleanPhone);
++                    })
++                    ->update(['customer_user_id' => $userId]);
++            }
+ 
+-            // Fetch all udhar ledger nodes where customer_user_id matches
++            // Fetch all udhar ledger nodes where customer_user_id or phone matches
+             $ledgers = UdharCustomer::with('merchant')
+-                ->where('customer_user_id', $userId)
++                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
++                    $q->where('customer_user_id', $userId);
++                    if (!empty($cleanPhone)) {
++                        $q->orWhere('phone', $userPhone)
++                          ->orWhere('phone', 'like', '%' . $cleanPhone);
++                    }
++                })
+                 ->where('status', 1)
+                 ->get()
+                 ->map(function ($cust) {
+@@ -58,17 +80,34 @@ class CustomerUdharController extends Controller
+     public function ledgerList($merchantId)
+     {
+         try {
+-            $userId = Auth::id();
++            $user = Auth::user();
++            $userId = $user ? $user->id : Auth::id();
++            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
++            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
++            if (strlen($cleanPhone) > 10) {
++                $cleanPhone = substr($cleanPhone, -10);
++            }
+ 
+             // Find the specific customer record mapping the user to this merchant
+-            $customer = UdharCustomer::where('customer_user_id', $userId)
+-                ->where('merchant_id', $merchantId)
++            $customer = UdharCustomer::where('merchant_id', $merchantId)
++                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
++                    $q->where('customer_user_id', $userId);
++                    if (!empty($cleanPhone)) {
++                        $q->orWhere('phone', $userPhone)
++                          ->orWhere('phone', 'like', '%' . $cleanPhone);
++                    }
++                })
+                 ->first();
+ 
+             if (!$customer) {
+                 return response()->json($this->withErrors('No ledger account found with this merchant.'), 404);
+             }
+ 
++            if ($customer->customer_user_id != $userId) {
++                $customer->customer_user_id = $userId;
++                $customer->save();
++            }
++
+             $ledgers = UdharLedger::where('customer_id', $customer->id)
+                 ->orderBy('created_at', 'desc')
+                 ->paginate(20)
+diff --git a/laravel-backend/app/Models/User.php b/laravel-backend/app/Models/User.php
+new file mode 100644
+index 0000000..a6e9f70
+--- /dev/null
++++ b/laravel-backend/app/Models/User.php
+@@ -0,0 +1,19 @@
++<?php
++
++namespace App\Models;
++
++use Illuminate\Database\Eloquent\Factories\HasFactory;
++use Illuminate\Foundation\Auth\User as Authenticatable;
++use Illuminate\Notifications\Notifiable;
++
++class User extends Authenticatable
++{
++    use HasFactory, Notifiable;
++
++    protected $guarded = [];
++
++    protected $hidden = [
++        'password',
++        'remember_token',
++    ];
++}
+diff --git a/laravel-backend/routes/api.php b/laravel-backend/routes/api.php
+index f48680a..4c088f5 100644
+--- a/laravel-backend/routes/api.php
++++ b/laravel-backend/routes/api.php
+@@ -47,6 +47,7 @@ Route::controller(AuthController::class)->group(function () {
+     Route::get('/register/form', 'registerUserForm');
+     Route::post('/register', 'registerUser');
+     Route::post('/login', 'loginUser');
++    Route::post('/merchant/check-exist', 'checkMerchantExist');
+     Route::post('/recovery-pass/get-email', 'getEmailForRecoverPass');
+     Route::post('/recovery-pass/get-code', 'getCodeForRecoverPass');
+     Route::post('/update-pass', 'updatePass');
