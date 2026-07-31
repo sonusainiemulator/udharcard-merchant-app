@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/app_constants.dart';
@@ -217,6 +218,30 @@ class FintechAuthPage extends StatelessWidget {
                             fontSize: 11.sp,
                           ),
                         ),
+                      ),
+                      SizedBox(height: 6.h),
+                      FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform().catchError((_) => PackageInfo(
+                          appName: '',
+                          packageName: '',
+                          version: '',
+                          buildNumber: '',
+                          buildSignature: '',
+                        )),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data!.version.isNotEmpty) {
+                            return Center(
+                              child: Text(
+                                'v${snapshot.data!.version}',
+                                style: TextStyle(
+                                  color: bodyColor.withValues(alpha: .5),
+                                  fontSize: 11.sp,
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
                     ],
                   ),

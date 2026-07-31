@@ -42,7 +42,7 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
   Widget build(BuildContext context) {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
     final phoneText = _authController.firebasePhoneController.text.trim();
-    final canSubmit = phoneText.length >= 7;
+    final canSubmit = phoneText.length == 10;
 
     return FintechAuthPage(
       eyebrow: 'Fast Authentication',
@@ -59,8 +59,8 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
             controller: _authController.firebasePhoneController,
             keyboardType: TextInputType.phone,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-              LengthLimitingTextInputFormatter(15),
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
             ],
             autofillHints: const [AutofillHints.telephoneNumber],
             prefix: Padding(

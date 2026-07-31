@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.21] - 2026-07-31
+
+### 📱 Mobile Number Constraints
+- **10-Digit Constraint on Login Screen**: Restricted login mobile input field to exactly 10 digits and numbers only, preventing users from entering country codes twice or typing more than 10 digits.
+
+---
+
+## [1.0.20] - 2026-07-31
+
+### 🚀 Voice & Sync Enhancements
+- **Voice Entry TalkBack**: Improved accessibility features for Voice Entry screen.
+- **Merchant Auth & Profile Backend Sync**: Robust state management and database synchronization on merchant login and profile updates.
+- **Udhar History Auto-Linking**: Automatically linked historical customer ledger entries upon account onboarding.
+- **VPS Patches**: Implemented backend connection and session patches.
+
+---
+
 ## [1.0.18] - 2026-07-29
 
 ### 🎨 Complete Mobbin-Inspired Fintech UI Redesign
