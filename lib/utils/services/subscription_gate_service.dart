@@ -38,6 +38,14 @@ class CustomerLimitState {
 }
 
 class SubscriptionGateService {
+  static bool isPlanEnrollmentRequired() {
+    final dynamic raw = HiveHelp.read(Keys.subscriptionEnrollmentRequired);
+    if (raw is bool) {
+      return raw;
+    }
+    return false;
+  }
+
   static const Map<String, int?> _customerLimitByPlan = {
     'starter': 250,
     'growth': 1000,

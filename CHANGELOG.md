@@ -5,6 +5,13 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.39] - 2026-08-04
+
+### ✨ Optional Subscription Enrollment for Merchant Onboarding
+- **Made Plan Enrollment Optional**: Added a shared `subscriptionEnrollmentRequired` flag so merchant onboarding and app launch can go straight to the dashboard when plan selection is not being enforced.
+- **Added Skip Path on Plan Screen**: The subscription screen now shows a **Skip for now** action that clears partial subscription state and launches the merchant dashboard immediately.
+- **Preserved Re-Enable Path**: Plan selection can be forced back on later by setting the enrollment flag to `true`, without changing the onboarding or subscription screen structure.
+
 ## [1.0.38] - 2026-08-03
 
 ### 📊 Udhar Reports Dashboard, Device Exports, and Backend Route Wiring

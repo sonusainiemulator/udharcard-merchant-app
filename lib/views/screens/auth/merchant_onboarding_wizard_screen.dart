@@ -8,6 +8,7 @@ import '../../../routes/routes_name.dart';
 import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import '../../../utils/services/subscription_gate_service.dart';
 import '../../widgets/fintech_auth_widgets.dart';
 
 class MerchantOnboardingWizardScreen extends StatefulWidget {
@@ -131,10 +132,9 @@ class _MerchantOnboardingWizardScreenState
       _isSubmitting = false;
     });
 
-    final bool planSelected =
-        (HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true;
-
-    if (planSelected) {
+    if (!SubscriptionGateService.isPlanEnrollmentRequired()) {
+      Get.offAllNamed(RoutesName.bottomNavBar);
+    } else if ((HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true) {
       Get.offAllNamed(RoutesName.bottomNavBar);
     } else {
       Get.offAllNamed(RoutesName.subscriptionPlansScreen);

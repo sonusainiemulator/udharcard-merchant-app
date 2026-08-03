@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../config/app_colors.dart';
 import '../../../routes/routes_name.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import '../../../utils/services/subscription_gate_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -62,6 +63,11 @@ class _SplashScreenState extends State<SplashScreen>
             (HiveHelp.read('onboarding_completed') ?? false) == true;
         if (!onboardingCompleted) {
           Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
+          return;
+        }
+
+        if (!SubscriptionGateService.isPlanEnrollmentRequired()) {
+          Get.offAllNamed(RoutesName.bottomNavBar);
           return;
         }
 

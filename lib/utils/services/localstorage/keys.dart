@@ -26,6 +26,7 @@ class Keys {
   static String subscriptionPlanSelected = "subscriptionPlanSelected";
   static String subscriptionPlanCode = "subscriptionPlanCode";
   static String subscriptionBillingCycle = "subscriptionBillingCycle";
+  static String subscriptionEnrollmentRequired = "subscriptionEnrollmentRequired";
   static String subscriptionSoftRolloutEnabled = "subscriptionSoftRolloutEnabled";
   static String subscriptionHardLimitEnabled = "subscriptionHardLimitEnabled";
 }

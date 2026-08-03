@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'subscription_controller.dart';
 import '../routes/routes_name.dart';
 import '../utils/services/localstorage/keys.dart';
+import '../utils/services/subscription_gate_service.dart';
 
 class AuthController extends GetxController {
   static AuthController get to => Get.find<AuthController>();
@@ -729,6 +730,11 @@ class AuthController extends GetxController {
   }
 
   Future<void> _navigatePostAuthentication() async {
+    if (!SubscriptionGateService.isPlanEnrollmentRequired()) {
+      Get.offAllNamed(RoutesName.bottomNavBar);
+      return;
+    }
+
     final bool planSelected =
         (HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true;
 

@@ -14,6 +14,13 @@ class SubscriptionPlansScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Choose a Plan'),
+            actions: [
+              if (!controller.isPlanEnrollmentRequired)
+                TextButton(
+                  onPressed: controller.skipPlanEnrollment,
+                  child: const Text('Skip for now'),
+                ),
+            ],
           ),
           body: controller.isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -36,6 +43,15 @@ class SubscriptionPlansScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (controller.isPlanEnrollmentRequired)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Plan selection is currently required before entering the dashboard.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     Expanded(
                       child: ListView.builder(

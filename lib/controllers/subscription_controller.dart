@@ -12,6 +12,7 @@ import '../routes/routes_name.dart';
 import '../utils/services/helpers.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/localstorage/keys.dart';
+import '../utils/services/subscription_gate_service.dart';
 
 class SubscriptionController extends GetxController {
   static SubscriptionController get to => Get.find<SubscriptionController>();
@@ -167,6 +168,16 @@ class SubscriptionController extends GetxController {
     selectedBillingCycle = value;
     update();
   }
+
+  Future<void> skipPlanEnrollment() async {
+    HiveHelp.write(Keys.subscriptionPlanSelected, false);
+    await HiveHelp.remove(Keys.subscriptionPlanCode);
+    await HiveHelp.remove(Keys.subscriptionBillingCycle);
+    Get.offAllNamed(RoutesName.bottomNavBar);
+  }
+
+  bool get isPlanEnrollmentRequired =>
+      SubscriptionGateService.isPlanEnrollmentRequired();
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
     final orderId = response.orderId?.toString().trim().isNotEmpty == true
