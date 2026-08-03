@@ -28,6 +28,21 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
     if (!Get.isRegistered<UdharController>()) {
       Get.put(UdharController());
     }
+
+    final args = Get.arguments;
+    if (args is Map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Get.find<UdharController>().applyVoiceEntryPrefill(
+          name: args['name']?.toString(),
+          amount:
+              args['amount'] is num
+                  ? (args['amount'] as num).toDouble()
+                  : double.tryParse(args['amount']?.toString() ?? ''),
+          type: args['type']?.toString(),
+        );
+      });
+    }
   }
 
   @override
@@ -53,7 +68,10 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                   Container(
                     width: double.infinity,
                     margin: EdgeInsets.only(bottom: 14.h),
-                    padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 10.w),
+                    padding: EdgeInsets.symmetric(
+                      vertical: 8.h,
+                      horizontal: 10.w,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10.r),
@@ -117,7 +135,9 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                 VSpace(28.h),
 
                 // ── Date & Time Selector ──────────────────────────
-                _SectionLabel(text: storedLanguage['Date & Time'] ?? 'Transaction Date'),
+                _SectionLabel(
+                  text: storedLanguage['Date & Time'] ?? 'Transaction Date',
+                ),
                 VSpace(10.h),
                 _DateSelector(
                   selectedDate: controller.selectedDate,
@@ -159,15 +179,17 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                       storedLanguage['Add Udhar Transaction'] ??
                       'Add Udhar Transaction',
                   isLoading: controller.isSubmitting,
-                  bgColor: controller.isOffline
-                      ? AppColors.mainColor.withValues(alpha: 0.55)
-                      : AppColors.mainColor,
-                  onTap: controller.isOffline
-                      ? null
-                      : () {
-                    FocusScope.of(context).unfocus();
-                    controller.submitUdhar();
-                  },
+                  bgColor:
+                      controller.isOffline
+                          ? AppColors.mainColor.withValues(alpha: 0.55)
+                          : AppColors.mainColor,
+                  onTap:
+                      controller.isOffline
+                          ? null
+                          : () {
+                            FocusScope.of(context).unfocus();
+                            controller.submitUdhar();
+                          },
                 ),
 
                 VSpace(32.h),
@@ -534,10 +556,7 @@ class _PaymentMethodToggle extends StatelessWidget {
 
 /// Tappable card that shows selected date or defaults to Now
 class _DateSelector extends StatelessWidget {
-  const _DateSelector({
-    required this.selectedDate,
-    required this.onTap,
-  });
+  const _DateSelector({required this.selectedDate, required this.onTap});
 
   final DateTime? selectedDate;
   final VoidCallback onTap;
@@ -545,9 +564,10 @@ class _DateSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasDate = selectedDate != null;
-    final String formattedDate = hasDate
-        ? DateFormat('dd MMM yyyy, hh:mm a').format(selectedDate!)
-        : 'Now';
+    final String formattedDate =
+        hasDate
+            ? DateFormat('dd MMM yyyy, hh:mm a').format(selectedDate!)
+            : 'Now';
 
     return GestureDetector(
       onTap: onTap,
@@ -594,11 +614,7 @@ class _DateSelector extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.black50,
-              size: 20.sp,
-            ),
+            Icon(Icons.chevron_right, color: AppColors.black50, size: 20.sp),
           ],
         ),
       ),

@@ -24,11 +24,14 @@ class UdharController extends GetxController {
   static UdharController get to => Get.find<UdharController>();
 
   CustomerLimitState get customerLimitState =>
-      SubscriptionGateService.customerLimitState(currentCount: usersList.length);
+      SubscriptionGateService.customerLimitState(
+        currentCount: usersList.length,
+      );
 
   void showCustomerLimitNudgeIfNeeded() {
-    final String? warning =
-        SubscriptionGateService.customerAddSoftWarning(currentCount: usersList.length);
+    final String? warning = SubscriptionGateService.customerAddSoftWarning(
+      currentCount: usersList.length,
+    );
     if (warning != null && warning.isNotEmpty) {
       Helpers.showSnackBar(msg: warning, title: 'Plan Notice');
     }
@@ -134,17 +137,22 @@ class UdharController extends GetxController {
     if (ledgerDateRange == null) {
       filteredLedgerTransactions = List.from(ledgerTransactions);
     } else {
-      filteredLedgerTransactions = ledgerTransactions.where((tx) {
-        if (tx['created_at'] == null) return true;
-        try {
-          final DateTime txDate = DateTime.parse(tx['created_at'].toString());
-          final start = ledgerDateRange!.start;
-          final end = ledgerDateRange!.end.add(const Duration(days: 1)); // Include the end day fully
-          return txDate.isAfter(start) && txDate.isBefore(end);
-        } catch (_) {
-          return true;
-        }
-      }).toList();
+      filteredLedgerTransactions =
+          ledgerTransactions.where((tx) {
+            if (tx['created_at'] == null) return true;
+            try {
+              final DateTime txDate = DateTime.parse(
+                tx['created_at'].toString(),
+              );
+              final start = ledgerDateRange!.start;
+              final end = ledgerDateRange!.end.add(
+                const Duration(days: 1),
+              ); // Include the end day fully
+              return txDate.isAfter(start) && txDate.isBefore(end);
+            } catch (_) {
+              return true;
+            }
+          }).toList();
     }
     update();
   }
@@ -182,7 +190,9 @@ class UdharController extends GetxController {
     await checkConnection();
 
     if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Unable to fetch latest customers.');
+      Helpers.showSnackBar(
+        msg: 'No internet. Unable to fetch latest customers.',
+      );
     } else {
       try {
         final response = await UdharRepo.getUsers();
@@ -192,9 +202,11 @@ class UdharController extends GetxController {
             if (data['data'] != null) {
               if (data['data'] is Map && data['data']['data'] != null) {
                 usersList = List<dynamic>.from(data['data']['data']);
-              } else if (data['data'] is Map && data['data']['contacts'] != null) {
+              } else if (data['data'] is Map &&
+                  data['data']['contacts'] != null) {
                 usersList = List<dynamic>.from(data['data']['contacts']);
-              } else if (data['data'] is Map && data['data']['customers'] != null) {
+              } else if (data['data'] is Map &&
+                  data['data']['customers'] != null) {
                 usersList = List<dynamic>.from(data['data']['customers']);
               } else if (data['data'] is List) {
                 usersList = List<dynamic>.from(data['data']);
@@ -249,14 +261,78 @@ class UdharController extends GetxController {
     update();
   }
 
+  void applyVoiceEntryPrefill({String? name, double? amount, String? type}) {
+    if (name != null && name.trim().isNotEmpty) {
+      final normalizedVoiceName = name.trim().toLowerCase();
+      final voiceTokens =
+          normalizedVoiceName
+              .split(RegExp(r'\s+'))
+              .where((token) => token.isNotEmpty)
+              .toList();
+
+      for (final user in usersList) {
+        if (user is Map) {
+          final fullName = (user['name'] ?? '').toString().trim();
+          final normalizedUserName = fullName.toLowerCase();
+          final userTokens =
+              normalizedUserName
+                  .split(RegExp(r'\s+'))
+                  .where((token) => token.isNotEmpty)
+                  .toList();
+
+          final matchesSimpleSubstring =
+              normalizedUserName.contains(normalizedVoiceName) ||
+              normalizedVoiceName.contains(normalizedUserName);
+
+          final matchesInitials =
+              voiceTokens.length > 1 &&
+              userTokens.isNotEmpty &&
+              voiceTokens.every((token) {
+                return userTokens.any((userToken) {
+                  return userToken.startsWith(token) ||
+                      token.startsWith(userToken);
+                });
+              });
+
+          final matchesSingleToken =
+              voiceTokens.length == 1 &&
+              userTokens.any((userToken) {
+                return userToken.startsWith(voiceTokens.first) ||
+                    voiceTokens.first.startsWith(userToken);
+              });
+
+          if (matchesSimpleSubstring || matchesInitials || matchesSingleToken) {
+            selectedUser = Map<String, dynamic>.from(user);
+            break;
+          }
+        }
+      }
+    }
+
+    if (amount != null && amount > 0) {
+      amountCtrl.text =
+          amount.truncateToDouble() == amount
+              ? amount.toInt().toString()
+              : amount.toString();
+    }
+
+    if (type != null && type.trim().isNotEmpty) {
+      transactionType = type.toLowerCase() == 'received' ? 'received' : 'given';
+    }
+
+    update();
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Customer Add / Delete
   // ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> addCustomer() async {
     final String name = nameCtrl.text.trim();
-    final String phone =
-      phoneCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
+    final String phone = phoneCtrl.text.trim().replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
     final String email = emailCtrl.text.trim();
     final String creditLimit =
         limitCtrl.text.trim().isEmpty ? "5000" : limitCtrl.text.trim();
@@ -305,7 +381,9 @@ class UdharController extends GetxController {
     Map<String, dynamic>? resultCustomer;
 
     if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Customer add requires live sync.');
+      Helpers.showSnackBar(
+        msg: 'No internet. Customer add requires live sync.',
+      );
     } else {
       try {
         final response = await UdharRepo.addCustomer(
@@ -339,9 +417,7 @@ class UdharController extends GetxController {
           );
         }
       } catch (_) {
-        Helpers.showSnackBar(
-          msg: 'Unable to add customer. Please try again.',
-        );
+        Helpers.showSnackBar(msg: 'Unable to add customer. Please try again.');
       }
     }
 
@@ -426,7 +502,9 @@ class UdharController extends GetxController {
 
     await checkConnection();
     if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Credit limit update requires live sync.');
+      Helpers.showSnackBar(
+        msg: 'No internet. Credit limit update requires live sync.',
+      );
       isUpdatingLimit = false;
       update();
       return;
@@ -495,7 +573,10 @@ class UdharController extends GetxController {
   // Ledger Loading
   // ─────────────────────────────────────────────────────────────
 
-  Future<void> fetchCustomerLedger(String customerId, {bool showLoading = true}) async {
+  Future<void> fetchCustomerLedger(
+    String customerId, {
+    bool showLoading = true,
+  }) async {
     if (isLedgerLoading) return;
 
     if (showLoading) {
@@ -516,8 +597,11 @@ class UdharController extends GetxController {
           if (data['status'] == 'success') {
             final payload = data['message'] ?? data['data'] ?? {};
             if (payload['ledgers'] != null) {
-              if (payload['ledgers'] is Map && payload['ledgers']['data'] != null) {
-                ledgerTransactions = List<dynamic>.from(payload['ledgers']['data']);
+              if (payload['ledgers'] is Map &&
+                  payload['ledgers']['data'] != null) {
+                ledgerTransactions = List<dynamic>.from(
+                  payload['ledgers']['data'],
+                );
               } else if (payload['ledgers'] is List) {
                 ledgerTransactions = List<dynamic>.from(payload['ledgers']);
               }
@@ -526,21 +610,30 @@ class UdharController extends GetxController {
             } else {
               ledgerTransactions = [];
             }
-            
+
             if (payload['customer'] != null && payload['customer'] is Map) {
-              currentOutstandingBalance = double.tryParse(
-                payload['customer']['outstanding_balance']?.toString() ?? '0'
-              ) ?? 0.0;
-              currentCreditLimit = double.tryParse(
-                payload['customer']['credit_limit']?.toString() ?? '5000'
-              ) ?? 5000.0;
+              currentOutstandingBalance =
+                  double.tryParse(
+                    payload['customer']['outstanding_balance']?.toString() ??
+                        '0',
+                  ) ??
+                  0.0;
+              currentCreditLimit =
+                  double.tryParse(
+                    payload['customer']['credit_limit']?.toString() ?? '5000',
+                  ) ??
+                  5000.0;
             } else {
-              currentOutstandingBalance = double.tryParse(
-                payload['outstanding_balance']?.toString() ?? '0'
-              ) ?? 0.0;
-              currentCreditLimit = double.tryParse(
-                payload['credit_limit']?.toString() ?? '5000'
-              ) ?? 5000.0;
+              currentOutstandingBalance =
+                  double.tryParse(
+                    payload['outstanding_balance']?.toString() ?? '0',
+                  ) ??
+                  0.0;
+              currentCreditLimit =
+                  double.tryParse(
+                    payload['credit_limit']?.toString() ?? '5000',
+                  ) ??
+                  5000.0;
             }
           } else {
             final msg = data['message']?.toString().trim();
@@ -611,7 +704,9 @@ class UdharController extends GetxController {
     final paymentMethodStr = paymentMethod;
 
     if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Transaction add requires live sync.');
+      Helpers.showSnackBar(
+        msg: 'No internet. Transaction add requires live sync.',
+      );
     } else {
       try {
         final response = await UdharRepo.addUdhar(
@@ -669,9 +764,7 @@ class UdharController extends GetxController {
     await checkConnection();
 
     if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'You are offline. Cannot send reminder.',
-      );
+      Helpers.showSnackBar(msg: 'You are offline. Cannot send reminder.');
       isSendingReminder = false;
       update();
       return;
@@ -710,7 +803,9 @@ class UdharController extends GetxController {
         orElse: () => null,
       );
       if (oldestPendingTx != null && oldestPendingTx['created_at'] != null) {
-        final DateTime txDate = DateTime.parse(oldestPendingTx['created_at'].toString());
+        final DateTime txDate = DateTime.parse(
+          oldestPendingTx['created_at'].toString(),
+        );
         final int daysDiff = DateTime.now().difference(txDate).inDays;
         return daysDiff >= 28;
       }
@@ -729,9 +824,7 @@ class UdharController extends GetxController {
     await checkConnection();
 
     if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'You are offline. Cannot generate PDF bill.',
-      );
+      Helpers.showSnackBar(msg: 'You are offline. Cannot generate PDF bill.');
       isGeneratingPdf = false;
       update();
       return;
@@ -755,7 +848,9 @@ class UdharController extends GetxController {
           } catch (_) {}
         }
         Helpers.showSnackBar(
-          msg: data['message'] ?? '28-Day Due Bill PDF generated & sent successfully!',
+          msg:
+              data['message'] ??
+              '28-Day Due Bill PDF generated & sent successfully!',
         );
       } else {
         Helpers.showSnackBar(
@@ -806,8 +901,7 @@ class UdharController extends GetxController {
   void _showEntitlementWarningIfAny(Map<String, dynamic>? data) {
     if (data == null) return;
 
-    final String? warning =
-        data['entitlement']?['warning']?.toString().trim();
+    final String? warning = data['entitlement']?['warning']?.toString().trim();
 
     if (warning != null && warning.isNotEmpty) {
       Helpers.showSnackBar(msg: warning, title: 'Plan Notice');
@@ -869,24 +963,34 @@ class UdharController extends GetxController {
 
   // ── WhatsApp Payment Reminder ────────────────────────────────────────────────
   Future<void> sendWhatsAppReminder(Map<String, dynamic> customer) async {
-    final String phone = (customer['mobile'] ?? customer['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+    final String phone = (customer['mobile'] ?? customer['phone'] ?? '')
+        .toString()
+        .replaceAll(RegExp(r'\D'), '');
     final String name = (customer['name'] ?? 'Customer').toString();
-    final double balance = (customer['balance'] ?? currentOutstandingBalance).toDouble();
-    
-    final String merchantUpi = HiveHelp.read(Keys.merchantUpiId) ?? 'paysecure@upi';
-    final String upiUrl = "upi://pay?pa=$merchantUpi&pn=Merchant&am=${balance.abs()}&cu=INR";
-    
-    final String message = "Namaste $name ji,\nUdharCard Merchant par aapka ₹${balance.abs().toStringAsFixed(0)} ka udhar balance pending hai.\nKripya is UPI link se payment karein:\n$upiUrl\n\nDhanyawad!";
-    
+    final double balance =
+        (customer['balance'] ?? currentOutstandingBalance).toDouble();
+
+    final String merchantUpi =
+        HiveHelp.read(Keys.merchantUpiId) ?? 'paysecure@upi';
+    final String upiUrl =
+        "upi://pay?pa=$merchantUpi&pn=Merchant&am=${balance.abs()}&cu=INR";
+
+    final String message =
+        "Namaste $name ji,\nUdharCard Merchant par aapka ₹${balance.abs().toStringAsFixed(0)} ka udhar balance pending hai.\nKripya is UPI link se payment karein:\n$upiUrl\n\nDhanyawad!";
+
     if (phone.isEmpty) {
       Helpers.showSnackBar(msg: "Customer phone number unavailable.");
       return;
     }
-    
+
     final String formattedPhone = phone.length == 10 ? "91$phone" : phone;
-    final Uri whatsappUri = Uri.parse("whatsapp://send?phone=$formattedPhone&text=${Uri.encodeComponent(message)}");
-    final Uri webWhatsappUri = Uri.parse("https://wa.me/$formattedPhone?text=${Uri.encodeComponent(message)}");
-    
+    final Uri whatsappUri = Uri.parse(
+      "whatsapp://send?phone=$formattedPhone&text=${Uri.encodeComponent(message)}",
+    );
+    final Uri webWhatsappUri = Uri.parse(
+      "https://wa.me/$formattedPhone?text=${Uri.encodeComponent(message)}",
+    );
+
     try {
       if (await canLaunchUrl(whatsappUri)) {
         await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
@@ -908,7 +1012,9 @@ class UdharController extends GetxController {
     await checkConnection();
 
     if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Realtime reports sync is unavailable.');
+      Helpers.showSnackBar(
+        msg: 'No internet. Realtime reports sync is unavailable.',
+      );
       isReportsLoading = false;
       update();
       return;
@@ -933,7 +1039,9 @@ class UdharController extends GetxController {
               ? Map<String, dynamic>.from(data['data'])
               : {};
 
-      if (response.statusCode == 200 && data['status'] == 'success' && payload.isNotEmpty) {
+      if (response.statusCode == 200 &&
+          data['status'] == 'success' &&
+          payload.isNotEmpty) {
         reportsSummary = {
           'start_date': payload['start_date'],
           'end_date': payload['end_date'],
@@ -946,7 +1054,9 @@ class UdharController extends GetxController {
         );
       } else {
         Helpers.showSnackBar(
-          msg: data['message']?.toString() ?? 'Unable to fetch realtime reports.',
+          msg:
+              data['message']?.toString() ??
+              'Unable to fetch realtime reports.',
         );
       }
     } catch (_) {
@@ -974,13 +1084,21 @@ class UdharController extends GetxController {
           throw Exception('Storage directory unavailable');
         }
 
-        final String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-        final File file = File('${directory.path}/udhar_outstanding_$timestamp.csv');
-        final StringBuffer buffer = StringBuffer()
-          ..writeln('Customer Name,Phone,Email,Outstanding Balance,Credit Limit');
+        final String timestamp = DateFormat(
+          'yyyyMMdd_HHmmss',
+        ).format(DateTime.now());
+        final File file = File(
+          '${directory.path}/udhar_outstanding_$timestamp.csv',
+        );
+        final StringBuffer buffer =
+            StringBuffer()..writeln(
+              'Customer Name,Phone,Email,Outstanding Balance,Credit Limit',
+            );
 
         for (final dynamic customer in reportOutstandingCustomers) {
-          final Map<String, dynamic> row = Map<String, dynamic>.from(customer as Map);
+          final Map<String, dynamic> row = Map<String, dynamic>.from(
+            customer as Map,
+          );
           buffer.writeln(
             '${_csvValue(row['name'])},${_csvValue(row['phone'])},${_csvValue(row['email'])},${_csvValue(_asDouble(row['outstanding_balance']).toStringAsFixed(2))},${_csvValue(_asDouble(row['credit_limit']).toStringAsFixed(2))}',
           );
@@ -989,7 +1107,9 @@ class UdharController extends GetxController {
         await file.writeAsString(buffer.toString());
         lastGeneratedReportPath = file.path;
         await OpenFile.open(file.path);
-        Helpers.showSnackBar(msg: 'Outstanding balances CSV generated successfully.');
+        Helpers.showSnackBar(
+          msg: 'Outstanding balances CSV generated successfully.',
+        );
       },
     );
   }
@@ -1012,90 +1132,134 @@ class UdharController extends GetxController {
           symbol: 'Rs. ',
           decimalDigits: 2,
         );
-        final String generatedAt = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+        final String generatedAt = DateFormat(
+          'dd MMM yyyy, hh:mm a',
+        ).format(DateTime.now());
         final String periodLabel =
-            reportsSummary['start_date'] != null && reportsSummary['end_date'] != null
+            reportsSummary['start_date'] != null &&
+                    reportsSummary['end_date'] != null
                 ? '${reportsSummary['start_date']} to ${reportsSummary['end_date']}'
                 : 'All time';
 
         document.addPage(
           pw.MultiPage(
-            build: (context) => [
-              pw.Text(
-                'Udhar Ledger Statement',
-                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Text('Generated: $generatedAt'),
-              pw.Text('Period: $periodLabel'),
-              pw.SizedBox(height: 16),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
+            build:
+                (context) => [
                   pw.Text(
-                    'Credit Given: ${currency.format(_asDouble(reportsSummary['total_credit_given']))}',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    'Udhar Ledger Statement',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
                   ),
+                  pw.SizedBox(height: 6),
+                  pw.Text('Generated: $generatedAt'),
+                  pw.Text('Period: $periodLabel'),
+                  pw.SizedBox(height: 16),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Credit Given: ${currency.format(_asDouble(reportsSummary['total_credit_given']))}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.Text(
+                        'Collections: ${currency.format(_asDouble(reportsSummary['total_debit_received']))}',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 18),
                   pw.Text(
-                    'Collections: ${currency.format(_asDouble(reportsSummary['total_debit_received']))}',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    'Outstanding Customers',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.TableHelper.fromTextArray(
+                    headers: const [
+                      'Customer',
+                      'Phone',
+                      'Outstanding',
+                      'Limit',
+                    ],
+                    data:
+                        reportOutstandingCustomers.map((dynamic customer) {
+                          final row = Map<String, dynamic>.from(
+                            customer as Map,
+                          );
+                          return [
+                            row['name']?.toString() ?? 'Customer',
+                            row['phone']?.toString() ?? '-',
+                            currency.format(
+                              _asDouble(row['outstanding_balance']),
+                            ),
+                            currency.format(_asDouble(row['credit_limit'])),
+                          ];
+                        }).toList(),
+                  ),
+                  pw.SizedBox(height: 18),
+                  pw.Text(
+                    'Transactions',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.TableHelper.fromTextArray(
+                    headers: const [
+                      'Date',
+                      'Customer',
+                      'Type',
+                      'Method',
+                      'Amount',
+                      'Remarks',
+                    ],
+                    data:
+                        reportTransactions.map((dynamic tx) {
+                          final row = Map<String, dynamic>.from(tx as Map);
+                          final bool isCredit =
+                              _reportType(row['type']) == 'Credit';
+                          return [
+                            row['created_at']?.toString() ?? '-',
+                            row['customer_name']?.toString() ??
+                                row['customer']?['name']?.toString() ??
+                                '-',
+                            _reportType(row['type']),
+                            row['payment_method']?.toString() ?? 'cash',
+                            '${isCredit ? '+' : '-'}${currency.format(_asDouble(row['amount']))}',
+                            row['remarks']?.toString() ??
+                                row['notes']?.toString() ??
+                                '-',
+                          ];
+                        }).toList(),
                   ),
                 ],
-              ),
-              pw.SizedBox(height: 18),
-              pw.Text(
-                'Outstanding Customers',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: const ['Customer', 'Phone', 'Outstanding', 'Limit'],
-                data: reportOutstandingCustomers.map((dynamic customer) {
-                  final row = Map<String, dynamic>.from(customer as Map);
-                  return [
-                    row['name']?.toString() ?? 'Customer',
-                    row['phone']?.toString() ?? '-',
-                    currency.format(_asDouble(row['outstanding_balance'])),
-                    currency.format(_asDouble(row['credit_limit'])),
-                  ];
-                }).toList(),
-              ),
-              pw.SizedBox(height: 18),
-              pw.Text(
-                'Transactions',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 8),
-              pw.TableHelper.fromTextArray(
-                headers: const ['Date', 'Customer', 'Type', 'Method', 'Amount', 'Remarks'],
-                data: reportTransactions.map((dynamic tx) {
-                  final row = Map<String, dynamic>.from(tx as Map);
-                  final bool isCredit = _reportType(row['type']) == 'Credit';
-                  return [
-                    row['created_at']?.toString() ?? '-',
-                    row['customer_name']?.toString() ?? row['customer']?['name']?.toString() ?? '-',
-                    _reportType(row['type']),
-                    row['payment_method']?.toString() ?? 'cash',
-                    '${isCredit ? '+' : '-'}${currency.format(_asDouble(row['amount']))}',
-                    row['remarks']?.toString() ?? row['notes']?.toString() ?? '-',
-                  ];
-                }).toList(),
-              ),
-            ],
           ),
         );
 
-        final String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-        final File file = File('${directory.path}/udhar_ledger_statement_$timestamp.pdf');
+        final String timestamp = DateFormat(
+          'yyyyMMdd_HHmmss',
+        ).format(DateTime.now());
+        final File file = File(
+          '${directory.path}/udhar_ledger_statement_$timestamp.pdf',
+        );
         await file.writeAsBytes(await document.save());
         lastGeneratedReportPath = file.path;
         await OpenFile.open(file.path);
-        Helpers.showSnackBar(msg: 'Ledger statement PDF generated successfully.');
+        Helpers.showSnackBar(
+          msg: 'Ledger statement PDF generated successfully.',
+        );
       },
     );
   }
 
-  Future<void> _generateReportFile({required Future<void> Function() action}) async {
+  Future<void> _generateReportFile({
+    required Future<void> Function() action,
+  }) async {
     isExportingReport = true;
     update();
     try {
@@ -1157,7 +1321,10 @@ class UdharController extends GetxController {
         if (contact != null) {
           nameCtrl.text = contact.displayName;
           if (contact.phones.isNotEmpty) {
-            String rawPhone = contact.phones.first.number.replaceAll(RegExp(r'\D'), '');
+            String rawPhone = contact.phones.first.number.replaceAll(
+              RegExp(r'\D'),
+              '',
+            );
             if (rawPhone.length > 10) {
               rawPhone = rawPhone.substring(rawPhone.length - 10);
             }
@@ -1179,7 +1346,7 @@ class UdharController extends GetxController {
     try {
       final List customers = HiveHelp.read(Keys.udharCustomers) ?? [];
       final List transactions = HiveHelp.read(Keys.udharTransactions) ?? [];
-      
+
       final Map<String, dynamic> backupData = {
         "version": "1.0.16",
         "timestamp": DateTime.now().toIso8601String(),
@@ -1188,13 +1355,18 @@ class UdharController extends GetxController {
         "transactions": transactions,
       };
 
-      final String jsonStr = const JsonEncoder.withIndent('  ').convert(backupData);
+      final String jsonStr = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(backupData);
       final Directory dir = await getApplicationDocumentsDirectory();
-      final String filePath = "${dir.path}/udhar_backup_${DateTime.now().millisecondsSinceEpoch}.json";
+      final String filePath =
+          "${dir.path}/udhar_backup_${DateTime.now().millisecondsSinceEpoch}.json";
       final File file = File(filePath);
       await file.writeAsString(jsonStr);
 
-      await Share.shareXFiles([XFile(filePath)], text: "UdharCard Merchant Ledger Backup JSON");
+      await Share.shareXFiles([
+        XFile(filePath),
+      ], text: "UdharCard Merchant Ledger Backup JSON");
     } catch (e) {
       Helpers.showSnackBar(msg: "Failed to export backup: $e");
     }
@@ -1217,7 +1389,8 @@ class UdharController extends GetxController {
           if (data.containsKey("transactions")) {
             HiveHelp.write(Keys.udharTransactions, data["transactions"]);
           }
-          if (data.containsKey("merchant_upi") && data["merchant_upi"].toString().isNotEmpty) {
+          if (data.containsKey("merchant_upi") &&
+              data["merchant_upi"].toString().isNotEmpty) {
             HiveHelp.write(Keys.merchantUpiId, data["merchant_upi"]);
           }
           fetchUsers();

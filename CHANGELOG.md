@@ -5,6 +5,12 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.41] - 2026-08-04
+
+### 🎙️ AI Voice Entry & One-Tap Udhar Posting
+- **Voice Entry Transaction Actions**: Added instant **Speak (Talk Back)** playback button to review parsed speech transaction items in [voice_entry_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/voice_entry/voice_entry_screen.dart).
+- **Direct Udhar Ledger Posting**: Added 1-tap **Add Udhar** action on voice entries so merchants can post voice transactions directly into customer credit ledgers.
+
 ## [1.0.40] - 2026-08-04
 
 ### 🛠️ Universal AppBar Back Navigation Fix

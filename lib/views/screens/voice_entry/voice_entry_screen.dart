@@ -18,7 +18,8 @@ class VoiceEntryScreen extends StatefulWidget {
   State<VoiceEntryScreen> createState() => _VoiceEntryScreenState();
 }
 
-class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerProviderStateMixin {
+class _VoiceEntryScreenState extends State<VoiceEntryScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -40,36 +41,22 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
     super.dispose();
   }
 
-  Widget _buildFeatureBadge(BuildContext context, String text, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11.sp,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
-      ),
-    );
-  }
-
   Widget _buildLangChip(
-      BuildContext context, VoiceEntryController controller, String langCode, String label) {
+    BuildContext context,
+    VoiceEntryController controller,
+    String langCode,
+    String label,
+  ) {
     final bool isSelected = controller.talkBackLanguage == langCode;
     return GestureDetector(
       onTap: () => controller.changeTalkBackLanguage(langCode),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.mainColor
-              : AppColors.mainColor.withValues(alpha: 0.1),
+          color:
+              isSelected
+                  ? AppColors.mainColor
+                  : AppColors.mainColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8.r),
         ),
         child: Text(
@@ -85,7 +72,10 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
   }
 
   Widget _buildTryChip(
-      BuildContext context, VoiceEntryController controller, String phrase) {
+    BuildContext context,
+    VoiceEntryController controller,
+    String phrase,
+  ) {
     return GestureDetector(
       onTap: () {
         controller.sandboxTextCtrl.text = phrase;
@@ -95,9 +85,10 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
         margin: EdgeInsets.only(right: 8.w),
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
-          color: Get.isDarkMode
-              ? AppColors.darkCardColor
-              : AppColors.fillColorColor,
+          color:
+              Get.isDarkMode
+                  ? AppColors.darkCardColor
+                  : AppColors.fillColorColor,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor,
@@ -106,8 +97,11 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline,
-                size: 13.sp, color: AppColors.mainColor),
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 13.sp,
+              color: AppColors.mainColor,
+            ),
             HSpace(6.w),
             Text(
               phrase,
@@ -126,7 +120,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
     final String pageTitle = storedLanguage['Voice Entry'] ?? "Voice Entry";
-    
+
     return GetBuilder<VoiceEntryController>(
       init: VoiceEntryController(),
       builder: (controller) {
@@ -143,9 +137,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
         }
 
         return Scaffold(
-          appBar: CustomAppBar(
-            title: pageTitle,
-          ),
+          appBar: CustomAppBar(title: pageTitle),
           body: Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Column(
@@ -156,10 +148,12 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                       children: [
                         VSpace(15.h),
 
-                        // Qoder Voice Key Features Header Banner
                         Container(
                           width: double.maxFinite,
-                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 14.h,
+                          ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -170,17 +164,23 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(color: AppColors.mainColor.withValues(alpha: .3)),
+                            border: Border.all(
+                              color: AppColors.mainColor.withValues(alpha: .3),
+                            ),
                           ),
                           child: Column(
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.graphic_eq, color: AppColors.mainColor, size: 22.sp),
+                                  Icon(
+                                    Icons.mic,
+                                    color: AppColors.mainColor,
+                                    size: 22.sp,
+                                  ),
                                   HSpace(8.w),
                                   Text(
-                                    "Udhar Voice Assistant",
+                                    "Quick Voice Udhar",
                                     style: context.t.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: AppThemes.getIconBlackColor(),
@@ -188,23 +188,12 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   ),
                                 ],
                               ),
-                              VSpace(10.h),
-                              Wrap(
-                                alignment: WrapAlignment.center,
-                                spacing: 8.w,
-                                runSpacing: 6.h,
-                                children: [
-                                  _buildFeatureBadge(context, "🎙️ Hears you", AppColors.mainColor),
-                                  _buildFeatureBadge(context, "🔊 Talks back", AppColors.greenColor),
-                                  _buildFeatureBadge(context, "⚡ Gets it done", Colors.orangeAccent),
-                                ],
-                              ),
-                              VSpace(6.h),
+                              VSpace(8.h),
                               Text(
-                                "Full-duplex real-time voice entry with Talk Back assistant",
+                                "Say a short phrase and add the entry in seconds.",
+                                textAlign: TextAlign.center,
                                 style: context.t.bodySmall?.copyWith(
                                   color: AppColors.black50,
-                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ],
@@ -218,22 +207,36 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           width: double.maxFinite,
                           padding: EdgeInsets.all(14.h),
                           decoration: BoxDecoration(
-                            color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                            color:
+                                Get.isDarkMode
+                                    ? AppColors.darkCardColor
+                                    : AppColors.whiteColor,
                             borderRadius: BorderRadius.circular(14.r),
-                            border: Border.all(color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor),
+                            border: Border.all(
+                              color:
+                                  Get.isDarkMode
+                                      ? AppColors.black70
+                                      : AppColors.borderColor,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.record_voice_over, color: AppColors.mainColor, size: 22.sp),
+                                      Icon(
+                                        Icons.record_voice_over,
+                                        color: AppColors.mainColor,
+                                        size: 22.sp,
+                                      ),
                                       HSpace(8.w),
                                       Text(
-                                        storedLanguage['Talk Back Feature'] ?? "Talk Back Feature",
+                                        storedLanguage['Talk Back Feature'] ??
+                                            "Talk Back Feature",
                                         style: context.t.bodyMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: AppThemes.getIconBlackColor(),
@@ -244,7 +247,8 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   Switch(
                                     value: controller.isTalkBackEnabled,
                                     activeThumbColor: AppColors.mainColor,
-                                    onChanged: (val) => controller.toggleTalkBack(val),
+                                    onChanged:
+                                        (val) => controller.toggleTalkBack(val),
                                   ),
                                 ],
                               ),
@@ -254,12 +258,24 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   children: [
                                     Text(
                                       "Voice Language: ",
-                                      style: context.t.bodySmall?.copyWith(color: AppColors.black50),
+                                      style: context.t.bodySmall?.copyWith(
+                                        color: AppColors.black50,
+                                      ),
                                     ),
                                     HSpace(8.w),
-                                    _buildLangChip(context, controller, "hi-IN", "Hindi"),
+                                    _buildLangChip(
+                                      context,
+                                      controller,
+                                      "hi-IN",
+                                      "Hindi",
+                                    ),
                                     HSpace(6.w),
-                                    _buildLangChip(context, controller, "en-IN", "English"),
+                                    _buildLangChip(
+                                      context,
+                                      controller,
+                                      "en-IN",
+                                      "English",
+                                    ),
                                   ],
                                 ),
                               ],
@@ -269,13 +285,104 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
 
                         VSpace(15.h),
 
+                        if (controller.hasQuickEntry) ...[
+                          Container(
+                            width: double.maxFinite,
+                            padding: EdgeInsets.all(12.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.mainColor.withValues(alpha: .08),
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: AppColors.mainColor.withValues(
+                                  alpha: .25,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  color: AppColors.mainColor,
+                                  size: 20.sp,
+                                ),
+                                HSpace(8.w),
+                                Expanded(
+                                  child: Text(
+                                    '${controller.parsedName} • ${controller.parsedAmount.toInt()} • ${controller.parsedType.isEmpty ? "Given" : controller.parsedType}',
+                                    style: context.t.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: controller.openQuickAddEntry,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 6.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.mainColor,
+                                          borderRadius: BorderRadius.circular(
+                                            20.r,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Open Form',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.whiteColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    HSpace(6.w),
+                                    GestureDetector(
+                                      onTap: controller.saveParsedEntryDirectly,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w,
+                                          vertical: 6.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.greenColor,
+                                          borderRadius: BorderRadius.circular(
+                                            20.r,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Save Now',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.whiteColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          VSpace(12.h),
+                        ],
+
                         // Talk Back Active (Speaking Response) Indicator Banner
                         if (controller.isSpeaking) ...[
                           Container(
                             width: double.maxFinite,
-                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 12.h,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppColors.greenColor.withValues(alpha: 0.15),
+                              color: AppColors.greenColor.withValues(
+                                alpha: 0.15,
+                              ),
                               borderRadius: BorderRadius.circular(12.r),
                               border: Border.all(color: AppColors.greenColor),
                             ),
@@ -284,7 +391,11 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.volume_up, color: AppColors.greenColor, size: 24.sp),
+                                    Icon(
+                                      Icons.volume_up,
+                                      color: AppColors.greenColor,
+                                      size: 24.sp,
+                                    ),
                                     HSpace(10.w),
                                     Text(
                                       "Talk Back Active (Speaking...)",
@@ -297,25 +408,34 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                 ),
                                 GestureDetector(
                                   onTap: () => controller.stopSpeaking(),
-                                  child: Icon(Icons.stop_circle_outlined, color: AppColors.redColor, size: 26.sp),
+                                  child: Icon(
+                                    Icons.stop_circle_outlined,
+                                    color: AppColors.redColor,
+                                    size: 26.sp,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                           VSpace(15.h),
                         ],
-                        
+
                         // Waveform/Speech status banner
                         Text(
-                          controller.isListening 
-                              ? (storedLanguage['Listening...'] ?? "Listening...") 
-                              : (storedLanguage['Tap Mic to Record voice entry'] ?? "Tap Mic to Record voice entry"),
+                          controller.isListening
+                              ? (storedLanguage['Listening...'] ??
+                                  "Listening...")
+                              : (storedLanguage['Tap Mic to Record voice entry'] ??
+                                  "Tap Mic to Record voice entry"),
                           style: context.t.bodyMedium?.copyWith(
-                            color: controller.isListening ? AppColors.redColor : AppColors.black50,
+                            color:
+                                controller.isListening
+                                    ? AppColors.redColor
+                                    : AppColors.black50,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        
+
                         VSpace(15.h),
 
                         // Animated Pulse Microphone Button
@@ -340,9 +460,13 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                       height: 130.w * _pulseAnimation.value,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: controller.isListening
-                                            ? AppColors.redColor.withValues(alpha: .15)
-                                            : AppColors.mainColor.withValues(alpha: .05),
+                                        color:
+                                            controller.isListening
+                                                ? AppColors.redColor.withValues(
+                                                  alpha: .15,
+                                                )
+                                                : AppColors.mainColor
+                                                    .withValues(alpha: .05),
                                       ),
                                     );
                                   },
@@ -351,13 +475,19 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   animation: _pulseAnimation,
                                   builder: (context, child) {
                                     return Container(
-                                      width: 105.w * (_pulseAnimation.value * 0.9),
-                                      height: 105.w * (_pulseAnimation.value * 0.9),
+                                      width:
+                                          105.w * (_pulseAnimation.value * 0.9),
+                                      height:
+                                          105.w * (_pulseAnimation.value * 0.9),
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: controller.isListening
-                                            ? AppColors.redColor.withValues(alpha: .25)
-                                            : AppColors.mainColor.withValues(alpha: .1),
+                                        color:
+                                            controller.isListening
+                                                ? AppColors.redColor.withValues(
+                                                  alpha: .25,
+                                                )
+                                                : AppColors.mainColor
+                                                    .withValues(alpha: .1),
                                       ),
                                     );
                                   },
@@ -369,34 +499,50 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(
-                                      colors: controller.isListening
-                                          ? [AppColors.redColor, Colors.orangeAccent]
-                                          : [AppColors.mainColor, AppColors.yellowColor],
+                                      colors:
+                                          controller.isListening
+                                              ? [
+                                                AppColors.redColor,
+                                                Colors.orangeAccent,
+                                              ]
+                                              : [
+                                                AppColors.mainColor,
+                                                AppColors.yellowColor,
+                                              ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: controller.isListening
-                                            ? AppColors.redColor.withValues(alpha: .4)
-                                            : AppColors.mainColor.withValues(alpha: .3),
+                                        color:
+                                            controller.isListening
+                                                ? AppColors.redColor.withValues(
+                                                  alpha: .4,
+                                                )
+                                                : AppColors.mainColor
+                                                    .withValues(alpha: .3),
                                         blurRadius: 15,
                                         spreadRadius: 2,
                                         offset: const Offset(0, 4),
-                                      )
+                                      ),
                                     ],
                                   ),
                                   child: Icon(
-                                    controller.isListening ? Icons.mic : Icons.mic_none,
+                                    controller.isListening
+                                        ? Icons.mic
+                                        : Icons.mic_none,
                                     size: 40.sp,
-                                    color: controller.isListening ? AppColors.whiteColor : AppColors.blackColor,
+                                    color:
+                                        controller.isListening
+                                            ? AppColors.whiteColor
+                                            : AppColors.blackColor,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        
+
                         VSpace(25.h),
 
                         // Bouncing waveform when listening
@@ -406,11 +552,15 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                             children: List.generate(7, (index) {
                               return TweenAnimationBuilder<double>(
                                 tween: Tween(begin: 10.0, end: 40.0),
-                                duration: Duration(milliseconds: 300 + (index * 80)),
+                                duration: Duration(
+                                  milliseconds: 300 + (index * 80),
+                                ),
                                 curve: Curves.easeInOut,
                                 builder: (context, value, child) {
                                   return Container(
-                                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                                    margin: EdgeInsets.symmetric(
+                                      horizontal: 3.w,
+                                    ),
                                     width: 4.w,
                                     height: value,
                                     decoration: BoxDecoration(
@@ -426,12 +576,12 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           VSpace(15.h),
                         ],
 
-                        // Try Saying / Asking (Talk Back Suggestions)
+                        // Quick examples
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Try saying / asking (Talk Back Q&A):",
+                              "Try one of these:",
                               style: context.t.bodySmall?.copyWith(
                                 color: AppColors.black50,
                                 fontWeight: FontWeight.w600,
@@ -442,11 +592,31 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  _buildTryChip(context, controller, "Total balance kitna hai?"),
-                                  _buildTryChip(context, controller, "Ramesh ka balance batao"),
-                                  _buildTryChip(context, controller, "Ramesh ko 500 udhar diye"),
-                                  _buildTryChip(context, controller, "Suresh se 200 mil gaye"),
-                                  _buildTryChip(context, controller, "Help — Tum kya kar sakte ho?"),
+                                  _buildTryChip(
+                                    context,
+                                    controller,
+                                    "Ramesh ko 500 udhar diya",
+                                  ),
+                                  _buildTryChip(
+                                    context,
+                                    controller,
+                                    "Suresh se 200 mil gaye",
+                                  ),
+                                  _buildTryChip(
+                                    context,
+                                    controller,
+                                    "Asha ne 300 udhar liya",
+                                  ),
+                                  _buildTryChip(
+                                    context,
+                                    controller,
+                                    "Rajesh ko 1000 diya",
+                                  ),
+                                  _buildTryChip(
+                                    context,
+                                    controller,
+                                    "Total balance kitna hai?",
+                                  ),
                                 ],
                               ),
                             ),
@@ -461,22 +631,36 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12.r),
                             side: BorderSide(
-                              color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor,
+                              color:
+                                  Get.isDarkMode
+                                      ? AppColors.black70
+                                      : AppColors.borderColor,
                               width: 1,
                             ),
                           ),
-                          color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                          color:
+                              Get.isDarkMode
+                                  ? AppColors.darkCardColor
+                                  : AppColors.whiteColor,
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 12.h,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.keyboard, size: 20.sp, color: AppColors.black50),
+                                    Icon(
+                                      Icons.keyboard,
+                                      size: 20.sp,
+                                      color: AppColors.black50,
+                                    ),
                                     HSpace(8.w),
                                     Text(
-                                      storedLanguage['Type fallback (Simulator Sandbox)'] ?? "Type fallback (Simulator Sandbox)",
+                                      storedLanguage['Type a phrase'] ??
+                                          "Type a phrase",
                                       style: context.t.bodyMedium?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: AppThemes.getIconBlackColor(),
@@ -491,21 +675,34 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                     controller.parseSentence(val);
                                   },
                                   decoration: InputDecoration(
-                                    hintText: storedLanguage['Say or type: Ramesh ne 500 udhar liya'] ?? "Say or type: Ramesh ne 500 udhar liya",
-                                    hintStyle: context.t.bodySmall?.copyWith(color: AppColors.textFieldHintColor),
+                                    hintText:
+                                        storedLanguage['Say or type: Ramesh ko 500 udhar diya'] ??
+                                        "Say or type: Ramesh ko 500 udhar diya",
+                                    hintStyle: context.t.bodySmall?.copyWith(
+                                      color: AppColors.textFieldHintColor,
+                                    ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8.r),
-                                      borderSide: BorderSide(color: AppColors.borderColor),
+                                      borderSide: BorderSide(
+                                        color: AppColors.borderColor,
+                                      ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8.r),
-                                      borderSide: BorderSide(color: AppColors.borderColor),
+                                      borderSide: BorderSide(
+                                        color: AppColors.borderColor,
+                                      ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8.r),
-                                      borderSide: BorderSide(color: AppColors.mainColor),
+                                      borderSide: BorderSide(
+                                        color: AppColors.mainColor,
+                                      ),
                                     ),
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12.w,
+                                      vertical: 10.h,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -547,7 +744,10 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                 SizedBox(
                                   width: 24.w,
                                   height: 24.w,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mainColor),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.mainColor,
+                                  ),
                                 ),
                                 HSpace(12.w),
                                 Text(
@@ -569,16 +769,26 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                             width: double.maxFinite,
                             padding: EdgeInsets.all(16.h),
                             decoration: BoxDecoration(
-                              color: AppColors.greenColor.withValues(alpha: .08),
+                              color: AppColors.greenColor.withValues(
+                                alpha: .08,
+                              ),
                               borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: AppColors.greenColor.withValues(alpha: .3)),
+                              border: Border.all(
+                                color: AppColors.greenColor.withValues(
+                                  alpha: .3,
+                                ),
+                              ),
                             ),
                             child: Column(
                               children: [
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.auto_awesome, color: AppColors.greenColor, size: 24.sp),
+                                    Icon(
+                                      Icons.auto_awesome,
+                                      color: AppColors.greenColor,
+                                      size: 24.sp,
+                                    ),
                                     HSpace(8.w),
                                     Text(
                                       "AI Assistant Response",
@@ -601,18 +811,32 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                 VSpace(12.h),
                                 // Talk Back / Speak Again Button
                                 GestureDetector(
-                                  onTap: () => controller.speakReply(controller.aiReply),
+                                  onTap:
+                                      () => controller.speakReply(
+                                        controller.aiReply,
+                                      ),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 14.w,
+                                      vertical: 6.h,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.greenColor.withValues(alpha: 0.15),
+                                      color: AppColors.greenColor.withValues(
+                                        alpha: 0.15,
+                                      ),
                                       borderRadius: BorderRadius.circular(20.r),
-                                      border: Border.all(color: AppColors.greenColor),
+                                      border: Border.all(
+                                        color: AppColors.greenColor,
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.volume_up, size: 16.sp, color: AppColors.greenColor),
+                                        Icon(
+                                          Icons.volume_up,
+                                          size: 16.sp,
+                                          color: AppColors.greenColor,
+                                        ),
                                         HSpace(6.w),
                                         Text(
                                           "Speak Again (Talk Back)",
@@ -631,7 +855,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           ),
                           VSpace(15.h),
                         ],
-                        
+
                         VSpace(25.h),
 
                         // Voice ledger transactions history header
@@ -639,7 +863,8 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              storedLanguage['Voice Ledger History'] ?? "Voice Ledger History",
+                              storedLanguage['Voice Ledger History'] ??
+                                  "Voice Ledger History",
                               style: context.t.titleMedium?.copyWith(
                                 fontSize: 18.sp,
                                 fontWeight: FontWeight.bold,
@@ -662,11 +887,18 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                             padding: EdgeInsets.symmetric(vertical: 40.h),
                             child: Column(
                               children: [
-                                Icon(Icons.receipt_long, size: 50.sp, color: AppColors.black30),
+                                Icon(
+                                  Icons.receipt_long,
+                                  size: 50.sp,
+                                  color: AppColors.black30,
+                                ),
                                 VSpace(8.h),
                                 Text(
-                                  storedLanguage['No transactions added yet'] ?? "No transactions added yet",
-                                  style: context.t.bodyMedium?.copyWith(color: AppColors.black50),
+                                  storedLanguage['No transactions added yet'] ??
+                                      "No transactions added yet",
+                                  style: context.t.bodyMedium?.copyWith(
+                                    color: AppColors.black50,
+                                  ),
                                 ),
                               ],
                             ),
@@ -679,12 +911,16 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                             itemBuilder: (context, index) {
                               final tx = controller.voiceTransactions[index];
                               final bool isRec = tx['type'] == 'Received';
-                              
+
                               // Format date
                               String formattedDate = "";
                               try {
-                                DateTime dt = DateTime.parse(tx['date'].toString());
-                                formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+                                DateTime dt = DateTime.parse(
+                                  tx['date'].toString(),
+                                );
+                                formattedDate = DateFormat(
+                                  'dd MMM yyyy, hh:mm a',
+                                ).format(dt);
                               } catch (e) {
                                 formattedDate = tx['date'].toString();
                               }
@@ -699,7 +935,11 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   ),
                                   alignment: Alignment.centerRight,
                                   padding: EdgeInsets.only(right: 20.w),
-                                  child: Icon(Icons.delete, color: AppColors.whiteColor, size: 24.sp),
+                                  child: Icon(
+                                    Icons.delete,
+                                    color: AppColors.whiteColor,
+                                    size: 24.sp,
+                                  ),
                                 ),
                                 direction: DismissDirection.endToStart,
                                 onDismissed: (direction) {
@@ -709,10 +949,16 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                   margin: EdgeInsets.only(bottom: 12.h),
                                   padding: EdgeInsets.all(14.h),
                                   decoration: BoxDecoration(
-                                    color: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+                                    color:
+                                        Get.isDarkMode
+                                            ? AppColors.darkCardColor
+                                            : AppColors.whiteColor,
                                     borderRadius: BorderRadius.circular(12.r),
                                     border: Border.all(
-                                      color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor,
+                                      color:
+                                          Get.isDarkMode
+                                              ? AppColors.black70
+                                              : AppColors.borderColor,
                                       width: 0.5,
                                     ),
                                   ),
@@ -724,147 +970,229 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen> with SingleTickerPr
                                         height: 40.h,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: isRec 
-                                              ? AppColors.greenColor.withValues(alpha: .1) 
-                                              : AppColors.redColor.withValues(alpha: .1),
+                                          color:
+                                              isRec
+                                                  ? AppColors.greenColor
+                                                      .withValues(alpha: .1)
+                                                  : AppColors.redColor
+                                                      .withValues(alpha: .1),
                                         ),
                                         child: Icon(
-                                          isRec ? Icons.arrow_downward : Icons.arrow_upward,
-                                          color: isRec ? AppColors.greenColor : AppColors.redColor,
+                                          isRec
+                                              ? Icons.arrow_downward
+                                              : Icons.arrow_upward,
+                                          color:
+                                              isRec
+                                                  ? AppColors.greenColor
+                                                  : AppColors.redColor,
                                           size: 20.sp,
                                         ),
                                       ),
                                       HSpace(12.w),
-                                      
+
                                       // Transaction Text
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               tx['name'] ?? "Unknown",
-                                              style: context.t.bodyMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                              style: context.t.bodyMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                             ),
                                             VSpace(4.h),
                                             Text(
                                               formattedDate,
-                                              style: context.t.bodySmall?.copyWith(
-                                                color: AppColors.black50,
-                                                fontSize: 12.sp,
-                                              ),
+                                              style: context.t.bodySmall
+                                                  ?.copyWith(
+                                                    color: AppColors.black50,
+                                                    fontSize: 12.sp,
+                                                  ),
                                             ),
                                           ],
                                         ),
                                       ),
 
                                       // Amount Display
-                                       Column(
-                                         crossAxisAlignment: CrossAxisAlignment.end,
-                                         children: [
-                                           Text(
-                                             "${isRec ? '+' : '-'}${tx['amount'].toString()}",
-                                             style: context.t.bodyMedium?.copyWith(
-                                               fontWeight: FontWeight.bold,
-                                               color: isRec ? AppColors.greenColor : AppColors.redColor,
-                                             ),
-                                           ),
-                                           VSpace(4.h),
-                                           Row(
-                                             mainAxisSize: MainAxisSize.min,
-                                             children: [
-                                               Container(
-                                                 padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                                 decoration: BoxDecoration(
-                                                   color: isRec 
-                                                       ? AppColors.greenColor.withValues(alpha: .1) 
-                                                       : AppColors.redColor.withValues(alpha: .1),
-                                                   borderRadius: BorderRadius.circular(4.r),
-                                                 ),
-                                                 child: Text(
-                                                   isRec ? "Received" : "Given",
-                                                   style: context.t.bodySmall?.copyWith(
-                                                     color: isRec ? AppColors.greenColor : AppColors.redColor,
-                                                     fontSize: 10.sp,
-                                                     fontWeight: FontWeight.w600,
-                                                   ),
-                                                 ),
-                                               ),
-                                               HSpace(6.w),
-                                               // Speak (Talk Back) button for transaction
-                                               GestureDetector(
-                                                 onTap: () => controller.talkBackTransaction(tx),
-                                                 child: Container(
-                                                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                                   decoration: BoxDecoration(
-                                                     color: AppColors.greenColor.withValues(alpha: 0.15),
-                                                     borderRadius: BorderRadius.circular(4.r),
-                                                     border: Border.all(color: AppColors.greenColor),
-                                                   ),
-                                                   child: Row(
-                                                     children: [
-                                                       Icon(Icons.volume_up, size: 10.sp, color: AppColors.greenColor),
-                                                       HSpace(2.w),
-                                                       Text(
-                                                         "Speak",
-                                                         style: TextStyle(
-                                                           fontSize: 9.sp,
-                                                           fontWeight: FontWeight.bold,
-                                                           color: AppColors.greenColor,
-                                                         ),
-                                                       ),
-                                                     ],
-                                                   ),
-                                                 ),
-                                               ),
-                                               HSpace(6.w),
-                                               GestureDetector(
-                                                 onTap: () => controller.postToUdharLedger(tx),
-                                                 child: Container(
-                                                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                                   decoration: BoxDecoration(
-                                                     color: AppColors.mainColor.withValues(alpha: 0.2),
-                                                     borderRadius: BorderRadius.circular(4.r),
-                                                     border: Border.all(color: AppColors.mainColor),
-                                                   ),
-                                                   child: Row(
-                                                     children: [
-                                                       Icon(Icons.add_task, size: 10.sp, color: AppColors.blackColor),
-                                                       HSpace(2.w),
-                                                       Text(
-                                                         "Add Udhar",
-                                                         style: TextStyle(
-                                                           fontSize: 9.sp,
-                                                           fontWeight: FontWeight.bold,
-                                                           color: AppColors.blackColor,
-                                                         ),
-                                                       ),
-                                                     ],
-                                                   ),
-                                                 ),
-                                               ),
-                                             ],
-                                           ),
-                                         ],
-                                       ),
-                                     ],
-                                   ),
-                                 ),
-                               );
-                             },
-                           ),
-                         ],
-                         VSpace(30.h),
-                       ],
-                     ),
-                   ),
-                 ),
-               ],
-             ),
-           ),
-         );
-       },
-     );
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            "${isRec ? '+' : '-'}${tx['amount'].toString()}",
+                                            style: context.t.bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      isRec
+                                                          ? AppColors.greenColor
+                                                          : AppColors.redColor,
+                                                ),
+                                          ),
+                                          VSpace(4.h),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 6.w,
+                                                  vertical: 2.h,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      isRec
+                                                          ? AppColors.greenColor
+                                                              .withValues(
+                                                                alpha: .1,
+                                                              )
+                                                          : AppColors.redColor
+                                                              .withValues(
+                                                                alpha: .1,
+                                                              ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        4.r,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  isRec ? "Received" : "Given",
+                                                  style: context.t.bodySmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            isRec
+                                                                ? AppColors
+                                                                    .greenColor
+                                                                : AppColors
+                                                                    .redColor,
+                                                        fontSize: 10.sp,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                              ),
+                                              HSpace(6.w),
+                                              // Speak (Talk Back) button for transaction
+                                              GestureDetector(
+                                                onTap:
+                                                    () => controller
+                                                        .talkBackTransaction(
+                                                          tx,
+                                                        ),
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 2.h,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.greenColor
+                                                        .withValues(
+                                                          alpha: 0.15,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4.r,
+                                                        ),
+                                                    border: Border.all(
+                                                      color:
+                                                          AppColors.greenColor,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.volume_up,
+                                                        size: 10.sp,
+                                                        color:
+                                                            AppColors
+                                                                .greenColor,
+                                                      ),
+                                                      HSpace(2.w),
+                                                      Text(
+                                                        "Speak",
+                                                        style: TextStyle(
+                                                          fontSize: 9.sp,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              AppColors
+                                                                  .greenColor,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              HSpace(6.w),
+                                              GestureDetector(
+                                                onTap:
+                                                    () => controller
+                                                        .postToUdharLedger(tx),
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 2.h,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.mainColor
+                                                        .withValues(alpha: 0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          4.r,
+                                                        ),
+                                                    border: Border.all(
+                                                      color:
+                                                          AppColors.mainColor,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.add_task,
+                                                        size: 10.sp,
+                                                        color:
+                                                            AppColors
+                                                                .blackColor,
+                                                      ),
+                                                      HSpace(2.w),
+                                                      Text(
+                                                        "Add Udhar",
+                                                        style: TextStyle(
+                                                          fontSize: 9.sp,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              AppColors
+                                                                  .blackColor,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                        VSpace(30.h),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
