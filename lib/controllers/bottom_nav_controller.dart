@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../views/screens/udhar/customer_list_screen.dart';
 import '../views/screens/udhar/udhar_dashboard_screen.dart';
 import '../routes/page_index.dart';
 
@@ -7,7 +6,7 @@ class BottomNavController extends GetxController {
   static BottomNavController get to => Get.find<BottomNavController>();
   int selectedIndex = 0;
   final List<Widget> screens = [
-    const CustomerListScreen(),
+    const HomeScreen(),
     const UdharDashboardScreen(),
     const VoiceEntryScreen(),
     const ProfileSettingScreen(),

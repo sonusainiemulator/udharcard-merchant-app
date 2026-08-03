@@ -19,9 +19,9 @@ List<OnBordingData> onBordingDataList = [
           "Easily configure business details, services, and preferences from merchant settings."),
   OnBordingData(
       imagePath: "$rootImageDir/onbording_2.png",
-      title: "Track Payouts Easily",
+      title: "Track Payments Easily",
       description:
-          "Monitor payout requests, history, and charges from one simple, secure dashboard."),
+          "Monitor payment requests, history, and charges from one simple, secure dashboard."),
   OnBordingData(
       imagePath: "$rootImageDir/onbording_3.png",
       title: "QR Scan & Pay",

@@ -55,6 +55,13 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              onChanged: (value) {
+                if (authController.loginErrorMessage != null) {
+                  authController.loginErrorMessage = null;
+                  authController
+                      .update([AuthController.authSubmissionUpdateId]);
+                }
+              },
             ),
             SizedBox(height: 18.h),
             GetBuilder<AuthController>(

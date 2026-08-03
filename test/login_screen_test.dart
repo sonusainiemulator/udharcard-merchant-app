@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:paysecure/controllers/auth_controller.dart';
 import 'package:paysecure/views/screens/auth/login_screen.dart';
-import 'package:paysecure/views/widgets/auth_footer_branding.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +33,7 @@ void main() {
       );
     }
 
-    testWidgets('Renders MERCHANT PORTAL header & Mobile Login title', (WidgetTester tester) async {
+    testWidgets('Renders current login eyebrow and title', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -42,11 +41,11 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('MERCHANT PORTAL'), findsOneWidget);
-      expect(find.textContaining('Mobile Login'), findsOneWidget);
+      expect(find.text('MERCHANT ACCESS'), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
     });
 
-    testWidgets('Renders Send OTP SMS and WhatsApp buttons', (WidgetTester tester) async {
+    testWidgets('Renders OTP CTA and register link', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -54,11 +53,14 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Send OTP via SMS'), findsOneWidget);
-      expect(find.text('Send OTP via WhatsApp'), findsOneWidget);
+      expect(find.text('Continue with OTP'), findsOneWidget);
+      expect(
+        find.textContaining('Create merchant account', findRichText: true),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Renders Google Sign-In option', (WidgetTester tester) async {
+    testWidgets('Renders mobile number field and privacy copy', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -66,7 +68,8 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Google'), findsOneWidget);
+      expect(find.text('Mobile number'), findsOneWidget);
+      expect(find.textContaining('one-time verification code'), findsOneWidget);
     });
 
     testWidgets('Verifies legacy username & password fields are removed', (WidgetTester tester) async {
@@ -82,7 +85,7 @@ void main() {
       expect(find.text('Forgot Password?'), findsNothing);
     });
 
-    testWidgets('Renders AuthFooterBranding components', (WidgetTester tester) async {
+    testWidgets('Renders current fintech footer copy', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -90,9 +93,8 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('100% Secure & Trusted'), findsOneWidget);
-      expect(find.text('Made in India'), findsOneWidget);
-      expect(find.byType(AuthFooterBranding), findsOneWidget);
+      expect(find.text('Protected with bank-grade security'), findsOneWidget);
+      expect(find.textContaining('Made in India'), findsOneWidget);
     });
   });
 }

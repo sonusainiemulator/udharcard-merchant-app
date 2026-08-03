@@ -58,7 +58,20 @@ class _SplashScreenState extends State<SplashScreen>
           FirebaseAuth.instance.currentUser != null;
 
       if (isLoggedIn) {
-        Get.offAllNamed(RoutesName.bottomNavBar);
+        final bool onboardingCompleted =
+            (HiveHelp.read('onboarding_completed') ?? false) == true;
+        if (!onboardingCompleted) {
+          Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
+          return;
+        }
+
+        final bool planSelected =
+            (HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true;
+        if (planSelected) {
+          Get.offAllNamed(RoutesName.bottomNavBar);
+        } else {
+          Get.offAllNamed(RoutesName.subscriptionPlansScreen);
+        }
       } else if (HiveHelp.read(Keys.isNewUser) != null) {
         Get.offAllNamed(RoutesName.loginScreen);
       } else {

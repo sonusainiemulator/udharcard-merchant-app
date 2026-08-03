@@ -13,6 +13,7 @@ import '../../../../themes/themes.dart';
 import '../../../../utils/services/localstorage/hive.dart';
 import '../../../../utils/services/localstorage/keys.dart';
 import '../../../controllers/merchant_setting_controller.dart';
+import '../../../routes/routes_name.dart';
 import '../../widgets/app_custom_dropdown.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/spacing.dart';
@@ -47,6 +48,55 @@ class MerchantSettingScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     VSpace(40.h),
+                    InkWell(
+                      onTap: () => Get.toNamed(RoutesName.udharReportsScreen),
+                      borderRadius: BorderRadius.circular(16.r),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16.r),
+                        decoration: BoxDecoration(
+                          color: Get.isDarkMode ? const Color(0xFF121A2A) : const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: Get.isDarkMode ? const Color(0xFF23304A) : const Color(0xFFBFDBFE),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(10.r),
+                              decoration: BoxDecoration(
+                                color: AppColors.mainColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Icon(Icons.analytics_rounded, color: AppColors.mainColor, size: 22.sp),
+                            ),
+                            HSpace(12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Reports Dashboard',
+                                    style: context.t.displayMedium?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  VSpace(4.h),
+                                  Text(
+                                    'Open PDF ledger statements and CSV outstanding exports.',
+                                    style: context.t.bodySmall?.copyWith(
+                                      color: AppColors.black60,
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded, color: AppColors.mainColor),
+                          ],
+                        ),
+                      ),
+                    ),
+                    VSpace(24.h),
                     Text(
                       storedLanguage['Charge Applied To'] ??
                           "Charge Applied To",
@@ -93,7 +143,7 @@ class MerchantSettingScreen extends StatelessWidget {
                     ),
                     VSpace(24.h),
                     Text(
-                      storedLanguage['Auto Withdraw'] ?? "Auto Withdraw",
+                      storedLanguage['Auto Settlement'] ?? "Auto Settlement",
                       style: context.t.displayMedium,
                     ),
                     VSpace(10.h),
@@ -121,8 +171,8 @@ class MerchantSettingScreen extends StatelessWidget {
                                 merchantSettingController.update();
                               },
                               hint:
-                                  storedLanguage['Auto Withdraw'] ??
-                                  "Auto Withdraw",
+                                  storedLanguage['Auto Settlement'] ??
+                                  "Auto Settlement",
                               hintStyle: context.t.bodySmall?.copyWith(
                                 color: AppColors.textFieldHintColor,
                                 fontWeight: FontWeight.w400,
@@ -137,8 +187,8 @@ class MerchantSettingScreen extends StatelessWidget {
                     ),
                     VSpace(24.h),
                     Text(
-                      storedLanguage['Withdraw Frequency'] ??
-                          "Withdraw Frequency",
+                      storedLanguage['Settlement Frequency'] ??
+                          "Settlement Frequency",
                       style: context.t.displayMedium,
                     ),
                     VSpace(10.h),
@@ -166,8 +216,8 @@ class MerchantSettingScreen extends StatelessWidget {
                                 merchantSettingController.update();
                               },
                               hint:
-                                  storedLanguage['Withdraw Frequency'] ??
-                                  "Withdraw Frequency",
+                                  storedLanguage['Settlement Frequency'] ??
+                                  "Settlement Frequency",
                               hintStyle: context.t.bodySmall?.copyWith(
                                 color: AppColors.textFieldHintColor,
                                 fontWeight: FontWeight.w400,
@@ -183,8 +233,8 @@ class MerchantSettingScreen extends StatelessWidget {
 
                     VSpace(24.h),
                     Text(
-                      storedLanguage['Withdraw Amount (Select the currency)'] ??
-                          'Withdraw Amount (Select the currency)',
+                      storedLanguage['Settlement Amount (Select the currency)'] ??
+                          'Settlement Amount (Select the currency)',
                       style: context.t.displayMedium,
                     ),
                     VSpace(10.h),
@@ -205,8 +255,8 @@ class MerchantSettingScreen extends StatelessWidget {
                               isSuffixIcon: false,
                               contentPadding: EdgeInsets.only(left: 20.w),
                               hintext:
-                                  storedLanguage['Withdraw Amount (Select the currency)'] ??
-                                  'Withdraw Amount (Select the currency)',
+                                  storedLanguage['Settlement Amount (Select the currency)'] ??
+                                  'Settlement Amount (Select the currency)',
                               keyboardType: TextInputType.number,
                               inputFormatters: <TextInputFormatter>[
                                 FilteringTextInputFormatter.digitsOnly,
@@ -264,8 +314,8 @@ class MerchantSettingScreen extends StatelessWidget {
 
                     VSpace(24.h),
                     Text(
-                      storedLanguage['Last Auto Withdraw At'] ??
-                          'Last Auto Withdraw At',
+                      storedLanguage['Last Auto Settlement At'] ??
+                          'Last Auto Settlement At',
                       style: context.t.displayMedium,
                     ),
                     VSpace(10.h),
@@ -276,8 +326,8 @@ class MerchantSettingScreen extends StatelessWidget {
                         isSuffixIcon: false,
                         contentPadding: EdgeInsets.only(left: 20.w),
                         hintext:
-                            storedLanguage['Last Auto Withdraw At'] ??
-                            'Last Auto Withdraw At',
+                          storedLanguage['Last Auto Settlement At'] ??
+                          'Last Auto Settlement At',
                         keyboardType: TextInputType.number,
                         inputFormatters: <TextInputFormatter>[
                           FilteringTextInputFormatter.digitsOnly,
@@ -299,7 +349,7 @@ class MerchantSettingScreen extends StatelessWidget {
                           children: [
                             VSpace(20.h),
                             Text(
-                              "Auto Withdraw Information",
+                              "Auto Settlement Information",
                               style: context.t.bodyMedium,
                             ),
 
@@ -1109,20 +1159,20 @@ class MerchantSettingScreen extends StatelessWidget {
                                           .autoWithdraw ==
                                       null) {
                                     Helpers.showSnackBar(
-                                      msg: "Auto withdraw is required",
+                                      msg: "Auto settlement is required",
                                     );
                                   } else if (merchantSettingController
                                           .withdrawFrequency ==
                                       null) {
                                     Helpers.showSnackBar(
-                                      msg: "Withdraw frequency is required",
+                                      msg: "Settlement frequency is required",
                                     );
                                   } else if (merchantSettingController
                                       .amountController
                                       .text
                                       .isEmpty) {
                                     Helpers.showSnackBar(
-                                      msg: "Withdraw amount is required",
+                                      msg: "Settlement amount is required",
                                     );
                                   } else {
                                     await merchantSettingController

@@ -138,4 +138,66 @@ class UdharLedgerController extends Controller
             ]
         ], 200);
     }
+
+    /**
+     * Build report summary, transaction list and outstanding customers.
+     */
+    public function reports(Request $request)
+    {
+        $merchantId = auth()->id() ?? $request->header('X-Merchant-Id') ?? 1;
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $transactionsQuery = Transaction::with('customer')
+            ->where('merchant_id', $merchantId)
+            ->orderBy('created_at', 'desc');
+
+        if ($startDate) {
+            $transactionsQuery->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $transactionsQuery->whereDate('created_at', '<=', $endDate);
+        }
+
+        $transactions = $transactionsQuery->get();
+
+        $reportRows = $transactions->map(function ($tx) {
+            return [
+                'id' => $tx->id,
+                'customer_id' => $tx->customer_id,
+                'customer_name' => optional($tx->customer)->name,
+                'type' => $tx->type,
+                'amount' => (float) $tx->amount,
+                'payment_method' => $tx->payment_method,
+                'remarks' => $tx->remarks,
+                'due_date' => optional($tx->due_date)->format('Y-m-d'),
+                'created_at' => optional($tx->created_at)->format('Y-m-d H:i:s'),
+            ];
+        })->values();
+
+        $outstandingCustomers = Customer::where('merchant_id', $merchantId)
+            ->where('outstanding_balance', '>', 0)
+            ->orderByDesc('outstanding_balance')
+            ->get([
+                'id',
+                'name',
+                'phone',
+                'email',
+                'outstanding_balance',
+                'credit_limit',
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Udhar reports generated successfully.',
+            'data' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'total_credit_given' => (float) $transactions->where('type', 'given')->sum('amount'),
+                'total_debit_received' => (float) $transactions->where('type', 'received')->sum('amount'),
+                'outstanding_customers' => $outstandingCustomers,
+                'transactions' => $reportRows,
+            ],
+        ]);
+    }
 }

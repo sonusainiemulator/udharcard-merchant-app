@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:paysecure/data/repositories/auth_repo.dart';
 import 'package:paysecure/data/source/errors/check_api_status.dart';
 import 'package:paysecure/utils/services/helpers.dart';
@@ -8,6 +9,7 @@ import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'subscription_controller.dart';
 import '../routes/routes_name.dart';
 import '../utils/services/localstorage/keys.dart';
 
@@ -18,6 +20,13 @@ class AuthController extends GetxController {
   bool isLoading = false;
   bool _isOtpRequestInProgress = false;
   bool _isCompletingAuthentication = false;
+  bool _isPendingRegistrationFlow = false;
+
+  void _debugAuth(String message) {
+    if (kDebugMode) {
+      debugPrint('[AUTH] $message');
+    }
+  }
 
   void _notifyAuthSubmission() {
     // Keep existing auth screens reactive while limiting the costly form rebuild
@@ -83,7 +92,16 @@ class AuthController extends GetxController {
             HiveHelp.write(Keys.userPass, singInPassVal);
           }
           HiveHelp.write(Keys.token, data['token']);
-          Get.offAllNamed(RoutesName.bottomNavBar);
+          final user = data['user'];
+          if (user is Map) {
+            if (user['id'] != null) {
+              HiveHelp.write(Keys.userId, user['id'].toString());
+            }
+            final phone = user['phone']?.toString() ?? userNameVal;
+            HiveHelp.write(Keys.userPhone, phone);
+            HiveHelp.write(Keys.userName, phone);
+          }
+          await _navigatePostAuthentication();
           clearSignInController();
         } else {
           loginErrorMessage =
@@ -272,19 +290,61 @@ class AuthController extends GetxController {
     isRegisterConfirmPassShow = true;
   }
 
+  Map<String, dynamic> buildRegisterPayload({
+    String? name,
+    String? email,
+    String? phone,
+    String? shopName,
+    String? password,
+    String? confirmPassword,
+  }) {
+    final String rawPhone = (phone ?? phoneVal).trim();
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
+    }
+
+    final String normalizedName = (name ?? nameVal).trim();
+    final List<String> parts = normalizedName
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    final String firstName = parts.isNotEmpty ? parts.first : 'Merchant';
+    final String lastName = parts.length > 1
+        ? parts.sublist(1).join(' ')
+        : 'Merchant';
+    final String effectivePhone = cleanPhone.isNotEmpty ? cleanPhone : rawPhone;
+    final String trimmedEmail = (email ?? emailVal).trim();
+    final String effectiveEmail = trimmedEmail.isNotEmpty
+        ? trimmedEmail
+        : '$effectivePhone@merchant.udharcard.shop';
+    final String normalizedShopName = (shopName ?? shopNameVal).trim();
+
+    return {
+      "name": normalizedName,
+      "firstname": firstName,
+      "lastname": lastName,
+      "email": effectiveEmail,
+      "phone": effectivePhone,
+      "mobile": effectivePhone,
+      "username": effectivePhone,
+      "shop_name": normalizedShopName,
+      "business_name": normalizedShopName,
+      "phone_code": "+91",
+      "country": "India",
+      "country_code": "IN",
+      "type": "merchant",
+      "password": password ?? passwordVal,
+      "password_confirmation": confirmPassword ?? confirmPasswordVal,
+    };
+  }
+
   Future register() async {
     isLoading = true;
     update();
     try {
       http.Response response = await AuthRepo.register(
-        data: {
-          "name": nameVal,
-          "email": emailVal,
-          "phone": phoneVal,
-          "shop_name": shopNameVal,
-          "password": passwordVal,
-          "password_confirmation": confirmPasswordVal,
-        },
+        data: buildRegisterPayload(),
       );
       isLoading = false;
       var data = jsonDecode(response.body);
@@ -323,6 +383,7 @@ class AuthController extends GetxController {
     if (resetFlow) {
       _isOtpRequestInProgress = false;
       _isCompletingAuthentication = false;
+      _isPendingRegistrationFlow = false;
     }
   }
 
@@ -333,6 +394,7 @@ class AuthController extends GetxController {
       if (cleanPhone.startsWith('91') && cleanPhone.length > 10) {
         cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
       }
+      _debugAuth('check-exist start phone=$cleanPhone');
 
       // 1. Try check merchant endpoint first
       try {
@@ -346,9 +408,11 @@ class AuthController extends GetxController {
         );
         if (response.statusCode == 200) {
           var data = jsonDecode(response.body);
+          _debugAuth('check-exist 200 body=${response.body}');
           if (data['status'] == 'success' ||
               data['exists'] == true ||
               data['is_exist'] == true) {
+            _debugAuth('check-exist result=true via primary endpoint');
             return true;
           }
           if (data['status'] == 'error' ||
@@ -363,12 +427,14 @@ class AuthController extends GetxController {
                 msg.contains('register') ||
                 data['exists'] == false ||
                 data['is_exist'] == false) {
+              _debugAuth('check-exist result=false via primary endpoint');
               return false;
             }
           }
         } else if (response.statusCode == 404 || response.statusCode == 422) {
           try {
             var data = jsonDecode(response.body);
+            _debugAuth('check-exist ${response.statusCode} body=${response.body}');
             if (data['exists'] == false ||
                 data['status'] == 'error' ||
                 data['message'] != null) {
@@ -377,12 +443,14 @@ class AuthController extends GetxController {
                   msg.contains('not found') ||
                   msg.contains('register') ||
                   data['exists'] == false) {
+                _debugAuth('check-exist result=false via primary endpoint ${response.statusCode}');
                 return false;
               }
             }
           } catch (_) {}
         }
       } catch (_) {
+        _debugAuth('check-exist primary endpoint failed, falling back to login probe');
         // Fallthrough if check-exist endpoint is not available
       }
 
@@ -398,44 +466,60 @@ class AuthController extends GetxController {
       if (loginResponse.statusCode == 200 ||
           loginResponse.statusCode == 404 ||
           loginResponse.statusCode == 422 ||
+          loginResponse.statusCode == 400 ||
           loginResponse.statusCode == 401) {
         var data = jsonDecode(loginResponse.body);
         String msg = (data['message'] ?? '').toString().toLowerCase();
+        _debugAuth('login probe ${loginResponse.statusCode} body=${loginResponse.body}');
 
-        // If server says user not found / no account / invalid username -> does not exist
-        if (msg.contains('not found') ||
-            msg.contains('not exist') ||
-            msg.contains('does not exist') ||
-            msg.contains('no account') ||
-            msg.contains('invalid username') ||
-            msg.contains('no merchant') ||
-            msg.contains('user not') ||
-            msg.contains('register') ||
-            msg.contains('account not')) {
+        // If backend explicitly says username/user is invalid, account does not exist.
+        if (msg.contains('invalid username') ||
+            msg.contains('invalid user') ||
+            msg.contains('invalid mobile') ||
+            msg.contains('user not found')) {
+          _debugAuth('check-exist result=false via login probe invalid user message');
           return false;
         }
 
-        // If server complains about invalid password or wrong password -> account exists!
-        if (msg.contains('password') ||
+        // If server says phone already taken or password invalid -> account exists!
+        if (msg.contains('already been taken') ||
+            msg.contains('password') ||
             msg.contains('credential') ||
             data['status'] == 'success') {
+          _debugAuth('check-exist result=true via login probe');
           return true;
+        }
+
+        // If server explicitly says user/account not found -> does not exist
+        if (msg.contains('not found') ||
+            msg.contains('does not exist') ||
+            msg.contains('no account') ||
+            msg.contains('no merchant')) {
+          _debugAuth('check-exist result=false via login probe not found message');
+          return false;
         }
       }
 
       // 3. Additional fallback check: if login response returned status error with message indicating no user
       if (loginResponse.statusCode == 200) {
         var data = jsonDecode(loginResponse.body);
-        if (data['status'] == 'error') {
+        if (data['status'] == 'error' || data['status'] == 'failed') {
           String msg = (data['message'] ?? '').toString().toLowerCase();
-          if (msg.isNotEmpty && !msg.contains('password')) {
+          if (msg.isNotEmpty &&
+              (msg.contains('invalid') ||
+                  msg.contains('not found') ||
+                  msg.contains('not exist') ||
+                  !msg.contains('password'))) {
+            _debugAuth('check-exist result=false via login probe status=${data['status']}');
             return false;
           }
         }
       }
 
+      _debugAuth('check-exist default result=true (conservative pass-through)');
       return true;
     } catch (e) {
+      _debugAuth('check-exist exception=$e (allowing OTP to avoid hard block)');
       // In case of network exception, allow OTP to proceed so user is not blocked offline
       return true;
     }
@@ -443,15 +527,26 @@ class AuthController extends GetxController {
 
   Future<void> saveRegistrationProfileToHiveAndBackend() async {
     String regName = nameEditingController.text.trim();
-    String regPhone = phoneEditingController.text.trim();
+    String rawPhone = phoneEditingController.text.trim();
     String regShop = shopNameEditingController.text.trim();
     String regEmail = emailEditingController.text.trim();
 
     if (regName.isEmpty && regShop.isEmpty) return;
 
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.length > 10) {
+      cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
+    }
+    if (cleanPhone.isEmpty) cleanPhone = rawPhone;
+
+    List<String> nameParts = regName.split(' ');
+    String firstName = nameParts.first;
+    String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : 'Merchant';
+    String effectiveEmail = regEmail.isNotEmpty ? regEmail : '$cleanPhone@merchant.udharcard.shop';
+
     HiveHelp.write(Keys.userFullName, regName);
-    HiveHelp.write(Keys.userPhone, regPhone);
-    HiveHelp.write(Keys.userName, regPhone);
+    HiveHelp.write(Keys.userPhone, cleanPhone);
+    HiveHelp.write(Keys.userName, cleanPhone);
     HiveHelp.write('shop_name', regShop);
     if (regEmail.isNotEmpty) {
       HiveHelp.write(Keys.userEmail, regEmail);
@@ -461,11 +556,19 @@ class AuthController extends GetxController {
       await AuthRepo.register(
         data: {
           "name": regName,
-          "phone": regPhone,
-          "mobile": regPhone,
-          "username": regPhone,
+          "firstname": firstName,
+          "lastname": lastName,
+          "phone": cleanPhone,
+          "mobile": cleanPhone,
+          "username": cleanPhone,
           "shop_name": regShop,
-          "email": regEmail,
+          "business_name": regShop,
+          "email": effectiveEmail,
+          "password": "merchant_default_password",
+          "password_confirmation": "merchant_default_password",
+          "phone_code": "+91",
+          "country": "India",
+          "country_code": "IN",
           "type": "merchant",
         },
       );
@@ -486,6 +589,7 @@ class AuthController extends GetxController {
       formattedPhone = '+91$formattedPhone';
     }
     _isOtpRequestInProgress = true;
+    _isPendingRegistrationFlow = !isLogin;
     isLoading = true;
     loginErrorMessage = null;
     _notifyAuthSubmission();
@@ -494,14 +598,13 @@ class AuthController extends GetxController {
       bool accountExists = await _checkMerchantAccountExists(phoneNumber);
       if (!accountExists) {
         _isOtpRequestInProgress = false;
+        _isPendingRegistrationFlow = false;
         isLoading = false;
         loginErrorMessage =
             'Merchant account does not exist. Please register first.';
         _notifyAuthSubmission();
         return;
       }
-    } else {
-      await saveRegistrationProfileToHiveAndBackend();
     }
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
@@ -512,19 +615,19 @@ class AuthController extends GetxController {
         },
         verificationFailed: (FirebaseAuthException e) {
           _isOtpRequestInProgress = false;
+          _isPendingRegistrationFlow = false;
           isLoading = false;
           String errorMsg = e.message ?? 'Verification failed';
           if (e.code == 'invalid-phone-number') {
             errorMsg = 'Please enter a valid mobile number.';
           } else if (e.code == 'too-many-requests' || errorMsg.contains('blocked')) {
             errorMsg =
-                'This phone number has been blocked due to too many requests. Please try again later.';
+                'SMS limit reached for this mobile number. Please wait a few minutes before requesting another OTP.';
           } else if (e.code == 'app-not-authorized' || e.code == 'invalid-app-credential') {
             errorMsg = 'App not authorized in Firebase. Check SHA-1/SHA-256 in Firebase Console.';
           }
           loginErrorMessage = errorMsg;
           _notifyAuthSubmission();
-          Helpers.showSnackBar(msg: errorMsg, title: "Firebase (${e.code})");
         },
         codeSent: (String verificationId, int? resendToken) {
           _isOtpRequestInProgress = false;
@@ -533,10 +636,6 @@ class AuthController extends GetxController {
           loginErrorMessage = null;
           _notifyAuthSubmission();
           if (_isCompletingAuthentication) return;
-          Helpers.showSnackBar(
-            msg: "Verification code sent to $formattedPhone",
-            title: "Success",
-          );
           if (Get.currentRoute != RoutesName.firebaseOtpVerifyScreen) {
             Get.toNamed(RoutesName.firebaseOtpVerifyScreen);
           }
@@ -547,10 +646,10 @@ class AuthController extends GetxController {
       );
     } catch (e) {
       _isOtpRequestInProgress = false;
+      _isPendingRegistrationFlow = false;
       isLoading = false;
       loginErrorMessage = 'Failed to send OTP: $e';
       _notifyAuthSubmission();
-      Helpers.showSnackBar(msg: 'Failed to send OTP: $e', title: "Error!");
     }
   }
 
@@ -573,10 +672,6 @@ class AuthController extends GetxController {
       isLoading = false;
       loginErrorMessage = 'Invalid OTP or verification failed.';
       _notifyAuthSubmission();
-      Helpers.showSnackBar(
-        msg: 'Invalid OTP or verification failed.',
-        title: "Error!",
-      );
     }
   }
 
@@ -601,11 +696,19 @@ class AuthController extends GetxController {
           HiveHelp.write(Keys.userPhone, userCredential.user!.phoneNumber);
         }
 
-        await saveRegistrationProfileToHiveAndBackend();
+        if (_isPendingRegistrationFlow) {
+          await saveRegistrationProfileToHiveAndBackend();
+        }
 
         isLoading = false;
         _notifyAuthSubmission();
-        Get.offAllNamed(RoutesName.bottomNavBar);
+        final bool onboardingCompleted =
+            HiveHelp.read('onboarding_completed') ?? false;
+        if (!onboardingCompleted) {
+          Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
+        } else {
+          await _navigatePostAuthentication();
+        }
         clearFirebaseOtpController(resetFlow: false);
         clearRegisterController();
       } else {
@@ -615,10 +718,41 @@ class AuthController extends GetxController {
         _notifyAuthSubmission();
       }
     } catch (e) {
-      _isCompletingAuthentication = false;
       isLoading = false;
       _notifyAuthSubmission();
       Helpers.showSnackBar(msg: 'Sign in failed: $e');
+    } finally {
+      _isCompletingAuthentication = false;
+      _isOtpRequestInProgress = false;
+      _isPendingRegistrationFlow = false;
+    }
+  }
+
+  Future<void> _navigatePostAuthentication() async {
+    final bool planSelected =
+        (HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true;
+
+    if (planSelected) {
+      Get.offAllNamed(RoutesName.bottomNavBar);
+      return;
+    }
+
+    try {
+      if (Get.isRegistered<SubscriptionController>()) {
+        await Get.find<SubscriptionController>().getCurrentSubscription();
+      } else {
+        await Get.put(SubscriptionController(), permanent: true)
+            .getCurrentSubscription();
+      }
+    } catch (_) {}
+
+    final bool refreshedSelection =
+        (HiveHelp.read(Keys.subscriptionPlanSelected) ?? false) == true;
+
+    if (refreshedSelection) {
+      Get.offAllNamed(RoutesName.bottomNavBar);
+    } else {
+      Get.offAllNamed(RoutesName.subscriptionPlansScreen);
     }
   }
 

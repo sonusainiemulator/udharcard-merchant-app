@@ -30,10 +30,8 @@ class ProfileController extends GetxController {
   TextEditingController deleteEditingController = TextEditingController();
 
   Future validateEditProfile(context) async {
-    if (fNameEditingController.text.isEmpty) {
-      Helpers.showSnackBar(msg: 'First Name is required');
-    } else if (lNameEditingController.text.isEmpty) {
-      Helpers.showSnackBar(msg: 'Last Name is required');
+    if (fNameEditingController.text.isEmpty && lNameEditingController.text.isEmpty) {
+      Helpers.showSnackBar(msg: 'Full Name is required');
     } else if (phoneNumberEditingController.text.isEmpty) {
       Helpers.showSnackBar(msg: 'Phone Number is required');
     } else {

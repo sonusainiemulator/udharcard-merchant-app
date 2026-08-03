@@ -1,11 +1,13 @@
+import '../views/screens/auth/merchant_onboarding_wizard_screen.dart';
 import '../views/screens/merchant-settings/merchant_settings_screen.dart';
 import '../views/screens/pin_setup/security_pin_setup_screen.dart';
 import '../views/screens/qr-payment/qr_code_screen.dart';
 import '../views/screens/transfer/transfer_money_screen.dart';
-import '../views/screens/udhar/add_udhar_screen.dart';
+import '../views/screens/udhar/add_customer_screen.dart';
 import '../views/screens/udhar/customer_list_screen.dart';
 import '../views/screens/udhar/customer_ledger_screen.dart';
 import '../views/screens/udhar/chat_ledger_screen.dart';
+import '../views/screens/udhar/reports_dashboard_screen.dart';
 import '../views/screens/udhar/udhar_dashboard_screen.dart';
 import 'routes_name.dart';
 import '../routes/page_index.dart';
@@ -17,6 +19,14 @@ class RouteHelper {
     GetPage(name: RoutesName.bottomNavBar, page: () => BottomNavBar()),
     GetPage(name: RoutesName.loginScreen, page: () => LoginScreen()),
     GetPage(name: RoutesName.registerScreen, page: () => RegisterScreen()),
+    GetPage(
+      name: RoutesName.merchantOnboardingWizardScreen,
+      page: () => const MerchantOnboardingWizardScreen(),
+    ),
+    GetPage(
+      name: RoutesName.subscriptionPlansScreen,
+      page: () => const SubscriptionPlansScreen(),
+    ),
     GetPage(name: RoutesName.forgotPassScreen, page: () => ForgotPassScreen()),
     GetPage(name: RoutesName.otpScreen, page: () => OtpScreen()),
     GetPage(name: RoutesName.firebasePhoneLoginScreen, page: () => FirebasePhoneLoginScreen()),
@@ -29,19 +39,6 @@ class RouteHelper {
     GetPage(
       name: RoutesName.transactionScreen,
       page: () => TransactionScreen(),
-    ),
-    GetPage(name: RoutesName.withdrawScreen, page: () => WithdrawScreen()),
-    GetPage(
-      name: RoutesName.withdrawPreviewScreen,
-      page: () => WithdrawPreviewScreen(),
-    ),
-    GetPage(
-      name: RoutesName.withdrawHistoryScreen,
-      page: () => WithdrawHistoryScreen(),
-    ),
-    GetPage(
-      name: RoutesName.flutterWaveWithdrawScreen,
-      page: () => FlutterWaveWithdrawScreen(),
     ),
     GetPage(
       name: RoutesName.profileSettingScreen,
@@ -118,6 +115,10 @@ class RouteHelper {
       page: () => const TransferMoneyScreen(),
     ),
     GetPage(
+      name: RoutesName.addCustomerScreen,
+      page: () => const AddCustomerScreen(),
+    ),
+    GetPage(
       name: RoutesName.addUdharScreen,
       page: () => const AddUdharScreen(),
     ),
@@ -136,8 +137,16 @@ class RouteHelper {
       },
     ),
     GetPage(
+      name: RoutesName.udharReportsScreen,
+      page: () => const ReportsDashboardScreen(),
+    ),
+    GetPage(
       name: RoutesName.udharDashboardScreen,
       page: () => const UdharDashboardScreen(),
+    ),
+    GetPage(
+      name: RoutesName.workListScreen,
+      page: () => const WorkListScreen(),
     ),
     GetPage(
       name: RoutesName.voiceEntryScreen,

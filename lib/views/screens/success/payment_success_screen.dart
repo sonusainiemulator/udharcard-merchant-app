@@ -115,8 +115,8 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
               Text(
                   widget.isFromDepositPage == true
                       ? storedLanguage['Deposit Success'] ?? "Deposit Success"
-                      : storedLanguage['Withdraw Success'] ??
-                          "Withdraw Success",
+                    : storedLanguage['Payment Success'] ??
+                      "Payment Success",
                   style: context.t.bodyMedium?.copyWith(fontSize: 32.sp)),
               VSpace(40.h),
               Padding(
@@ -161,7 +161,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
                             Text(
                               widget.isFromDepositPage == true
                                   ? "Deposit Amount"
-                                  : "Withdraw Amount",
+                                : "Payment Amount",
                               style: context.t.displayMedium?.copyWith(
                                   color: AppThemes.getParagraphColor()),
                             ),

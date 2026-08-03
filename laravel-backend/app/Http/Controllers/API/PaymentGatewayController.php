@@ -8,9 +8,93 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class PaymentGatewayController extends Controller
 {
+    /**
+     * Generate a dynamic UPI payment payload for a customer.
+     */
+    public function generateQr(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'customer_id' => 'required|integer',
+            'amount' => 'required|numeric|min:0.01',
+            'upi_id' => 'nullable|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $merchantId = auth()->id() ?? $request->header('X-Merchant-Id') ?? 1;
+        $customer = Customer::where('merchant_id', $merchantId)
+            ->where('id', $request->input('customer_id'))
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Customer not found.',
+            ], 404);
+        }
+
+        $upiId = trim((string) $request->input('upi_id', 'paysecure@ybl'));
+        $amount = (float) $request->input('amount');
+        $reference = 'UDH-' . now()->format('YmdHis') . '-' . $customer->id;
+        $payeeName = preg_replace('/\s+/', ' ', trim($customer->name ?: 'Udhar Merchant'));
+
+        $upiUri = sprintf(
+            'upi://pay?pa=%s&pn=%s&am=%s&cu=INR&tn=%s&tr=%s',
+            rawurlencode($upiId),
+            rawurlencode($payeeName),
+            number_format($amount, 2, '.', ''),
+            rawurlencode('Udhar settlement'),
+            rawurlencode($reference)
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Dynamic payment QR payload generated successfully.',
+            'data' => [
+                'customer_id' => $customer->id,
+                'upi_uri' => $upiUri,
+                'transaction_reference' => $reference,
+            ],
+        ]);
+    }
+
+    /**
+     * Trigger a placeholder app reminder response for a customer.
+     */
+    public function sendAppReminder(Request $request, $id)
+    {
+        $merchantId = auth()->id() ?? $request->header('X-Merchant-Id') ?? 1;
+        $customer = Customer::where('merchant_id', $merchantId)
+            ->where('id', $id)
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Customer not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Payment reminder queued successfully.',
+            'data' => [
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'outstanding_balance' => (float) $customer->outstanding_balance,
+            ],
+        ]);
+    }
+
     /**
      * Handle webhook callbacks from Razorpay/PhonePe.
      */

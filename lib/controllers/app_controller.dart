@@ -3,8 +3,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_colors.dart';
 import '../data/models/wallet_model.dart' as wallet;
 import '../data/models/dashboard_model.dart' as dash;
 import '../data/models/basic_controll_model.dart' as basicCtrl;
@@ -164,31 +164,87 @@ class CustomDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          return;
-        }
-        return;
+        if (didPop) return;
       },
-      child: AlertDialog(
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Lottie.asset(
-              'assets/json/no_internet.json', // Replace with your image path
-              height: 150.h,
-              width: 150.w,
-            ),
-            Text(
-              'No Internet!!! Please check your connection.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w400, fontSize: 16.sp),
-            ),
-            const SizedBox(height: 20),
-          ],
+      child: Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.r),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.wifi_off_rounded,
+                  color: const Color(0xFFEF4444),
+                  size: 40.sp,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                'Internet Connection Issue',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18.sp,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Unable to connect to the backend server. Please check your mobile data or Wi-Fi connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12.sp,
+                  color: const Color(0xFF64748B),
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final connectivityResult =
+                      await Connectivity().checkConnectivity();
+                  if (connectivityResult != ConnectivityResult.none) {
+                    if (Get.isDialogOpen == true) {
+                      Get.back();
+                    }
+                  }
+                },
+                icon: Icon(Icons.refresh_rounded, size: 18.sp),
+                label: Text(
+                  'Check Connection Again',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mainColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 44.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

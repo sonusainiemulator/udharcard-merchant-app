@@ -8,16 +8,39 @@ import 'dart:io';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
 import '../data/repositories/udhar_repo.dart';
-import '../data/source/network/api_client.dart';
+import '../routes/routes_name.dart';
 import '../utils/services/helpers.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/localstorage/keys.dart';
+import '../utils/services/subscription_gate_service.dart';
 import '../config/app_colors.dart';
 
 class UdharController extends GetxController {
   static UdharController get to => Get.find<UdharController>();
+
+  CustomerLimitState get customerLimitState =>
+      SubscriptionGateService.customerLimitState(currentCount: usersList.length);
+
+  void showCustomerLimitNudgeIfNeeded() {
+    final String? warning =
+        SubscriptionGateService.customerAddSoftWarning(currentCount: usersList.length);
+    if (warning != null && warning.isNotEmpty) {
+      Helpers.showSnackBar(msg: warning, title: 'Plan Notice');
+    }
+  }
+
+  Future<void> openVoiceEntryWithSoftGate() async {
+    final String nudge = SubscriptionGateService.voiceEntrySoftNudge();
+    if (!SubscriptionGateService.isVoiceEntryIncluded()) {
+      Helpers.showSnackBar(msg: nudge, title: 'Plan Notice');
+    }
+    Get.toNamed(RoutesName.voiceEntryScreen);
+  }
 
   bool isOffline = false;
   bool isSyncing = false;
@@ -94,6 +117,13 @@ class UdharController extends GetxController {
   DateTimeRange? ledgerDateRange;
   double currentOutstandingBalance = 0.0;
   double currentCreditLimit = 5000.0;
+  bool isReportsLoading = false;
+  bool isExportingReport = false;
+  DateTimeRange? reportsDateRange;
+  Map<String, dynamic> reportsSummary = {};
+  List<dynamic> reportTransactions = [];
+  List<dynamic> reportOutstandingCustomers = [];
+  String? lastGeneratedReportPath;
 
   void setLedgerDateRange(DateTimeRange? range) {
     ledgerDateRange = range;
@@ -136,10 +166,6 @@ class UdharController extends GetxController {
     Connectivity().onConnectivityChanged.listen((result) {
       isOffline = result == ConnectivityResult.none;
       update();
-      if (!isOffline) {
-        ApiClient.syncQueuedRequests();
-        syncOfflineTransactions();
-      }
     });
   }
 
@@ -281,6 +307,19 @@ class UdharController extends GetxController {
       return null;
     }
 
+    if (SubscriptionGateService.isHardLimitEnabled() &&
+        customerLimitState.isAtOrOverLimit) {
+      Helpers.showSnackBar(
+        msg:
+            'Customer limit reached for ${customerLimitState.planCode} plan. Please upgrade to continue.',
+        title: 'Plan Limit',
+      );
+      return null;
+    }
+
+    // Soft-gating warning only: no hard block in current rollout.
+    showCustomerLimitNudgeIfNeeded();
+
     isAddingCustomer = true;
     update();
     await checkConnection();
@@ -312,6 +351,7 @@ class UdharController extends GetxController {
 
         final Map<String, dynamic>? data = _decodeJsonMap(response.body);
         if (response.statusCode == 200 && data?['status'] == 'success') {
+          _showEntitlementWarningIfAny(data);
           Helpers.showSnackBar(
             msg: data?['message'] ?? 'Customer added successfully',
           );
@@ -1105,6 +1145,7 @@ class UdharController extends GetxController {
       );
       final data = _decodeJsonMap(response.body) ?? {};
       if (response.statusCode == 200 && data['status'] == 'success') {
+        _showEntitlementWarningIfAny(data);
         Helpers.showSnackBar(
           msg: data['message'] ?? 'Payment reminder sent successfully',
         );
@@ -1167,6 +1208,7 @@ class UdharController extends GetxController {
       );
       final data = _decodeJsonMap(response.body) ?? {};
       if (response.statusCode == 200 && data['status'] == 'success') {
+        _showEntitlementWarningIfAny(data);
         final String pdfUrl = data['data']?['pdf_url']?.toString() ?? '';
         if (pdfUrl.isNotEmpty) {
           try {
@@ -1207,6 +1249,7 @@ class UdharController extends GetxController {
         generatedUpiUri = data['data']['upi_uri'];
         qrCodeSvg = data['data']['qr_code_svg'];
         txReference = data['data']['transaction_reference'];
+        _showEntitlementWarningIfAny(data);
       } else {
         generatedUpiUri =
             "upi://pay?pa=$merchantUpi&pn=Merchant&am=$amount&tn=Udhar";
@@ -1220,6 +1263,17 @@ class UdharController extends GetxController {
 
     isQrLoading = false;
     update();
+  }
+
+  void _showEntitlementWarningIfAny(Map<String, dynamic>? data) {
+    if (data == null) return;
+
+    final String? warning =
+        data['entitlement']?['warning']?.toString().trim();
+
+    if (warning != null && warning.isNotEmpty) {
+      Helpers.showSnackBar(msg: warning, title: 'Plan Notice');
+    }
   }
 
   void startPaymentStatusListener(String customerId) {
@@ -1306,6 +1360,320 @@ class UdharController extends GetxController {
     } catch (e) {
       Helpers.showSnackBar(msg: "Error opening WhatsApp: $e");
     }
+  }
+
+  Future<void> fetchReports({DateTimeRange? range}) async {
+    reportsDateRange = range ?? reportsDateRange;
+    isReportsLoading = true;
+    update();
+
+    await checkConnection();
+
+    if (isOffline) {
+      _loadLocalReports();
+      isReportsLoading = false;
+      update();
+      return;
+    }
+
+    try {
+      final response = await UdharRepo.getReports(
+        startDate:
+            reportsDateRange == null
+                ? null
+                : DateFormat('yyyy-MM-dd').format(reportsDateRange!.start),
+        endDate:
+            reportsDateRange == null
+                ? null
+                : DateFormat('yyyy-MM-dd').format(reportsDateRange!.end),
+      );
+      final Map<String, dynamic> data = _decodeJsonMap(response.body) ?? {};
+      final Map<String, dynamic> payload =
+          (data['data'] is Map<String, dynamic>)
+              ? Map<String, dynamic>.from(data['data'])
+              : (data['data'] is Map)
+              ? Map<String, dynamic>.from(data['data'])
+              : {};
+
+      if (response.statusCode == 200 && data['status'] == 'success' && payload.isNotEmpty) {
+        reportsSummary = {
+          'start_date': payload['start_date'],
+          'end_date': payload['end_date'],
+          'total_credit_given': _asDouble(payload['total_credit_given']),
+          'total_debit_received': _asDouble(payload['total_debit_received']),
+        };
+        reportTransactions = List<dynamic>.from(payload['transactions'] ?? []);
+        reportOutstandingCustomers = List<dynamic>.from(
+          payload['outstanding_customers'] ?? [],
+        );
+      } else {
+        _loadLocalReports();
+      }
+    } catch (_) {
+      _loadLocalReports();
+    }
+
+    isReportsLoading = false;
+    update();
+  }
+
+  void clearReportsDateRange() {
+    reportsDateRange = null;
+    fetchReports();
+  }
+
+  Future<void> exportOutstandingCsv() async {
+    await _generateReportFile(
+      action: () async {
+        if (reportOutstandingCustomers.isEmpty && !isReportsLoading) {
+          await fetchReports();
+        }
+
+        final Directory? directory = await _getReportDirectory();
+        if (directory == null) {
+          throw Exception('Storage directory unavailable');
+        }
+
+        final String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final File file = File('${directory.path}/udhar_outstanding_$timestamp.csv');
+        final StringBuffer buffer = StringBuffer()
+          ..writeln('Customer Name,Phone,Email,Outstanding Balance,Credit Limit');
+
+        for (final dynamic customer in reportOutstandingCustomers) {
+          final Map<String, dynamic> row = Map<String, dynamic>.from(customer as Map);
+          buffer.writeln(
+            '${_csvValue(row['name'])},${_csvValue(row['phone'])},${_csvValue(row['email'])},${_csvValue(_asDouble(row['outstanding_balance']).toStringAsFixed(2))},${_csvValue(_asDouble(row['credit_limit']).toStringAsFixed(2))}',
+          );
+        }
+
+        await file.writeAsString(buffer.toString());
+        lastGeneratedReportPath = file.path;
+        await OpenFile.open(file.path);
+        Helpers.showSnackBar(msg: 'Outstanding balances CSV generated successfully.');
+      },
+    );
+  }
+
+  Future<void> exportFullLedgerPdf() async {
+    await _generateReportFile(
+      action: () async {
+        if (reportTransactions.isEmpty && !isReportsLoading) {
+          await fetchReports();
+        }
+
+        final Directory? directory = await _getReportDirectory();
+        if (directory == null) {
+          throw Exception('Storage directory unavailable');
+        }
+
+        final pw.Document document = pw.Document();
+        final NumberFormat currency = NumberFormat.currency(
+          locale: 'en_IN',
+          symbol: 'Rs. ',
+          decimalDigits: 2,
+        );
+        final String generatedAt = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+        final String periodLabel =
+            reportsSummary['start_date'] != null && reportsSummary['end_date'] != null
+                ? '${reportsSummary['start_date']} to ${reportsSummary['end_date']}'
+                : 'All time';
+
+        document.addPage(
+          pw.MultiPage(
+            build: (context) => [
+              pw.Text(
+                'Udhar Ledger Statement',
+                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Text('Generated: $generatedAt'),
+              pw.Text('Period: $periodLabel'),
+              pw.SizedBox(height: 16),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Credit Given: ${currency.format(_asDouble(reportsSummary['total_credit_given']))}',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    'Collections: ${currency.format(_asDouble(reportsSummary['total_debit_received']))}',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 18),
+              pw.Text(
+                'Outstanding Customers',
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 8),
+              pw.TableHelper.fromTextArray(
+                headers: const ['Customer', 'Phone', 'Outstanding', 'Limit'],
+                data: reportOutstandingCustomers.map((dynamic customer) {
+                  final row = Map<String, dynamic>.from(customer as Map);
+                  return [
+                    row['name']?.toString() ?? 'Customer',
+                    row['phone']?.toString() ?? '-',
+                    currency.format(_asDouble(row['outstanding_balance'])),
+                    currency.format(_asDouble(row['credit_limit'])),
+                  ];
+                }).toList(),
+              ),
+              pw.SizedBox(height: 18),
+              pw.Text(
+                'Transactions',
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 8),
+              pw.TableHelper.fromTextArray(
+                headers: const ['Date', 'Customer', 'Type', 'Method', 'Amount', 'Remarks'],
+                data: reportTransactions.map((dynamic tx) {
+                  final row = Map<String, dynamic>.from(tx as Map);
+                  final bool isCredit = _reportType(row['type']) == 'Credit';
+                  return [
+                    row['created_at']?.toString() ?? '-',
+                    row['customer_name']?.toString() ?? row['customer']?['name']?.toString() ?? '-',
+                    _reportType(row['type']),
+                    row['payment_method']?.toString() ?? 'cash',
+                    '${isCredit ? '+' : '-'}${currency.format(_asDouble(row['amount']))}',
+                    row['remarks']?.toString() ?? row['notes']?.toString() ?? '-',
+                  ];
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+
+        final String timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final File file = File('${directory.path}/udhar_ledger_statement_$timestamp.pdf');
+        await file.writeAsBytes(await document.save());
+        lastGeneratedReportPath = file.path;
+        await OpenFile.open(file.path);
+        Helpers.showSnackBar(msg: 'Ledger statement PDF generated successfully.');
+      },
+    );
+  }
+
+  void _loadLocalReports() {
+    final List<dynamic> localTransactions = List<dynamic>.from(
+      HiveHelp.read(Keys.udharTransactions) ?? [],
+    );
+    final List<dynamic> localCustomers =
+        usersList.isNotEmpty
+            ? List<dynamic>.from(usersList)
+            : List<dynamic>.from(HiveHelp.read('cached_users') ?? []);
+
+    final DateTime? start = reportsDateRange?.start;
+    final DateTime? end =
+        reportsDateRange == null ? null : reportsDateRange!.end.add(const Duration(days: 1));
+
+    final Iterable<dynamic> filteredTx = localTransactions.where((dynamic item) {
+      if (start == null || end == null) {
+        return true;
+      }
+      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
+      final String createdAt =
+          tx['created_at']?.toString() ?? tx['date']?.toString() ?? '';
+      if (createdAt.isEmpty) {
+        return true;
+      }
+      try {
+        final DateTime parsed = DateTime.parse(createdAt);
+        return parsed.isAfter(start.subtract(const Duration(milliseconds: 1))) &&
+            parsed.isBefore(end);
+      } catch (_) {
+        return true;
+      }
+    });
+
+    final List<dynamic> normalizedTx = filteredTx.map((dynamic item) {
+      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
+      final String customerId = tx['customer_id']?.toString() ?? '';
+      final Map<String, dynamic>? customer = _findCustomerById(customerId, localCustomers);
+      return {
+        ...tx,
+        'customer_name': customer?['name'] ?? customer?['customer_name'] ?? 'Customer',
+      };
+    }).toList();
+
+    double totalCredit = 0.0;
+    double totalDebit = 0.0;
+    for (final dynamic item in normalizedTx) {
+      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
+      final double amount = _asDouble(tx['amount']);
+      final String type = _reportType(tx['type']);
+      if (type == 'Credit') {
+        totalCredit += amount;
+      } else {
+        totalDebit += amount;
+      }
+    }
+
+    reportsSummary = {
+      'start_date': start?.toIso8601String(),
+      'end_date': reportsDateRange?.end.toIso8601String(),
+      'total_credit_given': totalCredit,
+      'total_debit_received': totalDebit,
+    };
+    reportTransactions = normalizedTx;
+    reportOutstandingCustomers = localCustomers.where((dynamic item) {
+      final Map<String, dynamic> customer = Map<String, dynamic>.from(item as Map);
+      return _asDouble(customer['outstanding_balance']) > 0;
+    }).toList()
+      ..sort((a, b) => _asDouble((b as Map)['outstanding_balance']).compareTo(_asDouble((a as Map)['outstanding_balance'])));
+  }
+
+  Future<void> _generateReportFile({required Future<void> Function() action}) async {
+    isExportingReport = true;
+    update();
+    try {
+      await action();
+    } catch (e) {
+      Helpers.showSnackBar(msg: 'Failed to generate report: $e');
+    }
+    isExportingReport = false;
+    update();
+  }
+
+  Future<Directory?> _getReportDirectory() async {
+    if (Platform.isAndroid) {
+      return getExternalStorageDirectory();
+    }
+    if (Platform.isIOS) {
+      return getApplicationDocumentsDirectory();
+    }
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return getDownloadsDirectory();
+    }
+    return getApplicationDocumentsDirectory();
+  }
+
+  Map<String, dynamic>? _findCustomerById(String customerId, List<dynamic> customers) {
+    for (final dynamic item in customers) {
+      final Map<String, dynamic> customer = Map<String, dynamic>.from(item as Map);
+      if (customer['id']?.toString() == customerId || customer['user_id']?.toString() == customerId) {
+        return customer;
+      }
+    }
+    return null;
+  }
+
+  double _asDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '0') ?? 0.0;
+  }
+
+  String _reportType(dynamic rawType) {
+    final String type = rawType?.toString().toLowerCase() ?? '';
+    return type == 'given' || type == 'credit' ? 'Credit' : 'Debit';
+  }
+
+  String _csvValue(dynamic value) {
+    final String text = (value ?? '').toString().replaceAll('"', '""');
+    return '"$text"';
   }
 
   // ── Phonebook Contact Import ────────────────────────────────────────────────

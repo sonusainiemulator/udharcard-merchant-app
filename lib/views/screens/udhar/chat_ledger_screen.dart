@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../routes/routes_name.dart';

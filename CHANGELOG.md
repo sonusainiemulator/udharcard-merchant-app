@@ -5,7 +5,121 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.38] - 2026-08-03
+
+### 📊 Udhar Reports Dashboard, Device Exports, and Backend Route Wiring
+- **Added Reports Dashboard**: Introduced a new in-app reports hub with range filtering, collections summary cards, outstanding customer ranking, and recent ledger activity review.
+- **Added Device-Openable Exports**: Merchants can now generate a **full ledger statement PDF** and an **outstanding balances CSV** directly on the device, with files opened using the native file handler.
+- **Wired Merchant Udhar Routes**: Registered local Laravel routes for customer list/create/update/delete, ledger fetch/create, Razorpay webhook ingestion, and udhar report aggregation so the Flutter endpoints match actual backend routes.
+
+## [1.0.37] - 2026-08-03
+
+### 💳 Merchant Subscription & Billing Engine
+- **Subscription Controller & Repository**: Added [subscription_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/subscription_controller.dart) and [subscription_repo.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/repositories/subscription_repo.dart) for plan discovery, subscription activation, auto-renewal settings, and billing status tracking.
+- **Subscription Gate Service**: Implemented [subscription_gate_service.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/utils/services/subscription_gate_service.dart) to enforce tier-based feature access across merchant workflows.
+- **Laravel Billing API & Database Migrations**: Created subscription models, API controllers (`SubscriptionController.php`, `SubscriptionPaymentController.php`), and schema migration `2026_08_03_000000_create_subscription_billing_tables.php`.
+
+### 📋 Merchant WorkList & Task Management
+- **WorkList Controller & UI**: Built [worklist_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/worklist_controller.dart) and task management screens in `lib/views/screens/worklist/` for tracking merchant daily operations, customer follow-ups, and pending tasks.
+- **Laravel WorkList Backend**: Added backend API endpoints and schema migration `2026_08_03_010000_create_work_list_items_table.php`.
+
+### 🌐 Multi-Language Support & Onboarding Enhancements
+- **Language Service & Sheet**: Added [language_service.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/utils/services/language_service.dart) and modal bottom sheet `LanguageSelectionSheet` for seamless English/Hindi locale toggling.
+- **Merchant Onboarding Wizard**: Integrated `MerchantOnboardingWizardScreen` and `CompleteProfileOnboardingSheet` into post-registration authentication flow.
+
+### 🐛 Merchant App Registration Payload & Form-Encoding Fix
+- **Fixed Registration API Payload Format**: Updated [api_client.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/source/network/api_client.dart) to send `application/x-www-form-urlencoded` payloads for POST requests instead of raw JSON (`application/json`).
+- **Verified CLI Registration**: Tested merchant account creation via CLI (`ID: 229`, `username: climatch1`, `phone: 9876500001`).
+
 ---
+
+## [1.0.36] - 2026-08-01
+
+### 🎨 Edit Profile UI Overhaul & Simplified Name Field
+- **Unified Full Name Field**: Replaced separate "First Name" and "Last Name" input fields with a single, intuitive **"Full Name / Owner Name"** field that automatically syncs names to backend profile fields.
+- **Hidden Username Option**: Hidden/removed username input option entirely from Edit Profile UI.
+- **Fixed India 🇮🇳 (+91) Phone Prefix**: Fixed India country code badge and 10-digit input format before the mobile number field.
+- **Card-Based Fintech Design**: Enhanced Edit Profile UI layout with section cards ("Merchant Details", "Contact", "Preferences", "Address Details"), camera photo upload overlay, and elevated **Update Profile** button.
+
+---
+
+## [1.0.35] - 2026-08-01
+
+### 📊 3-Metric Financial Summary Cards (Total Diya, Total Mila, Pending)
+- **3 Dynamic Metrics Header**: Updated the financial header cards on [home_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/home/home_screen.dart) and [udhar_dashboard_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/udhar_dashboard_screen.dart) to display 3 distinct live metrics:
+  1. 🔴 **Total Diya**: Sum of all credit given to customers.
+  2. 🟢 **Total Mila**: Sum of all payments received from customers.
+  3. 🔵 **Pending**: Net outstanding pending balance (`Total Diya - Total Mila`).
+- **High-End Styling**: Enhanced card typography, colors, and layout dividers for instant clarity.
+
+---
+
+## [1.0.33] - 2026-08-01
+
+### 🎨 Bottom Sheet Save Button UI & Safe Inset Padding Fix
+- **System Navigation Inset Padding**: Fixed bottom cutoff issue on [add_customer_sheet.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_sheet.dart) by adding `MediaQuery.of(context).padding.bottom` safe inset padding. The **Save Customer** button is now fully visible and elevated cleanly above system navigation bars across all Android screen sizes.
+- **Button Contrast & Styling**: Changed icon and label text color to crisp bold white (`#FFFFFF`) on primary blue background (`#175CD3`) for high contrast and maximum legibility.
+
+## [1.0.32] - 2026-08-01
+
+### 🌐 Mandatory Real-Time API Execution & Internet Connection Notice
+- **Disabled Offline Fallback Mode**: Removed local queue caching and offline mock responses across all screens in [api_client.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/source/network/api_client.dart). Every single screen and action is forced to execute live real-time backend API calls (`_BASE_URL + ENDPOINT_URL`).
+- **Interactive Internet Issue Notice (`CustomDialog`)**: If a live network call fails due to no internet connection or server timeout, the app automatically presents a high-end **"Internet Connection Issue"** dialog informing the merchant to check their mobile data/Wi-Fi connection with a 1-tap **"Check Connection Again"** action.
+
+---
+
+## [1.0.31] - 2026-08-01
+
+### ✨ Multi-Step Merchant Onboarding Wizard Flow
+- **Interactive 3-Step Wizard (`MerchantOnboardingWizardScreen`)**: Created a guided onboarding wizard for all newly registered merchants:
+  - 🏪 **Step 1: Store & Category**: Collects Shop Name and Category Selection Chips (*Kirana & Grocery*, *Electronics*, *Clothing*, *Medical*, *Services*, etc.).
+  - 💳 **Step 2: Payment Collection Setup**: Configures Merchant UPI ID (for QR collections & WhatsApp payment links) and displays supported payment app collection modes.
+  - 📍 **Step 3: Business Location**: Captures Store Locality/Address, City, and Pincode.
+- **Progress Tracking & Routing**: Added step indicator progress bar (Step 1 of 3 -> Step 3 of 3), Back/Next step navigation, and automatic post-registration routing from `AuthController`.
+- **Skip Support**: Added "Skip Wizard" option so merchants can access their dashboard instantly.
+
+---
+
+## [1.0.30] - 2026-08-01
+
+### 🚫 Top Popup Notification Removal
+- **Removed Top Popup Banners**: Completely suppressed/disabled top popup snackbars (`Get.snackbar` / `Helpers.showSnackBar`) across all screens and auth flows.
+- **Strict In-Page Error Display**: All authentication notices, Firebase limit errors, and status feedback now display strictly as clean inline UI cards directly inside the active page canvas.
+
+---
+
+## [1.0.29] - 2026-08-01
+
+### ✨ Post-Registration Merchant Profile Onboarding
+- **Guided Merchant Profile Sheet (`CompleteProfileOnboardingSheet`)**: Added automated post-registration profile onboarding modal asking merchants for **Shop Name**, **Business Category**, **Merchant UPI ID**, and **Store City/Location**.
+
+---
+
+## [1.0.28] - 2026-08-01
+
+### 🐛 Merchant Registration Backend Sync & Payload Fix
+- **Backend API Field Alignment**: Fixed merchant onboarding failure by populating required backend fields: `firstname`, `lastname`, `password`, `password_confirmation`, `phone_code`, `country`, and `country_code`.
+
+---
+
+## [1.0.27] - 2026-08-01
+
+### ✨ Multi-Step Merchant Onboarding Wizard Flow
+- **Interactive 3-Step Wizard (`MerchantOnboardingWizardScreen`)**: Created a guided onboarding wizard for all newly registered merchants:
+  - 🏪 **Step 1: Store & Category**: Collects Shop Name and Category Selection Chips (*Kirana & Grocery*, *Electronics*, *Clothing*, *Medical*, *Services*, etc.).
+  - 💳 **Step 2: Payment Collection Setup**: Configures Merchant UPI ID (for QR collections & WhatsApp payment links) and displays supported payment app collection modes.
+  - 📍 **Step 3: Business Location**: Captures Store Locality/Address, City, and Pincode.
+- **Progress Tracking & Routing**: Added step indicator progress bar (Step 1 of 3 -> Step 3 of 3), Back/Next step navigation, and automatic post-registration routing from `AuthController`.
+- **Skip Support**: Added "Skip Wizard" option so merchants can access their dashboard instantly.
+
+---
+
+## [1.0.30] - 2026-08-01
+
+### 🐛 Login Screen — Flickering Fix
+- **Root Cause Eliminated**: Converted `LoginScreen` from `StatefulWidget` to `StatelessWidget` — removed `TextEditingController.addListener(_refreshForm)` + `setState()` that was causing the entire login screen to `build()` on every single keystroke typed in the phone number field.
+- **Scoped Rebuild Only**: The only dynamic section (Continue button loading state + error message banner) is wrapped in `GetBuilder<AuthController>` with a scoped ID `authSubmissionUpdateId` — typing in the phone field now triggers **zero** screen-wide rebuilds.
+- **FutureBuilder Flicker Fix**: Extracted `PackageInfo.fromPlatform()` from inline `FintechAuthPage` (`StatelessWidget`) into a dedicated `_AppVersionText` `StatefulWidget` — future is now initialized once in `initState` and never restarted on parent rebuilds.
 
 ## [1.0.26] - 2026-08-01
 
@@ -16,9 +130,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Removed Stale `initState` Code**: Removed `clearFirebaseOtpController()` + postFrameCallback `setState` that ran every time the login screen was pushed onto the navigator stack.
 - **Zero Logic Regression**: All login functionality unchanged — phone validation, OTP dispatch via `sendFirebaseOtp`, error message display, and navigation to Register screen all work identically.
 
+### 🔐 Merchant Account Existence Verification Before OTP (Verified & Live Tested)
+- **Pre-OTP Gate**: Before sending any Firebase OTP, `sendFirebaseOtp()` calls `_checkMerchantAccountExists()` which hits `POST /api/merchant/check-exist` — OTP is **never dispatched** to Firebase if the merchant account does not exist.
+- **API Response Handling**: Backend returns `HTTP 404 + {status:"error", exists:false, message:"Merchant account does not exist. Please register first."}` for unregistered numbers — app correctly parses both the HTTP status code and `exists` field.
+- **Error Banner Shown**: If account not found, login screen shows inline error: *"Merchant account does not exist. Please register first."* — button re-enables, user can correct the number.
+- **Login Fallback**: If `check-exist` endpoint is unreachable, app falls back to a dummy-password login call to infer existence from the error message (`"Invalid username"` → not found, `"Invalid password"` → account exists).
+- **Offline Fail-Open**: On complete network failure, app allows OTP to proceed so legitimate merchants are not locked out when offline.
+- **Live CLI Test Results**: Tested `POST /api/merchant/check-exist` with multiple non-registered 10-digit numbers — all returned `HTTP 404 + exists:false` — confirmed OTP is blocked in all cases.
+
+### 🧪 End-to-End Testing & Code Hygiene
+- **Verified Login Flow (`+91 99924 33121`)**: Live tested `POST /api/merchant/check-exist` with registered number `9992433121` and `+919992433121` — confirmed `HTTP 200` + `exists: true`. Verified pre-OTP gating, Firebase Auth dispatch, token persistence, and navigation logic.
+- **Unused Import Cleanup**: Cleaned up unused imports across `edit_profile_screen.dart`, `profile_setting_screen.dart`, `chat_ledger_screen.dart`, and `udhar_dashboard_screen.dart`.
+
 ---
 
 ## [1.0.25] - 2026-08-01
+
 
 
 ### 🎨 Edit Profile UI Overhaul

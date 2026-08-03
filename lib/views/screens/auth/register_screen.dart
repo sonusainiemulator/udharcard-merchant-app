@@ -47,10 +47,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canContinue =
-        _authController.nameEditingController.text.trim().isNotEmpty &&
-        _authController.shopNameEditingController.text.trim().isNotEmpty &&
-        _authController.phoneEditingController.text.trim().length == 10;
 
     return FintechAuthPage(
       eyebrow: 'Merchant onboarding',

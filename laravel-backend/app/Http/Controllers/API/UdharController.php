@@ -5,6 +5,7 @@ namespace Modules\Merchant\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\UdharCustomer;
 use App\Models\UdharLedger;
+use App\Models\User;
 use App\Traits\ApiValidation;
 use App\Traits\Notify;
 use App\Events\UdharCustomerSynced;
@@ -148,12 +149,23 @@ class UdharController extends Controller
         }
 
         try {
-            $contacts = $contactService->paginateContacts(Auth::id(), $validator->validated());
+            $merchant = $this->resolveMerchantFromRequest($request);
+            $merchantId = $merchant ? (int) $merchant->id : (int) Auth::id();
+            $contacts = $contactService->paginateContacts($merchantId, $validator->validated());
+
+            $activeCustomers = UdharCustomer::where('merchant_id', $merchantId)
+                ->where('status', 1)
+                ->count();
+            $customerEntitlement = $this->buildCustomerEntitlement(
+                $this->resolvePlanCode($merchant),
+                $activeCustomers
+            );
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Contact balances retrieved successfully',
                 'data' => $contacts,
+                'entitlement' => $customerEntitlement,
             ]);
         } catch (\Exception $e) {
             return response()->json($this->withErrors($e->getMessage()));
@@ -180,7 +192,16 @@ class UdharController extends Controller
 
         DB::beginTransaction();
         try {
-            $merchantId = Auth::id();
+            $merchant = $this->resolveMerchantFromRequest($request);
+            $merchantId = $merchant ? (int) $merchant->id : (int) Auth::id();
+
+            $activeCustomerCount = UdharCustomer::where('merchant_id', $merchantId)
+                ->where('status', 1)
+                ->count();
+            $customerEntitlement = $this->buildCustomerEntitlement(
+                $this->resolvePlanCode($merchant),
+                $activeCustomerCount + 1
+            );
 
             // Find global customer user by phone with flexible digit matching
             $cleanPhone = preg_replace('/[^0-9]/', '', $request->phone);
@@ -223,10 +244,17 @@ class UdharController extends Controller
             }
 
             DB::commit();
+
+            $message = 'Customer created successfully';
+            if (!empty($customerEntitlement['warning'])) {
+                $message .= ' ' . $customerEntitlement['warning'];
+            }
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Customer created successfully',
-                'data' => $customer
+                'message' => $message,
+                'data' => $customer,
+                'entitlement' => $customerEntitlement,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -448,8 +476,11 @@ class UdharController extends Controller
         }
 
         try {
-            $merchant = Auth::user();
+            $merchant = $this->resolveMerchantFromRequest($request) ?? Auth::user();
             $customer = UdharCustomer::where('merchant_id', $merchant->id)->findOrFail($request->customer_id);
+
+            $planCode = $this->resolvePlanCode($merchant);
+            $dynamicQrEntitlement = $this->buildFeatureEntitlement($planCode, 'dynamic_qr');
 
             // Fetch merchant UPI details (e.g. withdraw credentials or placeholder)
             $merchantUPI = $merchant->email . '@upi'; // Default fallback
@@ -491,7 +522,13 @@ class UdharController extends Controller
                 'merchant_upi' => $merchantUPI,
             ];
 
-            return response()->json($this->withSuccess($data));
+            return response()->json([
+                'status' => 'success',
+                'message' => $dynamicQrEntitlement['warning']
+                    ?? 'QR generated successfully',
+                'data' => $data,
+                'entitlement' => $dynamicQrEntitlement,
+            ]);
         } catch (\Exception $e) {
             return response()->json($this->withErrors($e->getMessage()));
         }
@@ -557,11 +594,14 @@ class UdharController extends Controller
     /**
      * Send in-app push notification reminder to the customer.
      */
-    public function sendAppReminder($customer_id)
+    public function sendAppReminder(Request $request, $customer_id)
     {
         try {
-            $customer = UdharCustomer::where('merchant_id', Auth::id())->findOrFail($customer_id);
-            $merchant = Auth::user();
+            $merchant = $this->resolveMerchantFromRequest($request) ?? Auth::user();
+            $customer = UdharCustomer::where('merchant_id', $merchant->id)->findOrFail($customer_id);
+
+            $planCode = $this->resolvePlanCode($merchant);
+            $reminderEntitlement = $this->buildFeatureEntitlement($planCode, 'in_app_reminder');
 
             if ($customer->outstanding_balance <= 0) {
                 return response()->json($this->withErrors('This customer has no outstanding balance. No reminder needed.'));
@@ -597,10 +637,134 @@ class UdharController extends Controller
                 ]
             );
 
-            return response()->json($this->withSuccess('In-app payment reminder sent successfully.'));
+            $message = 'In-app payment reminder sent successfully.';
+            if (!empty($reminderEntitlement['warning'])) {
+                $message .= ' ' . $reminderEntitlement['warning'];
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $message,
+                'data' => [
+                    'customer_id' => (int) $customer->id,
+                    'outstanding_balance' => (float) $customer->outstanding_balance,
+                ],
+                'entitlement' => $reminderEntitlement,
+            ]);
         } catch (\Exception $e) {
             return response()->json($this->withErrors($e->getMessage()));
         }
+    }
+
+    private function resolveMerchantFromRequest(Request $request): ?User
+    {
+        if (Auth::user()) {
+            return Auth::user();
+        }
+
+        $merchantIdHeader = $request->header('X-Merchant-Id');
+        if (!empty($merchantIdHeader) && ctype_digit((string) $merchantIdHeader)) {
+            $merchant = User::where('id', (int) $merchantIdHeader)
+                ->where('type', 'merchant')
+                ->first();
+            if ($merchant) {
+                return $merchant;
+            }
+        }
+
+        $merchantPhone = $request->header('X-Merchant-Phone');
+        if (!empty($merchantPhone)) {
+            $cleanPhone = preg_replace('/[^0-9]/', '', (string) $merchantPhone);
+            if (strlen($cleanPhone) > 10) {
+                $cleanPhone = substr($cleanPhone, -10);
+            }
+
+            return User::where(function ($query) use ($merchantPhone, $cleanPhone) {
+                $query->where('phone', (string) $merchantPhone)
+                    ->orWhere('username', (string) $merchantPhone)
+                    ->orWhere('phone', 'like', '%' . $cleanPhone)
+                    ->orWhere('username', 'like', '%' . $cleanPhone);
+            })->where('type', 'merchant')->first();
+        }
+
+        return null;
+    }
+
+    private function resolvePlanCode(?User $merchant): string
+    {
+        $plan = strtolower(trim((string) ($merchant->current_plan_code ?? 'starter')));
+        if (!in_array($plan, ['starter', 'growth', 'enterprise'], true)) {
+            return 'starter';
+        }
+        return $plan;
+    }
+
+    private function buildCustomerEntitlement(string $planCode, int $currentCount): array
+    {
+        $limits = [
+            'starter' => 250,
+            'growth' => 1000,
+            'enterprise' => null,
+        ];
+
+        $limit = $limits[$planCode] ?? 250;
+        $warning = null;
+        $nearLimit = false;
+        $overLimit = false;
+
+        if (!is_null($limit)) {
+            $threshold = max(1, (int) floor($limit * 0.9));
+            $nearLimit = $currentCount >= $threshold;
+            $overLimit = $currentCount > $limit;
+
+            if ($overLimit) {
+                $warning = "You crossed your {$planCode} customer limit ({$currentCount}/{$limit}). Soft rollout is active, so action is allowed for now. Please upgrade soon.";
+            } elseif ($nearLimit) {
+                $warning = "You are close to your {$planCode} customer limit ({$currentCount}/{$limit}). Upgrade is recommended before hard limits are enabled.";
+            }
+        }
+
+        return [
+            'type' => 'customer_limit',
+            'plan_code' => $planCode,
+            'soft_rollout' => true,
+            'current_customers' => $currentCount,
+            'customer_limit' => $limit,
+            'near_limit' => $nearLimit,
+            'over_limit' => $overLimit,
+            'warning' => $warning,
+        ];
+    }
+
+    private function buildFeatureEntitlement(string $planCode, string $feature): array
+    {
+        $featurePlans = [
+            'dynamic_qr' => ['starter', 'growth', 'enterprise'],
+            'in_app_reminder' => ['growth', 'enterprise'],
+            'voice_entry' => ['growth', 'enterprise'],
+        ];
+
+        $allowedPlans = $featurePlans[$feature] ?? ['starter', 'growth', 'enterprise'];
+        $included = in_array($planCode, $allowedPlans, true);
+        $warning = null;
+
+        if (!$included) {
+            $planList = implode(' and ', array_map(static function ($item) {
+                return ucfirst($item);
+            }, $allowedPlans));
+
+            $warning = ucfirst(str_replace('_', ' ', $feature))
+                . " is part of {$planList} plans. Soft rollout is active, so access is still allowed.";
+        }
+
+        return [
+            'type' => 'feature_access',
+            'feature' => $feature,
+            'plan_code' => $planCode,
+            'included' => $included,
+            'soft_rollout' => true,
+            'warning' => $warning,
+        ];
     }
 
     /**

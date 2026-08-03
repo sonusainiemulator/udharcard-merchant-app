@@ -44,5 +44,32 @@ void main() {
       expect(authController.firebaseOtpVal, '');
       expect(authController.firebaseVerificationId, isNull);
     });
+
+    test('buildRegisterPayload normalizes merchant registration fields', () {
+      final payload = authController.buildRegisterPayload(
+        name: 'Jane Mary Doe',
+        email: '',
+        phone: '+91 98765-43210',
+        shopName: 'Acme Shop',
+        password: 'secret123',
+        confirmPassword: 'secret123',
+      );
+
+      expect(payload['name'], 'Jane Mary Doe');
+      expect(payload['firstname'], 'Jane');
+      expect(payload['lastname'], 'Mary Doe');
+      expect(payload['phone'], '9876543210');
+      expect(payload['mobile'], '9876543210');
+      expect(payload['username'], '9876543210');
+      expect(payload['email'], '9876543210@merchant.udharcard.shop');
+      expect(payload['shop_name'], 'Acme Shop');
+      expect(payload['business_name'], 'Acme Shop');
+      expect(payload['phone_code'], '+91');
+      expect(payload['country'], 'India');
+      expect(payload['country_code'], 'IN');
+      expect(payload['type'], 'merchant');
+      expect(payload['password'], 'secret123');
+      expect(payload['password_confirmation'], 'secret123');
+    });
   });
 }

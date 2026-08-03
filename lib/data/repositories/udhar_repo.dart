@@ -86,6 +86,26 @@ class UdharRepo {
     );
   }
 
+  /// GET /api/merchant/udhar/reports - Get report summary, outstanding balances and ledger rows
+  static Future<http.Response> getReports({
+    String? startDate,
+    String? endDate,
+  }) async {
+    String endpoint = AppConstants.udharReportsUrl;
+    final List<String> query = [];
+    if (startDate != null && startDate.isNotEmpty) {
+      query.add("start_date=$startDate");
+    }
+    if (endDate != null && endDate.isNotEmpty) {
+      query.add("end_date=$endDate");
+    }
+    if (query.isNotEmpty) {
+      endpoint = "$endpoint?${query.join('&')}";
+    }
+
+    return await ApiClient.get(ENDPOINT_URL: endpoint);
+  }
+
   /// GET /api/merchant/udhar/sync - pull sync updates since last_sync_time
   static Future<http.Response> pullSync({required String lastSyncTime}) async {
     return await ApiClient.get(

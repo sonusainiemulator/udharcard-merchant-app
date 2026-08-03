@@ -20,4 +20,12 @@ class Keys {
   static String merchantUpiId = "merchantUpiId";
   static String udharCustomers = "udharCustomers";
   static String udharTransactions = "udharTransactions";
+  static String workListItems = "workListItems";
+  static String workListOfflineQueue = "workListOfflineQueue";
+  static String workListLastSyncAt = "workListLastSyncAt";
+  static String subscriptionPlanSelected = "subscriptionPlanSelected";
+  static String subscriptionPlanCode = "subscriptionPlanCode";
+  static String subscriptionBillingCycle = "subscriptionBillingCycle";
+  static String subscriptionSoftRolloutEnabled = "subscriptionSoftRolloutEnabled";
+  static String subscriptionHardLimitEnabled = "subscriptionHardLimitEnabled";
 }

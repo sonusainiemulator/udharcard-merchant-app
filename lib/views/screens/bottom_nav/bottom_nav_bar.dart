@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,17 +7,16 @@ import '../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/bottom_nav_controller.dart';
 import '../../../notification_service/notification_controller.dart';
-import '../../../utils/app_constants.dart';
 import '../../../utils/services/pop_app.dart';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
 
   @override
-  State<BottomNavBar> createState() => appCtrlBottomNavBarState();
+  State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class appCtrlBottomNavBarState extends State<BottomNavBar> {
+class _BottomNavBarState extends State<BottomNavBar> {
   final Connectivity appCtrlconnectivity = Connectivity();
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
@@ -47,7 +45,7 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
               canPop: false,
               onPopInvokedWithResult: (didPop, result) {
                 if (didPop) return;
-                return PopApp.onWillPop();
+                PopApp.onWillPop();
               },
               child: Scaffold(
                 body: IndexedStack(
@@ -56,51 +54,55 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
                 ),
                 bottomNavigationBar: Container(
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1D2939) : Colors.white,
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                        color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
                         blurRadius: 20,
                         offset: const Offset(0, -4),
                       ),
                     ],
+                    border: Border(
+                      top: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF1F5F9),
+                        width: 1,
+                      ),
+                    ),
                   ),
                   child: SafeArea(
                     child: Container(
-                      height: 64.h,
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      height: 62.h,
+                      padding: EdgeInsets.symmetric(horizontal: 14.w),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _buildNavItem(
                             index: 0,
                             label: 'Home',
-                            activeIcon: "$rootImageDir/home1.png",
-                            inactiveIcon: "$rootImageDir/home.png",
+                            iconData: Icons.home_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),
                           _buildNavItem(
                             index: 1,
-                            label: 'Udhar',
-                            activeIcon: "$rootImageDir/wallet1.png",
-                            inactiveIcon: "$rootImageDir/wallet.png",
+                            label: 'Dashboard',
+                            iconData: Icons.dashboard_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),
                           _buildNavItem(
                             index: 2,
-                            label: 'Transactions',
-                            activeIcon: "$rootImageDir/transaction.png",
-                            inactiveIcon: "$rootImageDir/transaction.png",
+                            label: 'History',
+                            iconData: Icons.receipt_long_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),
                           _buildNavItem(
                             index: 3,
                             label: 'Profile',
-                            activeIcon: "$rootImageDir/person2.png",
-                            inactiveIcon: "$rootImageDir/person.png",
+                            iconData: Icons.person_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),
@@ -120,43 +122,43 @@ class appCtrlBottomNavBarState extends State<BottomNavBar> {
   Widget _buildNavItem({
     required int index,
     required String label,
-    required String activeIcon,
-    required String inactiveIcon,
+    required IconData iconData,
     required BottomNavController controller,
     required bool isDark,
   }) {
     final isSelected = controller.selectedIndex == index;
     final activeColor = AppColors.mainColor;
-    final inactiveColor = isDark ? const Color(0xFF98A2B3) : const Color(0xFF667085);
+    final inactiveColor =
+        isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
     return InkWell(
       onTap: () => controller.changeScreen(index),
-      borderRadius: BorderRadius.circular(16.r),
-      child: Container(
+      borderRadius: BorderRadius.circular(20.r),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected
-              ? activeColor.withValues(alpha: 0.1)
+              ? activeColor.withValues(alpha: 0.12)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(20.r),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              isSelected ? activeIcon : inactiveIcon,
-              height: 22.h,
+            Icon(
+              iconData,
+              size: 22.sp,
               color: isSelected ? activeColor : inactiveColor,
-              fit: BoxFit.contain,
             ),
             if (isSelected) ...[
-              SizedBox(width: 8.w),
+              SizedBox(width: 6.w),
               Text(
                 label,
                 style: TextStyle(
                   color: activeColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.sp,
                 ),
               ),
             ],

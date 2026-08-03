@@ -66,36 +66,8 @@ class Helpers {
     Color? bgColor,
     SnackPosition? snackPosition = SnackPosition.TOP,
   }) {
-    if (!Get.isSnackbarOpen)
-      Get.snackbar(
-        title,
-        titleText: titleText,
-        msg,
-        snackPosition: snackPosition,
-        messageText: messageText,
-        colorText: textColor ?? AppColors.whiteColor,
-        backgroundColor: bgColor == null
-            ? title == 'Failed' ||
-                    title == 'Error!' ||
-                    title == 'Error' ||
-                    title == 'error'
-                ? AppColors.redColor
-                : AppColors.greenColor
-            : bgColor,
-        margin: EdgeInsets.all(10),
-        borderRadius: 8,
-        shouldIconPulse: true,
-        icon: Icon(
-            title == 'Failed' ||
-                    title == 'Error!' ||
-                    title == 'Error' ||
-                    title == 'error'
-                ? Icons.cancel
-                : Icons.check,
-            color: Colors.white),
-        barBlur: 10,
-        duration: Duration(seconds: durationTime!),
-      );
+    // Top popup notifications removed across all screens
+    return;
   }
 
   static appLoader({Color? color}) => Center(

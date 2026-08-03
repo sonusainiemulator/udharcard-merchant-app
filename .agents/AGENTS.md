@@ -15,3 +15,7 @@ Copy-Item "build\app\outputs\flutter-apk\app-release.apk" "build\app\outputs\flu
 Copy-Item "build\app\outputs\flutter-apk\app-debug.apk" "build\app\outputs\flutter-apk\udharcard-merchant-app-v$version-debug.apk"
 ```
 Then pass the renamed files to `gh release create`.
+
+# Changelog Policy
+Always update `CHANGELOG.md` upon completing any feature, bug fix, refactoring, or significant task.
+

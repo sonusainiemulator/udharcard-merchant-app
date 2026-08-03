@@ -26,19 +26,20 @@ class RoutesName {
   static String qrCodeScreen = "/qrCodeScreen";
 
   static String transactionScreen = "/transactionScreen";
-  static String withdrawScreen = "/withdrawScreen";
-  static String withdrawPreviewScreen = "/withdrawPreviewScreen";
-  static String withdrawHistoryScreen = "/withdrawHistoryScreen";
-  static String flutterWaveWithdrawScreen = "/flutterWaveWithdrawScreen";
   static String paymentSuccessScreen = "/paymentSuccessScreen";
 
   static String deleteAccountScreen = "/deleteAccountScreen";
   static String voiceEntryScreen = "/voiceEntryScreen";
   static String transferMoneyScreen = "/transferMoneyScreen";
+  static String addCustomerScreen = "/addCustomerScreen";
   static String addUdharScreen = "/addUdharScreen";
   static String customerListScreen = "/customerListScreen";
   static String customerLedgerScreen = "/customerLedgerScreen";
+  static String udharReportsScreen = "/udharReportsScreen";
   static String udharDashboardScreen = "/udharDashboardScreen";
+  static String workListScreen = "/workListScreen";
   static String registerScreen = "/registerScreen";
   static String chatLedgerScreen = "/chatLedgerScreen";
+  static String merchantOnboardingWizardScreen = "/merchantOnboardingWizardScreen";
+  static String subscriptionPlansScreen = "/subscriptionPlansScreen";
 }

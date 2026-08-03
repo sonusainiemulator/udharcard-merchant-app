@@ -5,21 +5,23 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:paysecure/config/dimensions.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import '../../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/profile_controller.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../controllers/verification_controller.dart';
+import '../../../controllers/worklist_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
 import '../../../utils/app_constants.dart';
 import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import '../../../utils/services/language_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_appbar.dart';
+import '../../widgets/language_selection_sheet.dart';
 import '../../widgets/spacing.dart';
 
 class ProfileSettingScreen extends StatefulWidget {
@@ -281,6 +283,68 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           ],
                         ),
                       ),
+                      VSpace(12.h),
+
+                      // ── App Language Switcher Card ───────────────────────────
+                      InkWell(
+                        onTap: () => LanguageSelectionSheet.show(context),
+                        borderRadius: BorderRadius.circular(16.r),
+                        child: Container(
+                          padding: EdgeInsets.all(16.h),
+                          decoration: BoxDecoration(
+                            color: AppThemes.getFillColor(),
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(
+                              color: Get.isDarkMode
+                                  ? AppColors.black70
+                                  : AppColors.borderColor.withValues(alpha: 0.5),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.translate_rounded,
+                                size: 20.sp,
+                                color: AppColors.mainColor,
+                              ),
+                              HSpace(12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      LanguageService.isHindi
+                                          ? "ऐप की भाषा (App Language)"
+                                          : "App Language",
+                                      style: t.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14.sp,
+                                      ),
+                                    ),
+                                    VSpace(2.h),
+                                    Text(
+                                      LanguageService.isHindi
+                                          ? "हिंदी (Hindi) 🇮🇳"
+                                          : "English 🇬🇧",
+                                      style: t.bodySmall?.copyWith(
+                                        color: AppColors.mainColor,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14.sp,
+                                color: AppThemes.getBlack50Color(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       VSpace(16.h),
 
                       // ── Section 1: Store & Payments ───────────────────────
@@ -315,29 +379,42 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       VSpace(16.h),
 
                       // ── Section 2: Data & Backup ──────────────────────────
-                      _buildGroupedSection(
-                        title: storedLanguage['Data & Backup'] ?? "Data & Backup",
-                        items: [
-                          _ProfileMenuItem(
-                            title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
-                            iconData: Icons.upload_file_rounded,
-                            subtitle: "Save JSON backup to phone/share",
-                            onTap: () => UdharController.to.exportLedgerBackup(),
-                          ),
-                          _ProfileMenuItem(
-                            title: storedLanguage['Restore Backup'] ?? "Restore Backup",
-                            iconData: Icons.download_for_offline_rounded,
-                            subtitle: "Restore customer ledgers from backup file",
-                            onTap: () => UdharController.to.importLedgerBackup(),
-                          ),
-                          _ProfileMenuItem(
-                            title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
-                            iconData: Icons.cloud_sync_rounded,
-                            badgeText: "Coming Soon",
-                            onTap: () => _showGoogleDriveComingSoonSheet(context),
-                          ),
-                        ],
-                        t: t,
+                      GetBuilder<WorkListController>(
+                        builder: (workListController) {
+                          return _buildGroupedSection(
+                            title: storedLanguage['Data & Backup'] ?? "Data & Backup",
+                            items: [
+                              _ProfileMenuItem(
+                                title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
+                                iconData: Icons.upload_file_rounded,
+                                subtitle: "Save JSON backup to phone/share",
+                                onTap: () => UdharController.to.exportLedgerBackup(),
+                              ),
+                              _ProfileMenuItem(
+                                title: storedLanguage['Restore Backup'] ?? "Restore Backup",
+                                iconData: Icons.download_for_offline_rounded,
+                                subtitle: "Restore customer ledgers from backup file",
+                                onTap: () => UdharController.to.importLedgerBackup(),
+                              ),
+                              _ProfileMenuItem(
+                                title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
+                                iconData: Icons.cloud_sync_rounded,
+                                badgeText: "Coming Soon",
+                                onTap: () => _showGoogleDriveComingSoonSheet(context),
+                              ),
+                              _ProfileMenuItem(
+                                title: storedLanguage['Today Work List'] ?? "Today Work List",
+                                iconData: Icons.event_note_rounded,
+                                subtitle: workListController.pendingBadgeText == null
+                                    ? "Plan today, tomorrow, and follow-ups"
+                                    : workListController.pendingSummaryText,
+                                badgeText: workListController.pendingBadgeText,
+                                onTap: () => Get.toNamed(RoutesName.workListScreen),
+                              ),
+                            ],
+                            t: t,
+                          );
+                        },
                       ),
                       VSpace(16.h),
 
@@ -511,16 +588,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                   ),
                   child: item.iconData != null
                       ? Icon(item.iconData, size: 20.sp, color: AppColors.blackColor)
-                      : (item.imageAsset != null
-                          ? Center(
-                              child: Image.asset(
-                                item.imageAsset!,
-                                height: 18.sp,
-                                width: 18.sp,
-                                color: AppColors.blackColor,
-                              ),
-                            )
-                          : Icon(Icons.tune, size: 20.sp, color: AppColors.blackColor)),
+                      : Icon(Icons.tune, size: 20.sp, color: AppColors.blackColor),
                 ),
                 title: Row(
                   children: [
@@ -867,20 +935,16 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
 
 class _ProfileMenuItem {
   final String title;
-  final String? imageAsset;
   final IconData? iconData;
   final String? subtitle;
   final String? badgeText;
-  final bool isLogout;
   final VoidCallback onTap;
 
   _ProfileMenuItem({
     required this.title,
-    this.imageAsset,
     this.iconData,
     this.subtitle,
     this.badgeText,
-    this.isLogout = false,
     required this.onTap,
   });
 }

@@ -5,10 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:paysecure/views/widgets/mediaquery_extension.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import '../../../../config/app_colors.dart';
-import '../../../config/dimensions.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/profile_controller.dart';
 import '../../../data/models/profile_model.dart';
@@ -22,11 +20,36 @@ import '../../widgets/app_custom_dropdown.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/spacing.dart';
 
-// ignore: must_be_immutable
-class EditProfileScreen extends StatelessWidget {
-  EditProfileScreen({super.key});
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
 
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  late TextEditingController _fullNameCtrl;
   var selectedLanguageVal;
+
+  @override
+  void initState() {
+    super.initState();
+    final profileController = Get.find<ProfileController>();
+    final initialName = "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}".trim();
+    _fullNameCtrl = TextEditingController(text: initialName);
+  }
+
+  @override
+  void dispose() {
+    _fullNameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _syncNames(String val, ProfileController profileController) {
+    final parts = val.trim().split(' ');
+    profileController.fNameEditingController.text = parts.isNotEmpty ? parts.first : '';
+    profileController.lNameEditingController.text = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +72,8 @@ class EditProfileScreen extends StatelessWidget {
                   await profileController.getProfile(
                     isFromRefreshIndicator: true,
                   );
+                  final initialName = "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}".trim();
+                  _fullNameCtrl.text = initialName;
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -186,30 +211,18 @@ class EditProfileScreen extends StatelessWidget {
                                 children: [
                                   // ── Name Card ─────────────────────────
                                   _buildSectionCard(
-                                    title: "Personal Info",
+                                    title: "Merchant Details",
                                     children: [
-                                      // First Name
+                                      // Full Name
                                       _buildFieldLabel(
-                                        storedLanguage['First Name'] ?? "First Name",
+                                        storedLanguage['Full Name'] ?? "Full Name / Owner Name",
                                         t,
                                       ),
                                       VSpace(8.h),
                                       _buildTextField(
-                                        controller: profileController.fNameEditingController,
-                                        hint: storedLanguage['Enter First Name'] ?? "Enter First Name",
-                                        prefixIcon: Icons.person_outline_rounded,
-                                        t: t,
-                                      ),
-                                      VSpace(16.h),
-                                      // Last Name
-                                      _buildFieldLabel(
-                                        storedLanguage['Last Name'] ?? "Last Name",
-                                        t,
-                                      ),
-                                      VSpace(8.h),
-                                      _buildTextField(
-                                        controller: profileController.lNameEditingController,
-                                        hint: storedLanguage['Enter Last Name'] ?? "Enter Last Name",
+                                        controller: _fullNameCtrl,
+                                        onChanged: (val) => _syncNames(val, profileController),
+                                        hint: storedLanguage['Enter Full Name'] ?? "Enter Full Name",
                                         prefixIcon: Icons.person_outline_rounded,
                                         t: t,
                                       ),
@@ -515,6 +528,7 @@ class EditProfileScreen extends StatelessWidget {
     required TextTheme t,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
   }) {
     return Container(
       height: 52.h,
@@ -532,6 +546,7 @@ class EditProfileScreen extends StatelessWidget {
         controller: controller,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
+        onChanged: onChanged,
         style: t.bodyMedium?.copyWith(fontSize: 14.sp),
         decoration: InputDecoration(
           hintText: hint,

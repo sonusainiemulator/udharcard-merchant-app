@@ -1,0 +1,74 @@
+{
+  "name": "merchant-registration-smoke",
+  "description": "Smoke checks for merchant registration, merchant existence lookup, and password login contract.",
+  "environment": {
+    "BASE_URL": "https://pay.udharcard.shop/api",
+    "TEST_MERCHANT_PHONE": "9651033828",
+    "TEST_MERCHANT_EMAIL": "rich.9651033828@example.com",
+    "TEST_MERCHANT_NAME": "CLI Merchant Full",
+    "TEST_MERCHANT_SHOP": "CLI Rich Shop 9651033828",
+    "TEST_MERCHANT_PASSWORD": "merchant_default_password"
+  },
+  "tests": [
+    {
+      "name": "register merchant",
+      "request": {
+        "method": "POST",
+        "url": "{{BASE_URL}}/register",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        },
+        "body": "name={{TEST_MERCHANT_NAME}}&firstname=CLI&lastname=Merchant&phone={{TEST_MERCHANT_PHONE}}&mobile={{TEST_MERCHANT_PHONE}}&username={{TEST_MERCHANT_PHONE}}&shop_name={{TEST_MERCHANT_SHOP}}&business_name={{TEST_MERCHANT_SHOP}}&email={{TEST_MERCHANT_EMAIL}}&password={{TEST_MERCHANT_PASSWORD}}&password_confirmation={{TEST_MERCHANT_PASSWORD}}&phone_code=%2B91&country=India&country_code=IN&type=merchant"
+      },
+      "expect": {
+        "status": 200,
+        "json": {
+          "status": "success",
+          "user.type": "merchant",
+          "user.username": "{{TEST_MERCHANT_PHONE}}",
+          "user.phone": "{{TEST_MERCHANT_PHONE}}"
+        }
+      }
+    },
+    {
+      "name": "merchant exists after registration",
+      "request": {
+        "method": "POST",
+        "url": "{{BASE_URL}}/merchant/check-exist",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        },
+        "body": "phone={{TEST_MERCHANT_PHONE}}&mobile={{TEST_MERCHANT_PHONE}}&username={{TEST_MERCHANT_PHONE}}&type=merchant"
+      },
+      "expect": {
+        "status": 200,
+        "json": {
+          "status": "success",
+          "exists": true
+        }
+      }
+    },
+    {
+      "name": "merchant login with password",
+      "request": {
+        "method": "POST",
+        "url": "{{BASE_URL}}/login",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        },
+        "body": "username={{TEST_MERCHANT_PHONE}}&password={{TEST_MERCHANT_PASSWORD}}&type=merchant"
+      },
+      "expect": {
+        "status": 200,
+        "json": {
+          "status": "success",
+          "user.type": "merchant",
+          "user.phone": "{{TEST_MERCHANT_PHONE}}"
+        }
+      }
+    }
+  ]
+}

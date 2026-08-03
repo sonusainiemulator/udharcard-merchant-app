@@ -22,15 +22,6 @@ class InitBindings implements Bindings {
       () => TransactionController(),
       fenix: true,
     );
-    Get.lazyPut<WithdrawHistoryController>(
-      () => WithdrawHistoryController(),
-      fenix: true,
-    );
-    Get.lazyPut<WithdrawController>(() => WithdrawController(), fenix: true);
-    Get.lazyPut<WithdrawHistoryController>(
-      () => WithdrawHistoryController(),
-      fenix: true,
-    );
     Get.lazyPut<NotificationSettingsController>(
       () => NotificationSettingsController(),
       fenix: true,
@@ -49,6 +40,14 @@ class InitBindings implements Bindings {
     );
     Get.lazyPut<UdharController>(
       () => UdharController(),
+      fenix: true,
+    );
+    Get.lazyPut<WorkListController>(
+      () => WorkListController(),
+      fenix: true,
+    );
+    Get.lazyPut<SubscriptionController>(
+      () => SubscriptionController(),
       fenix: true,
     );
   }

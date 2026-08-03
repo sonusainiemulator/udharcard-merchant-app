@@ -22,6 +22,12 @@ use App\Http\Controllers\Api\V1\SupportTicketController;
 use App\Http\Controllers\Api\V1\TwoFASecurityController;
 use App\Http\Controllers\Api\V1\PayoutController;
 use App\Http\Controllers\Api\V1\VerificationController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\SubscriptionPaymentController;
+use App\Http\Controllers\API\CustomerController;
+use App\Http\Controllers\API\PaymentGatewayController;
+use App\Http\Controllers\API\UdharLedgerController;
+use App\Http\Controllers\API\WorkListController as ApiWorkListController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +46,9 @@ Route::post('payout/{code}', [PayoutLogController::class, 'payoutIpn'])->name('p
 
 Route::post('initiate/payment', [ApiController::class, 'store'])->name('payment.initiate');
 Route::post('verify/payment', [ApiController::class, 'verifyPayment'])->name('payment.verify');
+Route::get('/subscription/plans', [SubscriptionController::class, 'plans']);
+Route::post('/webhook/subscription/razorpay', [SubscriptionPaymentController::class, 'razorpayWebhook']);
+Route::post('/merchant/udhar/webhook/razorpay', [PaymentGatewayController::class, 'handleWebhook']);
 
 
 //Restful Api
@@ -125,6 +134,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
         });
 
         Route::post('transfer/check-recipient', [SendMoneyController::class,'checkRecipientApi']);
+
+        Route::controller(SubscriptionController::class)->prefix('merchant/subscription')->group(function () {
+            Route::get('/current', 'current');
+            Route::get('/history', 'paymentHistory');
+            Route::post('/checkout', 'createCheckout');
+            Route::post('/verify', 'verifyCheckout');
+            Route::post('/cancel-auto-renew', 'cancelAutoRenew');
+        });
+
+        Route::controller(ApiWorkListController::class)->prefix('merchant/work-list')->group(function () {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::put('/{id}', 'update');
+            Route::delete('/{id}', 'destroy');
+            Route::get('/sync', 'pullSync');
+            Route::post('/sync', 'pushSync');
+        });
+
+        Route::get('/merchant/udhar/contacts', [CustomerController::class, 'index']);
+        Route::post('/merchant/udhar/customers', [CustomerController::class, 'store']);
+        Route::put('/merchant/udhar/customers/{id}/credit-limit', [CustomerController::class, 'update']);
+        Route::delete('/merchant/udhar/customers/{id}', [CustomerController::class, 'destroy']);
+        Route::get('/merchant/udhar/customers/{customerId}/ledger', [UdharLedgerController::class, 'show']);
+        Route::post('/merchant/udhar/ledger', [UdharLedgerController::class, 'store']);
+        Route::post('/merchant/udhar/qr/generate', [PaymentGatewayController::class, 'generateQr']);
+        Route::get('/merchant/udhar/reports', [UdharLedgerController::class, 'reports']);
 
     });
 
@@ -262,6 +297,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     
     // Udhar Card Merchant Reminder
-    Route::post('/merchant/udhar/customers/{id}/remind', [\Modules\Merchant\Http\Controllers\Api\UdharController::class, 'sendAppReminder']);
+    Route::post('/merchant/udhar/customers/{id}/remind', [PaymentGatewayController::class, 'sendAppReminder']);
     
 });

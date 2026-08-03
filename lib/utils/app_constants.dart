@@ -84,6 +84,16 @@ class AppConstants {
   static const String sendReminderUrl = "/merchant/udhar/customers";
   static const String sendAppReminderUrl = "/merchant/udhar/customer"; // id/remind is appended in repo
   static const String generatePdfBillUrl = "/merchant/udhar/customers";
+  static const String udharReportsUrl = "/merchant/udhar/reports";
+  static const String workListUrl = "/merchant/work-list";
+  static const String workListSyncUrl = "/merchant/work-list/sync";
+
+  //----SUBSCRIPTION
+  static const String subscriptionPlansUrl = "/subscription/plans";
+  static const String subscriptionCurrentUrl = "/merchant/subscription/current";
+  static const String subscriptionHistoryUrl = "/merchant/subscription/history";
+  static const String subscriptionCheckoutUrl = "/merchant/subscription/checkout";
+  static const String subscriptionVerifyUrl = "/merchant/subscription/verify";
 }
 
 //----------IMAGE DIRECTORY---------//

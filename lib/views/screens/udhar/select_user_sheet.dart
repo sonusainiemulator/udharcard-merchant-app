@@ -8,7 +8,7 @@ import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
 import '../../widgets/app_button.dart';
-import 'add_customer_sheet.dart';
+import 'add_customer_screen.dart';
 
 /// A bottom sheet for picking a customer to attach to the udhar entry.
 class SelectUserSheet extends StatelessWidget {
@@ -86,9 +86,7 @@ class SelectUserSheet extends StatelessWidget {
                             controller.phoneCtrl.clear();
                             controller.emailCtrl.clear();
                             controller.limitCtrl.clear();
-                            final newCust = await showAddCustomerSheet(
-                              context: context,
-                              controller: controller,
+                            final newCust = await openAddCustomerScreen(
                               storedLanguage: storedLanguage,
                             );
                             if (newCust != null) {
@@ -164,13 +162,13 @@ class SelectUserSheet extends StatelessWidget {
                                       buttonWidth: 180.w,
                                       onTap: () async {
                                         final searchText = controller.searchCtrl.text.trim();
+                                        final cleanSearch = searchText.replaceAll(' ', '').replaceAll('-', '');
                                         controller.nameCtrl.clear();
                                         controller.phoneCtrl.clear();
                                         controller.emailCtrl.clear();
                                         controller.limitCtrl.clear();
 
                                         if (searchText.isNotEmpty) {
-                                          final cleanSearch = searchText.replaceAll(' ', '').replaceAll('-', '');
                                           if (RegExp(r'^\d+$').hasMatch(cleanSearch)) {
                                             controller.phoneCtrl.text = searchText;
                                           } else {
@@ -178,10 +176,14 @@ class SelectUserSheet extends StatelessWidget {
                                           }
                                         }
 
-                                        final newCust = await showAddCustomerSheet(
-                                          context: context,
-                                          controller: controller,
+                                        final newCust = await openAddCustomerScreen(
                                           storedLanguage: storedLanguage,
+                                          initialName: RegExp(r'^\d+$').hasMatch(cleanSearch)
+                                              ? null
+                                              : searchText,
+                                          initialPhone: RegExp(r'^\d+$').hasMatch(cleanSearch)
+                                              ? searchText
+                                              : null,
                                         );
                                         if (newCust != null) {
                                           controller.searchCtrl.clear();
