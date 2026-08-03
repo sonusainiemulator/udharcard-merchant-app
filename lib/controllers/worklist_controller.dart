@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:paysecure/data/models/worklist_model.dart';
 import 'package:paysecure/data/repositories/worklist_repo.dart';
+import 'package:paysecure/utils/services/helpers.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:paysecure/utils/services/localstorage/keys.dart';
 
@@ -19,7 +20,6 @@ class WorkListController extends GetxController {
        _nowProvider = nowProvider ?? DateTime.now;
 
   final List<WorkListItem> items = [];
-  final List<Map<String, dynamic>> offlineQueue = [];
   final Connectivity _connectivity;
   final DateTime Function() _nowProvider;
 
@@ -84,14 +84,10 @@ class WorkListController extends GetxController {
 
   Future<void> loadFromStorage() async {
     final rawItems = HiveHelp.read(Keys.workListItems);
-    final rawQueue = HiveHelp.read(Keys.workListOfflineQueue);
 
     items
       ..clear()
       ..addAll(_decodeItems(rawItems));
-    offlineQueue
-      ..clear()
-      ..addAll(_decodeQueue(rawQueue));
 
     _sortInPlace(items);
     isLoaded = true;
@@ -99,14 +95,56 @@ class WorkListController extends GetxController {
   }
 
   Future<void> fetchWorkItems() async {
-    await loadFromStorage();
     await checkConnection();
     if (isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Realtime work list sync is unavailable.');
       update();
       return;
     }
 
-    await syncWorkItems();
+    isSyncing = true;
+    update();
+    try {
+      final response = await WorkListRepo.getItems();
+      final data = _decodeJsonMap(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        final payload = data?['data'];
+        final rawItems =
+            (payload is Map<String, dynamic>) ? payload['items'] : null;
+        final remoteItems = (rawItems is List)
+            ? rawItems
+                .whereType<Map>()
+                .map(
+                  (entry) => WorkListItem.fromJson(
+                    Map<String, dynamic>.from(entry.cast<dynamic, dynamic>()),
+                  ).copyWith(isSynced: true),
+                )
+                .toList()
+            : <WorkListItem>[];
+
+        items
+          ..clear()
+          ..addAll(_sortItems(remoteItems));
+        isLoaded = true;
+        HiveHelp.write(
+          Keys.workListItems,
+          items.map((item) => item.toJson()).toList(),
+        );
+      } else {
+        final msg = data?['message']?.toString().trim();
+        Helpers.showSnackBar(
+          msg:
+              (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Unable to fetch realtime work list.',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to fetch realtime work list.');
+    } finally {
+      isSyncing = false;
+      update();
+    }
   }
 
   Future<void> checkConnection() async {
@@ -127,65 +165,9 @@ class WorkListController extends GetxController {
   }
 
   Future<void> saveItem(WorkListItem item) async {
-    final existingIndex = items.indexWhere((element) => element.id == item.id);
-    final itemToSave = item.copyWith(
-      updatedAt: _nowProvider(),
-      isSynced: false,
-    );
-    if (existingIndex >= 0) {
-      items[existingIndex] = itemToSave;
-    } else {
-      items.add(itemToSave);
-    }
-
-    _sortInPlace(items);
-    _queueOperation('upsert', itemToSave.id, payload: itemToSave.toJson());
-    await _persist();
-    update();
-    if (!isOffline) {
-      await syncWorkItems();
-    }
-  }
-
-  Future<void> toggleCompletion(String id, bool isCompleted) async {
-    final index = items.indexWhere((element) => element.id == id);
-    if (index < 0) return;
-
-    final current = items[index];
-    final updated = current.copyWith(
-      status: isCompleted ? WorkListItem.statusCompleted : WorkListItem.statusPending,
-      updatedAt: _nowProvider(),
-      isSynced: false,
-    );
-
-    items[index] = updated;
-    _sortInPlace(items);
-    _queueOperation('upsert', updated.id, payload: updated.toJson());
-    await _persist();
-    update();
-    if (!isOffline) {
-      await syncWorkItems();
-    }
-  }
-
-  Future<void> deleteItem(String id) async {
-    final index = items.indexWhere((element) => element.id == id);
-    if (index < 0) return;
-
-    items.removeAt(index);
-    _queueOperation('delete', id);
-    await _persist();
-    update();
-    if (!isOffline) {
-      await syncWorkItems();
-    }
-  }
-
-  Future<void> syncWorkItems() async {
-    if (isSyncing) return;
     await checkConnection();
     if (isOffline) {
-      update();
+      Helpers.showSnackBar(msg: 'No internet. Saving tasks requires live sync.');
       return;
     }
 
@@ -193,14 +175,124 @@ class WorkListController extends GetxController {
     update();
 
     try {
-      if (offlineQueue.isNotEmpty) {
-        await _pushQueuedChanges();
+      final payload = {
+        'title': item.title,
+        'note': item.note,
+        'due_date': item.dueDate.toIso8601String(),
+        'status': item.status,
+        'priority': item.priority,
+        'customer_id': item.customerId,
+      };
+
+      final bool isServerId = int.tryParse(item.id) != null;
+      final http.Response response = isServerId
+          ? await WorkListRepo.updateItem(itemId: item.id, payload: payload)
+          : await WorkListRepo.createItem(
+              payload: {...payload, 'client_local_id': item.id},
+            );
+
+      final data = _decodeJsonMap(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        await fetchWorkItems();
+      } else {
+        final msg = data?['message']?.toString().trim();
+        Helpers.showSnackBar(
+          msg:
+              (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Unable to save task in realtime.',
+        );
       }
-      await _pullLatestChanges();
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to save task in realtime.');
     } finally {
       isSyncing = false;
       update();
     }
+  }
+
+  Future<void> toggleCompletion(String id, bool isCompleted) async {
+    final index = items.indexWhere((element) => element.id == id);
+    if (index < 0) return;
+
+    await checkConnection();
+    if (isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Status update requires live sync.');
+      return;
+    }
+
+    final current = items[index];
+    final payload = {
+      'title': current.title,
+      'note': current.note,
+      'due_date': current.dueDate.toIso8601String(),
+      'status':
+          isCompleted
+              ? WorkListItem.statusCompleted
+              : WorkListItem.statusPending,
+      'priority': current.priority,
+      'customer_id': current.customerId,
+    };
+
+    try {
+      final response = await WorkListRepo.updateItem(itemId: id, payload: payload);
+      final data = _decodeJsonMap(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        await fetchWorkItems();
+      } else {
+        final msg = data?['message']?.toString().trim();
+        Helpers.showSnackBar(
+          msg:
+              (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Unable to update task status.',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to update task status.');
+    }
+  }
+
+  Future<void> deleteItem(String id) async {
+    await checkConnection();
+    if (isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Delete requires live sync.');
+      return;
+    }
+
+    try {
+      final response = await WorkListRepo.deleteItem(itemId: id);
+      final data = _decodeJsonMap(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        items.removeWhere((element) => element.id == id);
+        await _persist();
+        update();
+      } else {
+        final msg = data?['message']?.toString().trim();
+        Helpers.showSnackBar(
+          msg:
+              (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Unable to delete task.',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to delete task.');
+    }
+  }
+
+  Future<void> syncWorkItems() async {
+    await fetchWorkItems();
+  }
+
+  Map<String, dynamic>? _decodeJsonMap(String input) {
+    try {
+      final dynamic parsed = jsonDecode(input);
+      if (parsed is Map<String, dynamic>) {
+        return parsed;
+      }
+    } catch (_) {}
+    return null;
   }
 
   String createLocalId() {
@@ -212,179 +304,6 @@ class WorkListController extends GetxController {
       Keys.workListItems,
       items.map((item) => item.toJson()).toList(),
     );
-    HiveHelp.write(Keys.workListOfflineQueue, offlineQueue);
-  }
-
-  void _queueOperation(
-    String action,
-    String itemId, {
-    Map<String, dynamic>? payload,
-  }) {
-    offlineQueue.removeWhere((entry) => entry['item_id']?.toString() == itemId);
-    offlineQueue.add({
-      'action': action,
-      'item_id': itemId,
-      'payload': payload,
-      'queued_at': _nowProvider().toIso8601String(),
-    });
-  }
-
-  Future<void> _pushQueuedChanges() async {
-    final upserts = <Map<String, dynamic>>[];
-    final deletes = <String>[];
-
-    for (final entry in offlineQueue) {
-      final action = entry['action']?.toString();
-      final itemId = entry['item_id']?.toString();
-      if (action == null || itemId == null || itemId.isEmpty) {
-        continue;
-      }
-
-      if (action == 'delete') {
-        deletes.add(itemId);
-        continue;
-      }
-
-      final payload = entry['payload'];
-      if (payload is Map) {
-        final upsertPayload = Map<String, dynamic>.from(payload.cast<dynamic, dynamic>());
-        upsertPayload['local_id'] = itemId;
-        upserts.add(upsertPayload);
-      }
-    }
-
-    if (upserts.isEmpty && deletes.isEmpty) {
-      return;
-    }
-
-    final http.Response response = await WorkListRepo.pushSync(
-      upserts: upserts,
-      deletes: deletes,
-    );
-    if (response.statusCode != 200) {
-      return;
-    }
-
-    final data = jsonDecode(response.body);
-    if (data['status'] != 'success') {
-      return;
-    }
-
-    final syncedItems = (data['data']?['synced_items'] as List?) ?? const [];
-    for (final raw in syncedItems.whereType<Map>()) {
-      final syncedEntry = Map<String, dynamic>.from(raw.cast<dynamic, dynamic>());
-      final localId = syncedEntry['local_id']?.toString();
-      final serverItemRaw = syncedEntry['item'];
-      if (localId == null || serverItemRaw is! Map) {
-        continue;
-      }
-
-      final serverItem = WorkListItem.fromJson(
-        Map<String, dynamic>.from(serverItemRaw.cast<dynamic, dynamic>()),
-      ).copyWith(isSynced: true);
-
-      final itemIndex = items.indexWhere(
-        (item) => item.id == localId || item.id == serverItem.id,
-      );
-      if (itemIndex >= 0) {
-        items[itemIndex] = serverItem;
-      } else {
-        items.add(serverItem);
-      }
-
-      offlineQueue.removeWhere(
-        (entry) => entry['action']?.toString() == 'upsert' &&
-            (entry['item_id']?.toString() == localId ||
-                entry['item_id']?.toString() == serverItem.id),
-      );
-    }
-
-    final deletedIds = (data['data']?['deleted_ids'] as List?) ?? const [];
-    for (final rawId in deletedIds) {
-      final deletedId = rawId.toString();
-      offlineQueue.removeWhere(
-        (entry) => entry['action']?.toString() == 'delete' &&
-            entry['item_id']?.toString() == deletedId,
-      );
-    }
-
-    _sortInPlace(items);
-    await _persist();
-  }
-
-  Future<void> _pullLatestChanges() async {
-    final lastSyncTime =
-        (HiveHelp.read(Keys.workListLastSyncAt) ?? '1970-01-01 00:00:00').toString();
-
-    final http.Response response = await WorkListRepo.pullSync(
-      lastSyncTime: lastSyncTime,
-    );
-    if (response.statusCode != 200) {
-      return;
-    }
-
-    final data = jsonDecode(response.body);
-    if (data['status'] != 'success') {
-      return;
-    }
-
-    final payload = data['data'] as Map<String, dynamic>? ?? {};
-    final remoteItems = ((payload['items'] as List?) ?? const [])
-        .whereType<Map>()
-        .map(
-          (entry) => WorkListItem.fromJson(
-            Map<String, dynamic>.from(entry.cast<dynamic, dynamic>()),
-          ).copyWith(isSynced: true),
-        )
-        .toList();
-
-    final deletedIds = ((payload['deleted_ids'] as List?) ?? const [])
-        .map((entry) => entry.toString())
-        .toSet();
-
-    final mergedItems = _mergeRemoteItems(remoteItems, deletedIds);
-    items
-      ..clear()
-      ..addAll(mergedItems);
-
-    HiveHelp.write(
-      Keys.workListLastSyncAt,
-      (payload['last_sync_time'] ?? _nowProvider().toIso8601String()).toString(),
-    );
-    await _persist();
-    update();
-  }
-
-  List<WorkListItem> _mergeRemoteItems(
-    List<WorkListItem> remoteItems,
-    Set<String> deletedIds,
-  ) {
-    final merged = <WorkListItem>[];
-    final remoteIds = <String>{};
-
-    for (final item in remoteItems) {
-      if (deletedIds.contains(item.id)) {
-        continue;
-      }
-      merged.add(item.copyWith(isSynced: true));
-      remoteIds.add(item.id);
-    }
-
-    for (final item in items) {
-      if (deletedIds.contains(item.id)) {
-        continue;
-      }
-
-      final hasQueuedChange = offlineQueue.any(
-        (entry) => entry['item_id']?.toString() == item.id,
-      );
-      if ((hasQueuedChange || !item.isSynced) && !remoteIds.contains(item.id)) {
-        merged.add(item);
-      }
-    }
-
-    _sortInPlace(merged);
-    return merged;
   }
 
   List<WorkListItem> _decodeItems(dynamic rawItems) {
@@ -397,15 +316,6 @@ class WorkListController extends GetxController {
             Map<String, dynamic>.from(entry.cast<dynamic, dynamic>()),
           ),
         )
-        .toList();
-  }
-
-  List<Map<String, dynamic>> _decodeQueue(dynamic rawQueue) {
-    if (rawQueue is! List) return <Map<String, dynamic>>[];
-
-    return rawQueue
-        .whereType<Map>()
-        .map((entry) => Map<String, dynamic>.from(entry.cast<dynamic, dynamic>()))
         .toList();
   }
 

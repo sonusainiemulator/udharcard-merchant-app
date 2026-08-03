@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'udhar_controller.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/helpers.dart';
 import '../routes/routes_name.dart';
@@ -350,10 +351,15 @@ User's speech: "$_transcribedText"
 
   String _calculateBalanceReply(String? targetName) {
     try {
-      final cached = HiveHelp.read('cached_users');
       List<dynamic> users = [];
-      if (cached != null && cached is List) {
-        users = cached;
+      if (Get.isRegistered<UdharController>()) {
+        users = List<dynamic>.from(Get.find<UdharController>().usersList);
+      }
+      if (users.isEmpty) {
+        final cached = HiveHelp.read('cached_users');
+        if (cached != null && cached is List) {
+          users = cached;
+        }
       }
 
       // Check if asking for a specific customer

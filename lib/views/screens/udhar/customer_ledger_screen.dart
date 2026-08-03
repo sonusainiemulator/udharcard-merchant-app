@@ -134,7 +134,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                               ),
                               HSpace(6.w),
                               Text(
-                                'Offline - Cached Data',
+                                'Offline - Realtime Sync Paused',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12.sp,
@@ -236,6 +236,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'WhatsApp',
                                 icon: Icons.chat,
                                 color: const Color(0xFF25D366),
+                                enabled: !controller.isOffline,
                                 onTap: () => controller.sendWhatsAppReminder({
                                   'name': widget.customerName,
                                   'mobile': controller.selectedUser?['mobile'] ?? controller.selectedUser?['phone'] ?? widget.customerId,
@@ -249,6 +250,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'PDF Bill',
                                 icon: Icons.picture_as_pdf_outlined,
                                 color: Colors.deepOrangeAccent,
+                                enabled: !controller.isOffline,
                                 onTap: () => _showPdfBillModal(context, widget.customerId),
                               ),
                             ),
@@ -258,6 +260,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'Remind',
                                 icon: Icons.notifications_active_outlined,
                                 color: Colors.green,
+                                enabled: !controller.isOffline,
                                 onTap:
                                     () => _showReminderOptions(context, balance, storedLanguage),
                               ),
@@ -268,6 +271,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'UPI QR',
                                 icon: Icons.qr_code_scanner,
                                 color: AppColors.mainColor,
+                                enabled: !controller.isOffline,
                                 onTap: () => _showQrDialog(context, balance),
                               ),
                             ),
@@ -464,7 +468,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: controller.isOffline
+                          ? null
+                          : () {
                         final userMap = controller.usersList.firstWhere(
                           (u) => u['id'].toString() == widget.customerId,
                           orElse:
@@ -502,7 +508,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: controller.isOffline
+                          ? null
+                          : () {
                         final userMap = controller.usersList.firstWhere(
                           (u) => u['id'].toString() == widget.customerId,
                           orElse:
@@ -521,6 +529,20 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
               ),
             ),
           ),
+          persistentFooterButtons: controller.isOffline
+              ? [
+                  Center(
+                    child: Text(
+                      'Internet required to add transactions and send reminders.',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: AppColors.black50,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ]
+              : null,
         );
       },
     );
@@ -1027,36 +1049,49 @@ class _QuickActionBtn extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.enabled = true,
   });
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: enabled ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withValues(alpha: enabled ? 0.2 : 0.12)),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 20.sp),
+            Icon(icon, color: color.withValues(alpha: enabled ? 1 : 0.45), size: 20.sp),
             VSpace(4.h),
             Text(
               label,
               style: TextStyle(
                 fontSize: 11.sp,
                 fontWeight: FontWeight.bold,
-                color: color,
+                color: color.withValues(alpha: enabled ? 1 : 0.45),
               ),
             ),
+            if (!enabled) ...[
+              VSpace(2.h),
+              Text(
+                'Needs internet',
+                style: TextStyle(
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black50,
+                ),
+              ),
+            ],
           ],
         ),
       ),

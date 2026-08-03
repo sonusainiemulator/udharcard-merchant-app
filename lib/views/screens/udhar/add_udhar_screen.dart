@@ -49,6 +49,28 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
               children: [
                 VSpace(8.h),
 
+                if (controller.isOffline)
+                  Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 14.h),
+                    padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 10.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Text(
+                      'No internet. Adding transaction requires realtime sync.',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFB91C1C),
+                      ),
+                    ),
+                  ),
+
                 // ── Transaction type toggle ────────────────────────
                 _SectionLabel(
                   text:
@@ -137,8 +159,12 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                       storedLanguage['Add Udhar Transaction'] ??
                       'Add Udhar Transaction',
                   isLoading: controller.isSubmitting,
-                  bgColor: AppColors.mainColor,
-                  onTap: () {
+                  bgColor: controller.isOffline
+                      ? AppColors.mainColor.withValues(alpha: 0.55)
+                      : AppColors.mainColor,
+                  onTap: controller.isOffline
+                      ? null
+                      : () {
                     FocusScope.of(context).unfocus();
                     controller.submitUdhar();
                   },

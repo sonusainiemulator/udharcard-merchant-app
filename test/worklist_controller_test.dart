@@ -2,16 +2,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:paysecure/controllers/worklist_controller.dart';
 import 'package:paysecure/data/models/worklist_model.dart';
 
+class TestWorkListController extends WorkListController {
+  TestWorkListController({required DateTime Function() nowProvider})
+      : super(nowProvider: nowProvider);
+
+  @override
+  Future<void> checkConnection() async {
+    // Tests control connectivity state directly via `isOffline`.
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('WorkListController', () {
     late DateTime now;
-    late WorkListController controller;
+    late TestWorkListController controller;
 
     setUp(() {
       now = DateTime(2026, 8, 3, 9, 0);
-      controller = WorkListController(nowProvider: () => now);
+      controller = TestWorkListController(nowProvider: () => now);
       controller.isOffline = true;
     });
 
@@ -39,23 +49,19 @@ void main() {
     }
 
     test('groups items into overdue, today, tomorrow, upcoming, and completed buckets', () async {
-      await controller.saveItem(
-        buildItem(id: '1', dueDate: now.subtract(const Duration(days: 1))),
-      );
-      await controller.saveItem(buildItem(id: '2', dueDate: now));
-      await controller.saveItem(
-        buildItem(id: '3', dueDate: now.add(const Duration(days: 1))),
-      );
-      await controller.saveItem(
-        buildItem(id: '4', dueDate: now.add(const Duration(days: 3))),
-      );
-      await controller.saveItem(
-        buildItem(
-          id: '5',
-          dueDate: now,
-          status: WorkListItem.statusCompleted,
-        ),
-      );
+      controller.items
+        ..clear()
+        ..addAll([
+          buildItem(id: '1', dueDate: now.subtract(const Duration(days: 1))),
+          buildItem(id: '2', dueDate: now),
+          buildItem(id: '3', dueDate: now.add(const Duration(days: 1))),
+          buildItem(id: '4', dueDate: now.add(const Duration(days: 3))),
+          buildItem(
+            id: '5',
+            dueDate: now,
+            status: WorkListItem.statusCompleted,
+          ),
+        ]);
 
       expect(controller.overdueItems.map((item) => item.id), ['1']);
       expect(controller.todayItems.map((item) => item.id), ['2']);
@@ -67,18 +73,11 @@ void main() {
       expect(controller.pendingSummaryText, '4 pending items');
     });
 
-    test('saveItem queues one upsert per task and updates existing entries in place', () async {
+    test('saveItem does not mutate local items when offline in realtime mode', () async {
       final original = buildItem(id: 'local_task_1', dueDate: now);
       await controller.saveItem(original);
-      await controller.saveItem(
-        original.copyWith(title: 'Updated title', note: 'Updated note'),
-      );
 
-      expect(controller.items, hasLength(1));
-      expect(controller.items.first.title, 'Updated title');
-      expect(controller.offlineQueue, hasLength(1));
-      expect(controller.offlineQueue.first['action'], 'upsert');
-      expect(controller.offlineQueue.first['item_id'], 'local_task_1');
+      expect(controller.items, isEmpty);
     });
   });
 

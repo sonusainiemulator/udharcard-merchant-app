@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../controllers/subscription_controller.dart';
 import '../../../routes/page_index.dart';
+import '../../widgets/custom_appbar.dart';
 
 class SubscriptionPlansScreen extends StatelessWidget {
   const SubscriptionPlansScreen({super.key});
@@ -12,8 +13,8 @@ class SubscriptionPlansScreen extends StatelessWidget {
       init: SubscriptionController.to,
       builder: (controller) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Choose a Plan'),
+          appBar: CustomAppBar(
+            title: 'Choose a Plan',
             actions: [
               if (!controller.isPlanEnrollmentRequired)
                 TextButton(

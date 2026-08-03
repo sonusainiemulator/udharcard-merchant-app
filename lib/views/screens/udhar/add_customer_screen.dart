@@ -7,6 +7,7 @@ import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
+import '../../../utils/services/helpers.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
 
@@ -14,9 +15,15 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
   required Map storedLanguage,
   String? initialName,
   String? initialPhone,
-}) {
+}) async {
   if (Get.isRegistered<UdharController>()) {
-    Get.find<UdharController>().showCustomerLimitNudgeIfNeeded();
+    final ctrl = Get.find<UdharController>();
+    await ctrl.checkConnection();
+    if (ctrl.isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Adding customers requires realtime sync.');
+      return null;
+    }
+    ctrl.showCustomerLimitNudgeIfNeeded();
   }
 
   return Get.toNamed<Map<String, dynamic>?>(
@@ -88,7 +95,13 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           surfaceTintColor: backgroundColor,
           elevation: 0,
           leading: IconButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Get.back();
+              }
+            },
             icon: Icon(
               Icons.arrow_back_ios_new_rounded,
               color: isDark ? Colors.white : AppColors.blackColor,
@@ -182,41 +195,59 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 14.h,
           ),
           child: GetBuilder<UdharController>(
-            builder: (ctrl) => SizedBox(
-              height: 52.h,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _accentColor,
-                  disabledBackgroundColor: _accentColor.withValues(alpha: 0.55),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(7.r),
+            builder: (ctrl) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (ctrl.isOffline)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 6.h),
+                    child: Text(
+                      'Internet required to save customer.',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black50,
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  height: 52.h,
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _accentColor,
+                      disabledBackgroundColor: _accentColor.withValues(alpha: 0.55),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(7.r),
+                      ),
+                    ),
+                    onPressed: (ctrl.isAddingCustomer || ctrl.isOffline)
+                        ? null
+                        : () {
+                            FocusScope.of(context).unfocus();
+                            ctrl.addCustomer();
+                          },
+                    child: ctrl.isAddingCustomer
+                        ? SizedBox(
+                            height: 22.h,
+                            width: 22.h,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Save',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   ),
                 ),
-                onPressed: ctrl.isAddingCustomer
-                    ? null
-                    : () {
-                        FocusScope.of(context).unfocus();
-                        ctrl.addCustomer();
-                      },
-                child: ctrl.isAddingCustomer
-                    ? SizedBox(
-                        height: 22.h,
-                        width: 22.h,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        'Save',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 19.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
+              ],
             ),
           ),
         ),
@@ -275,7 +306,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                   ),
                   HSpace(7.w),
                   Text(
-                    '+880',
+                    '+91',
                     style: context.t.bodyMedium?.copyWith(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w600,

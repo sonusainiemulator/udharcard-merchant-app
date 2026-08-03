@@ -176,29 +176,14 @@ class UdharController extends GetxController {
   Future<void> fetchUsers() async {
     if (isUsersLoading) return;
 
-    // Load from cache first to avoid blank screen / flickering
-    final cached = HiveHelp.read('cached_users');
-    if (cached != null && cached is List && cached.isNotEmpty) {
-      usersList = List<dynamic>.from(cached);
-      filteredUsers = List.from(usersList);
-    }
-
-    if (usersList.isEmpty) {
-      isUsersLoading = true;
-      update();
-    }
+    isUsersLoading = true;
+    update();
 
     await checkConnection();
 
     if (isOffline) {
-      if (cached != null) {
-        usersList = List<dynamic>.from(cached);
-      } else {
-        usersList = [];
-        HiveHelp.write('cached_users', usersList);
-      }
+      Helpers.showSnackBar(msg: 'No internet. Unable to fetch latest customers.');
     } else {
-      syncOfflineTransactions();
       try {
         final response = await UdharRepo.getUsers();
         if (response.statusCode == 200) {
@@ -219,31 +204,23 @@ class UdharController extends GetxController {
             } else {
               usersList = [];
             }
-            HiveHelp.write('cached_users', usersList);
           } else {
-            _setUsersFromCacheOrEmpty();
+            final msg = data['message']?.toString().trim();
+            if (msg != null && msg.isNotEmpty) {
+              Helpers.showSnackBar(msg: msg);
+            }
           }
         } else {
-          _setUsersFromCacheOrEmpty();
+          Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
         }
       } catch (_) {
-        _setUsersFromCacheOrEmpty();
+        Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
       }
     }
 
     filteredUsers = List.from(usersList);
     isUsersLoading = false;
     update();
-  }
-
-  void _setUsersFromCacheOrEmpty() {
-    final cached = HiveHelp.read('cached_users');
-    if (cached != null) {
-      usersList = List<dynamic>.from(cached);
-    } else {
-      usersList = [];
-      HiveHelp.write('cached_users', usersList);
-    }
   }
 
   void searchUsers(String query) {
@@ -278,7 +255,8 @@ class UdharController extends GetxController {
 
   Future<Map<String, dynamic>?> addCustomer() async {
     final String name = nameCtrl.text.trim();
-    final String phone = phoneCtrl.text.trim().replaceAll(' ', '');
+    final String phone =
+      phoneCtrl.text.trim().replaceAll(RegExp(r'[^0-9]'), '');
     final String email = emailCtrl.text.trim();
     final String creditLimit =
         limitCtrl.text.trim().isEmpty ? "5000" : limitCtrl.text.trim();
@@ -292,7 +270,7 @@ class UdharController extends GetxController {
       return null;
     }
 
-    if (phone.length < 10) {
+    if (phone.length < 10 || phone.length > 15) {
       Helpers.showSnackBar(msg: 'Please enter a valid phone number');
       return null;
     }
@@ -327,18 +305,7 @@ class UdharController extends GetxController {
     Map<String, dynamic>? resultCustomer;
 
     if (isOffline) {
-      resultCustomer = _queueOfflineCustomer(
-        name: name,
-        phone: phone,
-        email: email,
-        creditLimit: parsedLimit,
-        openingBalance: parsedOpeningBalance,
-      );
-      _resetCustomerForm();
-      Helpers.showSnackBar(
-        msg: 'Customer saved offline. Will sync when internet is back.',
-      );
-      if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
+      Helpers.showSnackBar(msg: 'No internet. Customer add requires live sync.');
     } else {
       try {
         final response = await UdharRepo.addCustomer(
@@ -350,7 +317,8 @@ class UdharController extends GetxController {
         );
 
         final Map<String, dynamic>? data = _decodeJsonMap(response.body);
-        if (response.statusCode == 200 && data?['status'] == 'success') {
+        final bool isSuccess = _isApiSuccess(response.statusCode, data);
+        if (isSuccess) {
           _showEntitlementWarningIfAny(data);
           Helpers.showSnackBar(
             msg: data?['message'] ?? 'Customer added successfully',
@@ -360,40 +328,51 @@ class UdharController extends GetxController {
           }
           _resetCustomerForm();
           await fetchUsers();
-          if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
+          _closeAddCustomerScreen(resultCustomer);
         } else {
-          resultCustomer = _queueOfflineCustomer(
-            name: name,
-            phone: phone,
-            email: email,
-            creditLimit: parsedLimit,
-            openingBalance: parsedOpeningBalance,
-          );
-          _resetCustomerForm();
+          final String apiMessage = _extractApiMessage(data, response.body);
           Helpers.showSnackBar(
-            msg: 'Customer saved offline. Backend sync pending.',
+            msg:
+                apiMessage.isNotEmpty
+                    ? apiMessage
+                    : 'Unable to add customer. Please verify details and try again.',
           );
-          if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
         }
       } catch (_) {
-        resultCustomer = _queueOfflineCustomer(
-          name: name,
-          phone: phone,
-          email: email,
-          creditLimit: parsedLimit,
-          openingBalance: parsedOpeningBalance,
-        );
-        _resetCustomerForm();
         Helpers.showSnackBar(
-          msg: 'Customer saved offline. Backend sync pending.',
+          msg: 'Unable to add customer. Please try again.',
         );
-        if (Get.context != null) Navigator.of(Get.context!).pop(resultCustomer);
       }
     }
 
     isAddingCustomer = false;
     update();
     return resultCustomer;
+  }
+
+  bool _isApiSuccess(int statusCode, Map<String, dynamic>? data) {
+    if (statusCode < 200 || statusCode >= 300) return false;
+    final dynamic status = data?['status'];
+    if (status == null) return true;
+    if (status is bool) return status;
+    return status.toString().toLowerCase() == 'success';
+  }
+
+  String _extractApiMessage(Map<String, dynamic>? data, String rawBody) {
+    final String fromData = data?['message']?.toString().trim() ?? '';
+    if (fromData.isNotEmpty) return fromData;
+
+    final String plain = rawBody.trim();
+    if (plain.isNotEmpty && !plain.startsWith('{') && !plain.startsWith('[')) {
+      return plain;
+    }
+    return '';
+  }
+
+  void _closeAddCustomerScreen(Map<String, dynamic>? resultCustomer) {
+    if (Get.key.currentState?.canPop() ?? false) {
+      Get.back(result: resultCustomer);
+    }
   }
 
   void _resetCustomerForm() {
@@ -404,51 +383,7 @@ class UdharController extends GetxController {
     openingBalanceCtrl.clear();
   }
 
-  Map<String, dynamic> _queueOfflineCustomer({
-    required String name,
-    required String phone,
-    required String email,
-    required double creditLimit,
-    required double openingBalance,
-  }) {
-    final localCustId = 'local_cust_${DateTime.now().millisecondsSinceEpoch}';
-    final List<dynamic> queue = List<dynamic>.from(
-      HiveHelp.read('offline_customers_queue') ?? [],
-    );
-
-    queue.add({
-      'local_id': localCustId,
-      'name': name,
-      'phone': phone,
-      'email': email,
-      'credit_limit': creditLimit,
-      'opening_balance': openingBalance,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-    HiveHelp.write('offline_customers_queue', queue);
-
-    final customerMap = {
-      "id": localCustId,
-      "name": name,
-      "email": email,
-      "phone": phone,
-      "outstanding_balance": openingBalance,
-      "credit_limit": creditLimit,
-    };
-
-    usersList.insert(0, customerMap);
-    filteredUsers = List.from(usersList);
-    HiveHelp.write('cached_users', usersList);
-    update();
-    return customerMap;
-  }
-
   Future<void> deleteCustomer(String id) async {
-    if (id.startsWith('local_cust_')) {
-      _deleteLocalQueuedCustomer(id);
-      return;
-    }
-
     await checkConnection();
     if (isOffline) {
       Helpers.showSnackBar(
@@ -489,10 +424,9 @@ class UdharController extends GetxController {
     isUpdatingLimit = true;
     update();
 
-    // Local-only customer: update directly in cache and pending create queue.
-    if (customerId.startsWith('local_cust_')) {
-      _applyCreditLimitToLocal(customerId: customerId, newLimit: parsed);
-      Helpers.showSnackBar(msg: 'Credit limit updated for offline customer.');
+    await checkConnection();
+    if (isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Credit limit update requires live sync.');
       isUpdatingLimit = false;
       update();
       return;
@@ -504,18 +438,13 @@ class UdharController extends GetxController {
         creditLimit: parsed.toStringAsFixed(2),
       );
       final data = _decodeJsonMap(response.body) ?? {};
-      final bool queued = data['queued'] == true;
       final bool isSuccess =
-          response.statusCode == 200 &&
-          (data['status'] == 'success' || queued == true);
+          response.statusCode == 200 && data['status'] == 'success';
 
       if (isSuccess) {
         _applyCreditLimitToLocal(customerId: customerId, newLimit: parsed);
         Helpers.showSnackBar(
-          msg:
-              queued
-                  ? 'Credit limit updated offline. Backend sync pending.'
-                  : (data['message']?.toString() ?? 'Credit limit updated.'),
+          msg: data['message']?.toString() ?? 'Credit limit updated.',
         );
       } else {
         final fallbackMsg = data['message']?.toString();
@@ -560,36 +489,6 @@ class UdharController extends GetxController {
         (selectedUser != null ? selectedUser!['id']?.toString() : null)) {
       currentCreditLimit = newLimit;
     }
-
-    // Keep offline create queue in sync when editing a local-only customer.
-    if (customerId.startsWith('local_cust_')) {
-      final List<dynamic> queue = List<dynamic>.from(
-        HiveHelp.read('offline_customers_queue') ?? [],
-      );
-      final qIndex = queue.indexWhere(
-        (e) => e is Map && e['local_id']?.toString() == customerId,
-      );
-      if (qIndex != -1) {
-        final item = Map<String, dynamic>.from(queue[qIndex]);
-        item['credit_limit'] = newLimit;
-        queue[qIndex] = item;
-        HiveHelp.write('offline_customers_queue', queue);
-      }
-    }
-  }
-
-  void _deleteLocalQueuedCustomer(String id) {
-    final List<dynamic> queue = List<dynamic>.from(
-      HiveHelp.read('offline_customers_queue') ?? [],
-    );
-    queue.removeWhere((item) => item['local_id']?.toString() == id);
-    HiveHelp.write('offline_customers_queue', queue);
-
-    usersList.removeWhere((u) => u['id'].toString() == id);
-    filteredUsers = List.from(usersList);
-    HiveHelp.write('cached_users', usersList);
-    Helpers.showSnackBar(msg: 'Customer deleted successfully');
-    update();
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -599,46 +498,14 @@ class UdharController extends GetxController {
   Future<void> fetchCustomerLedger(String customerId, {bool showLoading = true}) async {
     if (isLedgerLoading) return;
 
-    // Load from cache first to avoid blank screen / flickering
-    final cached = HiveHelp.read('cached_ledger_$customerId');
-    if (cached != null) {
-      ledgerTransactions = List<dynamic>.from(cached['transactions'] ?? []);
-      currentOutstandingBalance =
-          double.tryParse(cached['outstanding_balance']?.toString() ?? '0') ??
-          0.0;
-      currentCreditLimit =
-          double.tryParse(cached['credit_limit']?.toString() ?? '5000') ??
-          5000.0;
-      _applyLedgerDateFilter();
-    }
-
-    if (showLoading && ledgerTransactions.isEmpty) {
+    if (showLoading) {
       isLedgerLoading = true;
       update();
     }
     await checkConnection();
 
-    // Local/offline-created customers do not exist on server yet.
-    if (customerId.startsWith('local_cust_')) {
-      _loadLedgerFromLocalOrEmpty(customerId);
-      _applyLedgerDateFilter();
-      isLedgerLoading = false;
-      update();
-      return;
-    }
-
     if (isOffline) {
-      if (cached != null) {
-        ledgerTransactions = List<dynamic>.from(cached['transactions'] ?? []);
-        currentOutstandingBalance =
-            double.tryParse(cached['outstanding_balance']?.toString() ?? '0') ??
-            0.0;
-        currentCreditLimit =
-            double.tryParse(cached['credit_limit']?.toString() ?? '5000') ??
-            5000.0;
-      } else {
-        _loadLedgerFromLocalOrEmpty(customerId);
-      }
+      Helpers.showSnackBar(msg: 'No internet. Unable to fetch latest ledger.');
     } else {
       try {
         final response = await UdharRepo.getCustomerLedger(
@@ -675,19 +542,17 @@ class UdharController extends GetxController {
                 payload['credit_limit']?.toString() ?? '5000'
               ) ?? 5000.0;
             }
-            HiveHelp.write('cached_ledger_$customerId', {
-              'transactions': ledgerTransactions,
-              'outstanding_balance': currentOutstandingBalance,
-              'credit_limit': currentCreditLimit,
-            });
           } else {
-            _loadLedgerFromLocalOrEmpty(customerId);
+            final msg = data['message']?.toString().trim();
+            if (msg != null && msg.isNotEmpty) {
+              Helpers.showSnackBar(msg: msg);
+            }
           }
         } else {
-          _loadLedgerFromLocalOrEmpty(customerId);
+          Helpers.showSnackBar(msg: 'Unable to fetch latest ledger.');
         }
       } catch (_) {
-        _loadLedgerFromLocalOrEmpty(customerId);
+        Helpers.showSnackBar(msg: 'Unable to fetch latest ledger.');
       }
     }
 
@@ -704,23 +569,6 @@ class UdharController extends GetxController {
       }
     } catch (_) {}
     return null;
-  }
-
-  void _loadLedgerFromLocalOrEmpty(String customerId) {
-    final cust = usersList.firstWhere(
-      (u) => u['id'].toString() == customerId,
-      orElse: () => null,
-    );
-    if (cust != null) {
-      currentOutstandingBalance =
-          double.tryParse(cust['outstanding_balance']?.toString() ?? '0') ??
-          0.0;
-      currentCreditLimit =
-          double.tryParse(cust['credit_limit']?.toString() ?? '5000') ?? 5000.0;
-    }
-
-    final cached = HiveHelp.read('cached_ledger_$customerId');
-    ledgerTransactions = List<dynamic>.from(cached?['transactions'] ?? []);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -756,11 +604,6 @@ class UdharController extends GetxController {
     update();
     await checkConnection();
 
-    final identifier =
-        selectedUser!['phone']?.toString() ??
-        selectedUser!['email']?.toString() ??
-        selectedUser!['id']?.toString() ??
-        '';
     final String selectedCustomerId = selectedUser!['id']?.toString() ?? '';
     final amountStr = amountCtrl.text.trim();
     final remarksStr = remarksCtrl.text.trim();
@@ -768,24 +611,7 @@ class UdharController extends GetxController {
     final paymentMethodStr = paymentMethod;
 
     if (isOffline) {
-      _queueOfflineTransaction(
-        customerId: selectedCustomerId,
-        customerIdentifier: identifier,
-        amount: amountStr,
-        type: typeStr,
-        remarks: remarksStr,
-        paymentMethod: paymentMethodStr,
-        createdAt: selectedDate?.toIso8601String(),
-      );
-      _updateLocalCustomerBalance(selectedCustomerId, identifier, amt, typeStr);
-      _resetForm();
-      if (Get.context != null) Navigator.of(Get.context!).pop();
-      if (selectedCustomerId.isNotEmpty) {
-        await fetchCustomerLedger(selectedCustomerId);
-      }
-      Helpers.showSnackBar(
-        msg: 'Transaction saved offline. Will sync when internet is back.',
-      );
+      Helpers.showSnackBar(msg: 'No internet. Transaction add requires live sync.');
     } else {
       try {
         final response = await UdharRepo.addUdhar(
@@ -803,316 +629,28 @@ class UdharController extends GetxController {
           Helpers.showSnackBar(
             msg: data['message'] ?? 'Udhar transaction added successfully',
           );
-          _updateLocalCustomerBalance(
-            selectedCustomerId,
-            identifier,
-            amt,
-            typeStr,
-          );
           _resetForm();
           if (Get.context != null) Navigator.of(Get.context!).pop();
+          await fetchUsers();
           if (selectedCustomerId.isNotEmpty) {
             await fetchCustomerLedger(selectedCustomerId);
           }
         } else {
-          _queueOfflineTransaction(
-            customerId: selectedCustomerId,
-            customerIdentifier: identifier,
-            amount: amountStr,
-            type: typeStr,
-            remarks: remarksStr,
-            paymentMethod: paymentMethodStr,
-            createdAt: selectedDate?.toIso8601String(),
-          );
-          _updateLocalCustomerBalance(
-            selectedCustomerId,
-            identifier,
-            amt,
-            typeStr,
-          );
-          _resetForm();
-          if (Get.context != null) Navigator.of(Get.context!).pop();
-          if (selectedCustomerId.isNotEmpty) {
-            await fetchCustomerLedger(selectedCustomerId);
-          }
           Helpers.showSnackBar(
-            msg: 'Transaction saved offline. Backend sync pending.',
+            msg:
+                data['message']?.toString() ??
+                'Unable to add transaction. Please try again.',
           );
         }
       } catch (_) {
-        _queueOfflineTransaction(
-          customerId: selectedCustomerId,
-          customerIdentifier: identifier,
-          amount: amountStr,
-          type: typeStr,
-          remarks: remarksStr,
-          paymentMethod: paymentMethodStr,
-          createdAt: selectedDate?.toIso8601String(),
-        );
-        _updateLocalCustomerBalance(
-          selectedCustomerId,
-          identifier,
-          amt,
-          typeStr,
-        );
-        _resetForm();
-        if (Get.context != null) Navigator.of(Get.context!).pop();
-        if (selectedCustomerId.isNotEmpty) {
-          await fetchCustomerLedger(selectedCustomerId);
-        }
         Helpers.showSnackBar(
-          msg: 'Transaction saved offline. Backend sync pending.',
+          msg: 'Unable to add transaction. Please try again.',
         );
       }
     }
 
     isSubmitting = false;
     update();
-  }
-
-  Future<void> syncOfflineTransactions() async {
-    if (isSyncing) return;
-    await checkConnection();
-    if (isOffline) return;
-
-    isSyncing = true;
-    update();
-
-    List<dynamic> customersQueue =
-        HiveHelp.read('offline_customers_queue') ?? [];
-    List<dynamic> txQueue = HiveHelp.read('offline_tx_queue') ?? [];
-
-    if (customersQueue.isNotEmpty || txQueue.isNotEmpty) {
-      try {
-        final pushResponse = await UdharRepo.pushSync(
-          customers: customersQueue,
-          transactions: txQueue,
-        );
-        final pushData = jsonDecode(pushResponse.body);
-        print('=== PUSH SYNC RESPONSE: ${pushResponse.statusCode} ===');
-        print('=== PUSH SYNC BODY: ${pushResponse.body} ===');
-        if (pushResponse.statusCode == 200 && pushData['status'] == 'success') {
-          HiveHelp.write('offline_customers_queue', []);
-          HiveHelp.write('offline_tx_queue', []);
-        } else {
-          print('Push Sync Failed: ${pushData['message']}');
-        }
-      } catch (e) {
-        print('=== PUSH SYNC EXCEPTION: $e ===');
-        // Keep queue to retry next time
-      }
-    }
-
-    // Two-way synchronization pull:
-    String lastSyncTime =
-        HiveHelp.read('last_sync_time') ?? '1970-01-01 00:00:00';
-    try {
-      final pullResponse = await UdharRepo.pullSync(lastSyncTime: lastSyncTime);
-      final pullData = jsonDecode(pullResponse.body);
-      if (pullResponse.statusCode == 200 && pullData['status'] == 'success') {
-        HiveHelp.write(
-          'last_sync_time',
-          DateTime.now().toString().substring(0, 19),
-        );
-
-        if (pullData['data'] != null) {
-          final list = pullData['data']['customers'] ?? pullData['data']['contacts'];
-          if (list != null) {
-            usersList = List<dynamic>.from(list);
-            HiveHelp.write('cached_users', usersList);
-          }
-        }
-      }
-    } catch (_) {}
-
-    isSyncing = false;
-    update();
-
-    fetchUsers();
-  }
-
-  Future<void> syncManual() async {
-    if (isSyncing) return;
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(msg: "You are offline. Cannot sync.");
-      return;
-    }
-    
-    isSyncing = true;
-    update();
-    
-    bool hasPushed = false;
-    bool hasPulled = false;
-
-    List<dynamic> customersQueue = HiveHelp.read('offline_customers_queue') ?? [];
-    List<dynamic> txQueue = HiveHelp.read('offline_tx_queue') ?? [];
-
-    if (customersQueue.isNotEmpty || txQueue.isNotEmpty) {
-      try {
-        final pushResponse = await UdharRepo.pushSync(
-          customers: customersQueue,
-          transactions: txQueue,
-        );
-        final pushData = jsonDecode(pushResponse.body);
-        if (pushResponse.statusCode == 200 && pushData['status'] == 'success') {
-          HiveHelp.write('offline_customers_queue', []);
-          HiveHelp.write('offline_tx_queue', []);
-          hasPushed = true;
-        } else {
-          Helpers.showSnackBar(msg: "Sync Push Failed: ${pushData['message'] ?? 'Unknown error'}");
-        }
-      } catch (e) {
-        Helpers.showSnackBar(msg: "Sync Push Error: $e");
-      }
-    }
-
-    String lastSyncTime = HiveHelp.read('last_sync_time') ?? '1970-01-01 00:00:00';
-    try {
-      final pullResponse = await UdharRepo.pullSync(lastSyncTime: lastSyncTime);
-      final pullData = jsonDecode(pullResponse.body);
-      if (pullResponse.statusCode == 200 && pullData['status'] == 'success') {
-        HiveHelp.write('last_sync_time', DateTime.now().toString().substring(0, 19));
-        if (pullData['data'] != null) {
-          final list = pullData['data']['customers'] ?? pullData['data']['contacts'];
-          if (list != null) {
-            usersList = List<dynamic>.from(list);
-            HiveHelp.write('cached_users', usersList);
-          }
-        }
-        hasPulled = true;
-      }
-    } catch (_) {}
-
-    isSyncing = false;
-    update();
-    
-    if (hasPushed || hasPulled || (customersQueue.isEmpty && txQueue.isEmpty)) {
-      Helpers.showSnackBar(msg: "Sync Completed Successfully.");
-    }
-    fetchUsers();
-  }
-
-  void _queueOfflineTransaction({
-    required String customerId,
-    required String customerIdentifier,
-    required String amount,
-    required String type,
-    required String remarks,
-    required String paymentMethod,
-    String? createdAt,
-  }) {
-    final List<dynamic> queue = List<dynamic>.from(
-      HiveHelp.read('offline_tx_queue') ?? [],
-    );
-
-    queue.add({
-      'local_id': 'local_tx_${DateTime.now().millisecondsSinceEpoch}',
-      'customer_id': customerId,
-      'user_identifier': customerIdentifier,
-      'amount': amount,
-      'type': type,
-      'remarks': remarks,
-      'payment_method': paymentMethod,
-      'created_at': createdAt ?? DateTime.now().toIso8601String(),
-    });
-
-    HiveHelp.write('offline_tx_queue', queue);
-  }
-
-  int _findCustomerIndex({
-    required String customerId,
-    required String fallback,
-  }) {
-    if (customerId.isNotEmpty) {
-      final idIndex = usersList.indexWhere(
-        (u) => u['id']?.toString() == customerId,
-      );
-      if (idIndex != -1) return idIndex;
-    }
-
-    final byPhone = usersList.indexWhere(
-      (u) => u['phone']?.toString() == fallback,
-    );
-    if (byPhone != -1) return byPhone;
-
-    return usersList.indexWhere((u) => u['email']?.toString() == fallback);
-  }
-
-  void _updateLocalCustomerBalance(
-    String customerId,
-    String fallbackIdentifier,
-    double amt,
-    String type,
-  ) {
-    final index = _findCustomerIndex(
-      customerId: customerId,
-      fallback: fallbackIdentifier,
-    );
-    if (index != -1) {
-      double currentBal =
-          double.tryParse(
-            usersList[index]['outstanding_balance']?.toString() ?? '0',
-          ) ??
-          0.0;
-      if (type == 'given') {
-        currentBal += amt;
-      } else {
-        currentBal -= amt;
-      }
-      usersList[index]['outstanding_balance'] = currentBal;
-      filteredUsers = List.from(usersList);
-      HiveHelp.write('cached_users', usersList);
-    }
-
-    final resolvedCustomerId =
-        customerId.isNotEmpty
-            ? customerId
-            : (index != -1
-                ? usersList[index]['id'].toString()
-                : fallbackIdentifier);
-
-    // Append to cached ledger
-    final cachedLedger =
-        HiveHelp.read('cached_ledger_$resolvedCustomerId') ??
-        {
-          'transactions': [],
-          'outstanding_balance': 0.0,
-          'credit_limit': 5000.0,
-        };
-    final list = List<dynamic>.from(cachedLedger['transactions'] ?? []);
-    list.insert(0, {
-      'id': 'local_tx_${DateTime.now().millisecondsSinceEpoch}',
-      'amount': amt,
-      'type': type,
-      'remarks':
-          remarksCtrl.text.trim().isNotEmpty
-              ? remarksCtrl.text.trim()
-              : (type == 'given' ? 'Udhar Given' : 'Payment Received'),
-      'created_at': DateTime.now().toString().substring(0, 19),
-      'due_date': null,
-    });
-
-    double newBal = 0.0;
-    double limitVal = 5000.0;
-    final match = usersList.firstWhere(
-      (u) => u['id'].toString() == resolvedCustomerId,
-      orElse: () => null,
-    );
-    if (match != null) {
-      newBal =
-          double.tryParse(match['outstanding_balance']?.toString() ?? '0.0') ??
-          0.0;
-      limitVal =
-          double.tryParse(match['credit_limit']?.toString() ?? '5000.0') ??
-          5000.0;
-    }
-
-    HiveHelp.write('cached_ledger_$resolvedCustomerId', {
-      'transactions': list,
-      'outstanding_balance': newBal,
-      'credit_limit': limitVal,
-    });
   }
 
   void _resetForm() {
@@ -1370,7 +908,7 @@ class UdharController extends GetxController {
     await checkConnection();
 
     if (isOffline) {
-      _loadLocalReports();
+      Helpers.showSnackBar(msg: 'No internet. Realtime reports sync is unavailable.');
       isReportsLoading = false;
       update();
       return;
@@ -1407,10 +945,12 @@ class UdharController extends GetxController {
           payload['outstanding_customers'] ?? [],
         );
       } else {
-        _loadLocalReports();
+        Helpers.showSnackBar(
+          msg: data['message']?.toString() ?? 'Unable to fetch realtime reports.',
+        );
       }
     } catch (_) {
-      _loadLocalReports();
+      Helpers.showSnackBar(msg: 'Unable to fetch realtime reports.');
     }
 
     isReportsLoading = false;
@@ -1555,75 +1095,6 @@ class UdharController extends GetxController {
     );
   }
 
-  void _loadLocalReports() {
-    final List<dynamic> localTransactions = List<dynamic>.from(
-      HiveHelp.read(Keys.udharTransactions) ?? [],
-    );
-    final List<dynamic> localCustomers =
-        usersList.isNotEmpty
-            ? List<dynamic>.from(usersList)
-            : List<dynamic>.from(HiveHelp.read('cached_users') ?? []);
-
-    final DateTime? start = reportsDateRange?.start;
-    final DateTime? end =
-        reportsDateRange == null ? null : reportsDateRange!.end.add(const Duration(days: 1));
-
-    final Iterable<dynamic> filteredTx = localTransactions.where((dynamic item) {
-      if (start == null || end == null) {
-        return true;
-      }
-      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
-      final String createdAt =
-          tx['created_at']?.toString() ?? tx['date']?.toString() ?? '';
-      if (createdAt.isEmpty) {
-        return true;
-      }
-      try {
-        final DateTime parsed = DateTime.parse(createdAt);
-        return parsed.isAfter(start.subtract(const Duration(milliseconds: 1))) &&
-            parsed.isBefore(end);
-      } catch (_) {
-        return true;
-      }
-    });
-
-    final List<dynamic> normalizedTx = filteredTx.map((dynamic item) {
-      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
-      final String customerId = tx['customer_id']?.toString() ?? '';
-      final Map<String, dynamic>? customer = _findCustomerById(customerId, localCustomers);
-      return {
-        ...tx,
-        'customer_name': customer?['name'] ?? customer?['customer_name'] ?? 'Customer',
-      };
-    }).toList();
-
-    double totalCredit = 0.0;
-    double totalDebit = 0.0;
-    for (final dynamic item in normalizedTx) {
-      final Map<String, dynamic> tx = Map<String, dynamic>.from(item as Map);
-      final double amount = _asDouble(tx['amount']);
-      final String type = _reportType(tx['type']);
-      if (type == 'Credit') {
-        totalCredit += amount;
-      } else {
-        totalDebit += amount;
-      }
-    }
-
-    reportsSummary = {
-      'start_date': start?.toIso8601String(),
-      'end_date': reportsDateRange?.end.toIso8601String(),
-      'total_credit_given': totalCredit,
-      'total_debit_received': totalDebit,
-    };
-    reportTransactions = normalizedTx;
-    reportOutstandingCustomers = localCustomers.where((dynamic item) {
-      final Map<String, dynamic> customer = Map<String, dynamic>.from(item as Map);
-      return _asDouble(customer['outstanding_balance']) > 0;
-    }).toList()
-      ..sort((a, b) => _asDouble((b as Map)['outstanding_balance']).compareTo(_asDouble((a as Map)['outstanding_balance'])));
-  }
-
   Future<void> _generateReportFile({required Future<void> Function() action}) async {
     isExportingReport = true;
     update();
@@ -1649,14 +1120,16 @@ class UdharController extends GetxController {
     return getApplicationDocumentsDirectory();
   }
 
-  Map<String, dynamic>? _findCustomerById(String customerId, List<dynamic> customers) {
-    for (final dynamic item in customers) {
-      final Map<String, dynamic> customer = Map<String, dynamic>.from(item as Map);
-      if (customer['id']?.toString() == customerId || customer['user_id']?.toString() == customerId) {
-        return customer;
-      }
+  Future<void> syncManual() async {
+    if (isSyncing) return;
+    isSyncing = true;
+    update();
+    await fetchUsers();
+    isSyncing = false;
+    update();
+    if (!isOffline) {
+      Helpers.showSnackBar(msg: 'Realtime sync completed.');
     }
-    return null;
   }
 
   double _asDouble(dynamic value) {

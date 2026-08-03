@@ -81,7 +81,9 @@ class SelectUserSheet extends StatelessWidget {
                         ),
                         HSpace(4.w),
                         IconButton(
-                          onPressed: () async {
+                          onPressed: controller.isOffline
+                              ? null
+                              : () async {
                             controller.nameCtrl.clear();
                             controller.phoneCtrl.clear();
                             controller.emailCtrl.clear();
@@ -108,6 +110,23 @@ class SelectUserSheet extends StatelessWidget {
                     ),
                   ),
                   VSpace(12.h),
+
+                  if (controller.isOffline)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Internet required to add new customers.',
+                          style: context.t.bodySmall?.copyWith(
+                            color: AppColors.black50,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  if (controller.isOffline) VSpace(8.h),
 
                   // ── Search bar ──────────────────────────────────
                   Padding(
@@ -160,7 +179,9 @@ class SelectUserSheet extends StatelessWidget {
                                     AppButton(
                                       text: storedLanguage['Add Customer'] ?? "Add Customer",
                                       buttonWidth: 180.w,
-                                      onTap: () async {
+                                      onTap: controller.isOffline
+                                          ? null
+                                          : () async {
                                         final searchText = controller.searchCtrl.text.trim();
                                         final cleanSearch = searchText.replaceAll(' ', '').replaceAll('-', '');
                                         controller.nameCtrl.clear();

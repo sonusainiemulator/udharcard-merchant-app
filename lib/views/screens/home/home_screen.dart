@@ -112,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor:
           isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
       appBar: CustomAppBar(
+        leading: const SizedBox.shrink(),
         toolberHeight: 68.h,
         prefferSized: 68.h,
         bgColor: isDark ? const Color(0xFF0B0F19) : Colors.white,

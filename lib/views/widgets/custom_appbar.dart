@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../controllers/bottom_nav_controller.dart';
+import '../../routes/routes_name.dart';
 import '../../themes/themes.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -57,7 +59,26 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             onPressed:
                 onBackPressed ??
                 () {
-                  Get.back();
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else if (Get.key.currentState?.canPop() ?? false) {
+                    Get.back();
+                  } else {
+                    try {
+                      if (Get.isRegistered<BottomNavController>()) {
+                        final bottomNav = Get.find<BottomNavController>();
+                        if (bottomNav.selectedIndex != 0) {
+                          bottomNav.changeScreen(0);
+                          return;
+                        }
+                      }
+                    } catch (_) {}
+                    try {
+                      Get.offAllNamed(RoutesName.bottomNavBar);
+                    } catch (_) {
+                      Get.back();
+                    }
+                  }
                 },
             icon: Icon(
               Icons.arrow_back_ios_new_rounded,

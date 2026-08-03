@@ -7,6 +7,7 @@ import 'package:paysecure/controllers/udhar_controller.dart';
 import 'package:paysecure/controllers/worklist_controller.dart';
 import 'package:paysecure/data/models/worklist_model.dart';
 import 'package:paysecure/themes/themes.dart';
+import 'package:paysecure/utils/services/helpers.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:paysecure/utils/services/localstorage/keys.dart';
 import 'package:paysecure/views/widgets/custom_appbar.dart';
@@ -45,7 +46,7 @@ class _WorkListScreenState extends State<WorkListScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             backgroundColor: AppColors.mainColor,
-            onPressed: () => _openTaskEditor(),
+            onPressed: workListController.isOffline ? null : () => _openTaskEditor(),
             icon: const Icon(Icons.add_task_rounded, color: Colors.black),
             label: Text(
               'Add Task',
@@ -164,10 +165,10 @@ class _WorkListScreenState extends State<WorkListScreen> {
               Expanded(
                 child: Text(
                   workListController.isOffline
-                      ? 'Offline mode active. Changes stay queued on this device.'
+                      ? 'No internet. Realtime sync is paused until connection is restored.'
                       : workListController.isSyncing
                           ? 'Syncing work items...'
-                          : 'Work list is synced to the backend.',
+                          : 'Work list is synced in realtime with backend.',
                   style: context.t.bodyMedium,
                 ),
               ),
@@ -180,6 +181,20 @@ class _WorkListScreenState extends State<WorkListScreen> {
             ],
           ),
         ),
+        if (workListController.isOffline)
+          Padding(
+            padding: EdgeInsets.only(top: 8.h),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Task add, edit, delete, and status updates need internet.',
+                style: context.t.bodySmall?.copyWith(
+                  color: AppThemes.getParagraphColor(),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -280,7 +295,7 @@ class _WorkListScreenState extends State<WorkListScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16.r),
-        onTap: () => _openTaskEditor(task: item),
+        onTap: controller.isOffline ? null : () => _openTaskEditor(task: item),
         child: Padding(
           padding: EdgeInsets.all(14.r),
           child: Row(
@@ -289,9 +304,11 @@ class _WorkListScreenState extends State<WorkListScreen> {
               Checkbox(
                 value: item.isCompleted,
                 activeColor: Colors.green,
-                onChanged: (value) {
-                  controller.toggleCompletion(item.id, value ?? false);
-                },
+                onChanged: controller.isOffline
+                    ? null
+                    : (value) {
+                        controller.toggleCompletion(item.id, value ?? false);
+                      },
               ),
               Expanded(
                 child: Column(
@@ -336,11 +353,6 @@ class _WorkListScreenState extends State<WorkListScreen> {
                             icon: Icons.person_outline_rounded,
                             label: item.customerName!.trim(),
                           ),
-                        if (!item.isSynced)
-                          const _MetaChip(
-                            icon: Icons.cloud_off_rounded,
-                            label: 'Saved offline',
-                          ),
                       ],
                     ),
                   ],
@@ -348,6 +360,12 @@ class _WorkListScreenState extends State<WorkListScreen> {
               ),
               IconButton(
                 onPressed: () async {
+                  if (controller.isOffline) {
+                    Helpers.showSnackBar(
+                      msg: 'No internet. Delete requires realtime sync.',
+                    );
+                    return;
+                  }
                   final shouldDelete = await _confirmDelete(item);
                   if (shouldDelete) {
                     controller.deleteItem(item.id);
@@ -366,6 +384,11 @@ class _WorkListScreenState extends State<WorkListScreen> {
   }
 
   Future<void> _openTaskEditor({WorkListItem? task}) async {
+    if (controller.isOffline) {
+      Helpers.showSnackBar(msg: 'No internet. Task changes require realtime sync.');
+      return;
+    }
+
     final titleController = TextEditingController(text: task?.title ?? '');
     final noteController = TextEditingController(text: task?.note ?? '');
     DateTime selectedDate = task?.dueDate ?? DateTime.now();

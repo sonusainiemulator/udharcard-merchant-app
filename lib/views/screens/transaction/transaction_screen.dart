@@ -383,7 +383,6 @@ class TransactionScreen extends StatelessWidget {
   ) {
     return CustomAppBar(
       title: storedLanguage['Transaction'] ?? "Transaction",
-      leading: BottomNavController.to.selectedIndex == 1 ? SizedBox() : null,
       actions: [
         InkResponse(
           onTap: () {

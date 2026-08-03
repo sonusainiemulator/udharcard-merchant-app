@@ -5,6 +5,14 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.40] - 2026-08-04
+
+### 🛠️ Universal AppBar Back Navigation Fix
+- **Enhanced CustomAppBar Navigation Engine**: Updated [custom_appbar.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/widgets/custom_appbar.dart) default `onPressed` handler to check `Navigator.of(context).canPop()` and `Get.key.currentState?.canPop()`. When popping is not possible (such as when switching top-level bottom navigation tabs or deep-linked routes), it gracefully switches back to the main Home tab (`BottomNavController.to.changeScreen(0)`).
+- **Fixed Hidden & Misconfigured AppBars**: Removed hardcoded `SizedBox` leading overrides in `MerchantSettingsScreen`, `TransactionScreen`, and `VerificationCheckScreen` so back arrows are fully visible and responsive.
+- **Unified Custom AppBars**: Standardized `SubscriptionPlansScreen` and `AddCustomerScreen` back actions to ensure consistent 1-tap navigation back to preceding screens across all Android devices.
+- **Root Home Tab Cleaner**: Ensured the root `HomeScreen` header cleanly suppresses redundant leading back arrows on the main merchant landing dashboard.
+
 ## [1.0.39] - 2026-08-04
 
 ### ✨ Optional Subscription Enrollment for Merchant Onboarding

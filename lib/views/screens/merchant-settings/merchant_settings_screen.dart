@@ -29,10 +29,6 @@ class MerchantSettingScreen extends StatelessWidget {
       builder: (merchantSettingController) {
         return Scaffold(
           appBar: CustomAppBar(
-            leading:
-                isFromDrawerSection == true
-                    ? null
-                    : SizedBox(width: 0, height: 0),
             title: storedLanguage['Merchant Setting'] ?? "Merchant Setting",
           ),
           body: RefreshIndicator(

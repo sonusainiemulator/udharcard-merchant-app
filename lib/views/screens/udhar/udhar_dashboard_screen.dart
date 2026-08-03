@@ -160,7 +160,7 @@ class _UdharDashboardScreenState extends State<UdharDashboardScreen> {
                               color: Colors.white, size: 16.sp),
                           SizedBox(width: 8.w),
                           Text(
-                            'Offline Mode — Showing Cached Ledgers',
+                            'No internet — Realtime ledger sync paused',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12.sp,

@@ -161,9 +161,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             title: storedLanguage['Customers'] ?? 'Customer Directory',
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => openAddCustomerScreen(
-              storedLanguage: storedLanguage,
-            ),
+            onPressed: controller.isOffline
+                ? null
+                : () => openAddCustomerScreen(
+                      storedLanguage: storedLanguage,
+                    ),
             backgroundColor: AppColors.mainColor,
             elevation: 6,
             icon: const Icon(Icons.person_add_alt_1_rounded,
@@ -249,7 +251,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                               color: Colors.white, size: 16.sp),
                           SizedBox(width: 8.w),
                           Text(
-                            'Offline Mode — Showing Cached Directory',
+                            'No internet — Realtime directory sync paused',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12.sp,
@@ -257,6 +259,20 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  if (controller.isOffline)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 12.h),
+                      child: Text(
+                        'Add Customer and Reminder actions are disabled until internet is back.',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B),
+                        ),
                       ),
                     ),
 
@@ -701,9 +717,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                             SizedBox(height: 4.h),
                                             if (balance > 0 && phone.isNotEmpty)
                                               InkWell(
-                                                onTap: () =>
-                                                    _sendWhatsAppReminder(
-                                                        phone, name, balance),
+                                                onTap: controller.isOffline
+                                                    ? null
+                                                    : () => _sendWhatsAppReminder(
+                                                          phone,
+                                                          name,
+                                                          balance,
+                                                        ),
                                                 borderRadius:
                                                     BorderRadius.circular(6.r),
                                                 child: Container(
@@ -714,7 +734,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                     color:
                                                         const Color(0xFF25D366)
                                                             .withValues(
-                                                                alpha: 0.12),
+                                                                alpha: controller
+                                                                        .isOffline
+                                                                    ? 0.06
+                                                                    : 0.12),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             6.r),
@@ -722,7 +745,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                       color:
                                                           const Color(0xFF25D366)
                                                               .withValues(
-                                                                  alpha: 0.3),
+                                                                  alpha: controller
+                                                                          .isOffline
+                                                                      ? 0.18
+                                                                      : 0.3),
                                                     ),
                                                   ),
                                                   child: Row(
@@ -739,7 +765,12 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                         "Remind",
                                                         style: TextStyle(
                                                           color: const Color(
-                                                              0xFF25D366),
+                                                              0xFF25D366)
+                                                              .withValues(
+                                                                  alpha: controller
+                                                                          .isOffline
+                                                                      ? 0.45
+                                                                      : 1),
                                                           fontSize: 10.sp,
                                                           fontWeight:
                                                               FontWeight.w800,

@@ -26,7 +26,6 @@ class VerficiationCheckScreen extends StatelessWidget {
       return Scaffold(
         appBar: CustomAppBar(
           title: verficationType + " Verification",
-          leading: const SizedBox(),
         ),
         body: Padding(
           padding: Dimensions.kDefaultPadding,
