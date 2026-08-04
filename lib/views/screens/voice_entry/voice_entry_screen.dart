@@ -23,10 +23,16 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late final VoiceEntryController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller =
+        Get.isRegistered<VoiceEntryController>()
+            ? Get.find<VoiceEntryController>()
+            : Get.put(VoiceEntryController());
+    unawaited(_controller.initializeVoiceFeatures());
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -34,13 +40,6 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final controller = Get.find<VoiceEntryController>();
-    unawaited(controller.initializeVoiceFeatures());
   }
 
   @override
@@ -130,7 +129,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
     final String pageTitle = storedLanguage['Voice Entry'] ?? "Voice Entry";
 
     return GetBuilder<VoiceEntryController>(
-      init: VoiceEntryController(),
+      init: _controller,
       builder: (controller) {
         // Control pulsing animation based on listening state
         if (controller.isListening) {

@@ -5,6 +5,36 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.46] - 2026-08-04
+
+### 🎙️ Voice Entry Stability & Fast Add UX
+- **Controller Registration Crash Fix**: Fixed red-screen crash on Voice Entry screen (`VoiceEntryController not found`) by ensuring controller initialization happens before lookup and voice features are initialized safely.
+- **Quick Add Flow Simplification**: Refined voice-first udhar entry flow for faster merchant usage with clearer parsed output and direct action paths.
+- **Recent Voice Contacts Shortcut**: Added recent-customer quick selection from voice history to speed repeated entries.
+- **Prefill Matching Improvements**: Improved name matching logic for voice-to-customer prefill (supports partial names and initials).
+
+### 💳 Temporary Merchant QR-Only Collection Mode
+- **System/App QR Temporarily Disabled**: Disabled app-generated/system QR presentation for current rollout period.
+- **Merchant QR as Primary Path**: Shifted payment collection actions to uploaded Merchant QR (custom upload image) for online payment acceptance.
+- **Ledger Action Update**: Replaced dynamic UPI QR quick action in customer ledger with Merchant QR navigation and temporary status notice.
+- **Single-Screen QR Experience**: Simplified QR screen to one Merchant QR upload/view workflow (removed tab complexity).
+
+### ✍️ Naming & UX Consistency
+- **Label Standardization**: Replaced user-facing "QR Code" / "App QR" wording with "Merchant QR" terminology across relevant screens.
+- **Translation Keys Added**: Added Merchant QR and Upload Merchant QR language keys in English and Hindi.
+
+## [1.0.45] - 2026-08-04
+
+### 🐛 Bug Fixes
+- **Add Customer Form**: Fixed an issue where the Add Customer feature failed. Reverted the API endpoint back to the standard resourceful route (removed `/store` suffix).
+- **Missing Customer Fields**: Plumbed the `Address`, `Note`, and `Party Type` fields from the Add Customer UI screen directly to the backend API payload. Previously, these fields were ignored when saving.
+
+## [1.0.44] - 2026-08-04
+
+### ✨ UI & Flow Improvements
+- **Splash Screen Animation**: Upgraded the splash screen with a dynamic elastic scale animation for the UdharCard logo and a delayed fade-in effect for the tagline.
+- **Onboarding Bypass**: Temporarily disabled the initial introduction and onboarding wizard flows to streamline testing and user entry directly to the login/dashboard.
+
 ## [1.0.43] - 2026-08-04
 
 ### 🔄 Merchant Panel API Alignment

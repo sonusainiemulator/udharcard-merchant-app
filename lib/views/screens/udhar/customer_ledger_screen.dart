@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
@@ -32,20 +31,12 @@ class CustomerLedgerScreen extends StatefulWidget {
 }
 
 class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
-  final TextEditingController amountController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Get.find<UdharController>().fetchCustomerLedger(widget.customerId);
     });
-  }
-
-  @override
-  void dispose() {
-    amountController.dispose();
-    super.dispose();
   }
 
   @override
@@ -237,11 +228,15 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 icon: Icons.chat,
                                 color: const Color(0xFF25D366),
                                 enabled: !controller.isOffline,
-                                onTap: () => controller.sendWhatsAppReminder({
-                                  'name': widget.customerName,
-                                  'mobile': controller.selectedUser?['mobile'] ?? controller.selectedUser?['phone'] ?? widget.customerId,
-                                  'balance': balance,
-                                }),
+                                onTap:
+                                    () => controller.sendWhatsAppReminder({
+                                      'name': widget.customerName,
+                                      'mobile':
+                                          controller.selectedUser?['mobile'] ??
+                                          controller.selectedUser?['phone'] ??
+                                          widget.customerId,
+                                      'balance': balance,
+                                    }),
                               ),
                             ),
                             HSpace(6.w),
@@ -251,7 +246,11 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 icon: Icons.picture_as_pdf_outlined,
                                 color: Colors.deepOrangeAccent,
                                 enabled: !controller.isOffline,
-                                onTap: () => _showPdfBillModal(context, widget.customerId),
+                                onTap:
+                                    () => _showPdfBillModal(
+                                      context,
+                                      widget.customerId,
+                                    ),
                               ),
                             ),
                             HSpace(6.w),
@@ -262,17 +261,28 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 color: Colors.green,
                                 enabled: !controller.isOffline,
                                 onTap:
-                                    () => _showReminderOptions(context, balance, storedLanguage),
+                                    () => _showReminderOptions(
+                                      context,
+                                      balance,
+                                      storedLanguage,
+                                    ),
                               ),
                             ),
                             HSpace(6.w),
                             Expanded(
                               child: _QuickActionBtn(
-                                label: 'UPI QR',
+                                label: 'Merchant QR',
                                 icon: Icons.qr_code_scanner,
                                 color: AppColors.mainColor,
                                 enabled: !controller.isOffline,
-                                onTap: () => _showQrDialog(context, balance),
+                                onTap: () {
+                                  Get.toNamed(RoutesName.qrCodeScreen);
+                                  Get.snackbar(
+                                    'Merchant QR Mode',
+                                    'App QR is temporarily disabled. Please use uploaded Merchant QR.',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -332,7 +342,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                       vertical: 8.h,
                                     ),
                                     itemCount:
-                                        controller.filteredLedgerTransactions.length,
+                                        controller
+                                            .filteredLedgerTransactions
+                                            .length,
                                     separatorBuilder:
                                         (_, __) => Divider(
                                           height: 1,
@@ -340,7 +352,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                         ),
                                     itemBuilder: (context, i) {
                                       final tx =
-                                          controller.filteredLedgerTransactions[i];
+                                          controller
+                                              .filteredLedgerTransactions[i];
                                       final bool isCredit =
                                           tx['type'] ==
                                           'given'; // Credit entry (Udhar Diya)
@@ -402,7 +415,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                                   ),
                                                   VSpace(2.h),
                                                   Text(
-                                                    Helpers.formatDateAndTime(tx['created_at']),
+                                                    Helpers.formatDateAndTime(
+                                                      tx['created_at'],
+                                                    ),
                                                     style: context.t.bodySmall
                                                         ?.copyWith(
                                                           color:
@@ -468,21 +483,23 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed: controller.isOffline
-                          ? null
-                          : () {
-                        final userMap = controller.usersList.firstWhere(
-                          (u) => u['id'].toString() == widget.customerId,
-                          orElse:
-                              () => {
-                                "id": widget.customerId,
-                                "name": widget.customerName,
+                      onPressed:
+                          controller.isOffline
+                              ? null
+                              : () {
+                                final userMap = controller.usersList.firstWhere(
+                                  (u) =>
+                                      u['id'].toString() == widget.customerId,
+                                  orElse:
+                                      () => {
+                                        "id": widget.customerId,
+                                        "name": widget.customerName,
+                                      },
+                                );
+                                controller.selectUser(userMap);
+                                controller.setType('given');
+                                Get.toNamed('/addUdharScreen');
                               },
-                        );
-                        controller.selectUser(userMap);
-                        controller.setType('given');
-                        Get.toNamed('/addUdharScreen');
-                      },
                     ),
                   ),
                   HSpace(12.w),
@@ -508,41 +525,44 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed: controller.isOffline
-                          ? null
-                          : () {
-                        final userMap = controller.usersList.firstWhere(
-                          (u) => u['id'].toString() == widget.customerId,
-                          orElse:
-                              () => {
-                                "id": widget.customerId,
-                                "name": widget.customerName,
+                      onPressed:
+                          controller.isOffline
+                              ? null
+                              : () {
+                                final userMap = controller.usersList.firstWhere(
+                                  (u) =>
+                                      u['id'].toString() == widget.customerId,
+                                  orElse:
+                                      () => {
+                                        "id": widget.customerId,
+                                        "name": widget.customerName,
+                                      },
+                                );
+                                controller.selectUser(userMap);
+                                controller.setType('received');
+                                Get.toNamed('/addUdharScreen');
                               },
-                        );
-                        controller.selectUser(userMap);
-                        controller.setType('received');
-                        Get.toNamed('/addUdharScreen');
-                      },
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          persistentFooterButtons: controller.isOffline
-              ? [
-                  Center(
-                    child: Text(
-                      'Internet required to add transactions and send reminders.',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.black50,
-                        fontWeight: FontWeight.w600,
+          persistentFooterButtons:
+              controller.isOffline
+                  ? [
+                    Center(
+                      child: Text(
+                        'Internet required to add transactions and send reminders.',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: AppColors.black50,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ]
-              : null,
+                  ]
+                  : null,
         );
       },
     );
@@ -561,7 +581,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
-      backgroundColor: Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
+      backgroundColor:
+          Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
@@ -596,15 +617,24 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                   if (isOverdue) ...[
                     VSpace(6.h),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 6.h,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.redAccent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: Colors.redAccent.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16.sp),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.redAccent,
+                            size: 16.sp,
+                          ),
                           HSpace(6.w),
                           Expanded(
                             child: Text(
@@ -623,12 +653,17 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                   VSpace(10.h),
                   Text(
                     'Billing Cycle:',
-                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   VSpace(4.h),
                   RadioListTile<String>(
                     title: const Text('28-Day Cycle Bill (Auto)'),
-                    subtitle: const Text('Generates statement for the last 28 days of credit'),
+                    subtitle: const Text(
+                      'Generates statement for the last 28 days of credit',
+                    ),
                     value: '28_days',
                     groupValue: selectedCycle,
                     activeColor: AppColors.mainColor,
@@ -638,7 +673,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                   ),
                   RadioListTile<String>(
                     title: const Text('Calendar Month Bill'),
-                    subtitle: const Text('Generates statement for the current calendar month'),
+                    subtitle: const Text(
+                      'Generates statement for the current calendar month',
+                    ),
                     value: 'calendar_month',
                     groupValue: selectedCycle,
                     activeColor: AppColors.mainColor,
@@ -649,7 +686,10 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                   VSpace(10.h),
                   Text(
                     'Dispatch Channels:',
-                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   VSpace(4.h),
                   RadioListTile<String>(
@@ -658,7 +698,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                     groupValue: selectedChannel,
                     activeColor: AppColors.mainColor,
                     onChanged: (val) {
-                      if (val != null) setStateModal(() => selectedChannel = val);
+                      if (val != null)
+                        setStateModal(() => selectedChannel = val);
                     },
                   ),
                   RadioListTile<String>(
@@ -667,7 +708,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                     groupValue: selectedChannel,
                     activeColor: AppColors.mainColor,
                     onChanged: (val) {
-                      if (val != null) setStateModal(() => selectedChannel = val);
+                      if (val != null)
+                        setStateModal(() => selectedChannel = val);
                     },
                   ),
                   RadioListTile<String>(
@@ -676,7 +718,8 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                     groupValue: selectedChannel,
                     activeColor: AppColors.mainColor,
                     onChanged: (val) {
-                      if (val != null) setStateModal(() => selectedChannel = val);
+                      if (val != null)
+                        setStateModal(() => selectedChannel = val);
                     },
                   ),
                   VSpace(16.h),
@@ -692,48 +735,57 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
-                          icon: ctrl.isGeneratingPdf
-                              ? SizedBox(
-                                  width: 18.w,
-                                  height: 18.h,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
+                          icon:
+                              ctrl.isGeneratingPdf
+                                  ? SizedBox(
+                                    width: 18.w,
+                                    height: 18.h,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : Icon(
+                                    Icons.send_rounded,
+                                    size: 18.sp,
                                     color: Colors.white,
                                   ),
-                                )
-                              : Icon(Icons.send_rounded, size: 18.sp, color: Colors.white),
                           label: Text(
-                            ctrl.isGeneratingPdf ? 'Generating PDF...' : 'Send 28-Day PDF Bill',
+                            ctrl.isGeneratingPdf
+                                ? 'Generating PDF...'
+                                : 'Send 28-Day PDF Bill',
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          onPressed: ctrl.isGeneratingPdf
-                              ? null
-                              : () async {
-                                  if (selectedChannel == 'whatsapp' || selectedChannel == 'both') {
-                                    Helpers.checkAndForcePhoneVerification(
-                                      context,
-                                      onVerified: () async {
-                                        Navigator.pop(ctx);
-                                        await ctrl.generateAndSendPdfBill(
-                                          customerId,
-                                          channel: selectedChannel,
-                                          cycle: selectedCycle,
-                                        );
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.pop(ctx);
-                                    await ctrl.generateAndSendPdfBill(
-                                      customerId,
-                                      channel: selectedChannel,
-                                      cycle: selectedCycle,
-                                    );
-                                  }
-                                },
+                          onPressed:
+                              ctrl.isGeneratingPdf
+                                  ? null
+                                  : () async {
+                                    if (selectedChannel == 'whatsapp' ||
+                                        selectedChannel == 'both') {
+                                      Helpers.checkAndForcePhoneVerification(
+                                        context,
+                                        onVerified: () async {
+                                          Navigator.pop(ctx);
+                                          await ctrl.generateAndSendPdfBill(
+                                            customerId,
+                                            channel: selectedChannel,
+                                            cycle: selectedCycle,
+                                          );
+                                        },
+                                      );
+                                    } else {
+                                      Navigator.pop(ctx);
+                                      await ctrl.generateAndSendPdfBill(
+                                        customerId,
+                                        channel: selectedChannel,
+                                        cycle: selectedCycle,
+                                      );
+                                    }
+                                  },
                         ),
                       );
                     },
@@ -748,7 +800,11 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     );
   }
 
-  void _showReminderOptions(BuildContext context, double balance, Map language) {
+  void _showReminderOptions(
+    BuildContext context,
+    double balance,
+    Map language,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -777,10 +833,14 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
               ListTile(
                 leading: Icon(Icons.notifications, color: Colors.blue),
                 title: Text("In-App Notification"),
-                subtitle: Text("Send a push notification to their UdharCard app"),
+                subtitle: Text(
+                  "Send a push notification to their UdharCard app",
+                ),
                 onTap: () {
                   Navigator.pop(context);
-                  Get.find<UdharController>().sendPaymentReminder(widget.customerId);
+                  Get.find<UdharController>().sendPaymentReminder(
+                    widget.customerId,
+                  );
                 },
               ),
               Divider(),
@@ -806,19 +866,21 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   void _sendWhatsAppReminder(double outstandingBalance, Map language) {
     final controller = Get.find<UdharController>();
     final txList = controller.filteredLedgerTransactions;
-    
+
     String historyMsg = "";
     if (txList.isNotEmpty) {
       historyMsg = "\n\n*Recent Transactions:*\n";
       final int count = txList.length > 5 ? 5 : txList.length;
       for (int i = 0; i < count; i++) {
         final tx = txList[i];
-        final bool isGiven = (tx['type'] ?? 'given') == 'given' || (tx['type'] == 'credit');
+        final bool isGiven =
+            (tx['type'] ?? 'given') == 'given' || (tx['type'] == 'credit');
         final amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
         final date = Helpers.formatDateAndTime(tx['created_at']);
         final remark = tx['remarks'] ?? tx['notes'] ?? '';
-        
-        historyMsg += "• ${isGiven ? 'Given' : 'Received'}: ₹${amt.toStringAsFixed(2)} on $date";
+
+        historyMsg +=
+            "• ${isGiven ? 'Given' : 'Received'}: ₹${amt.toStringAsFixed(2)} on $date";
         if (remark.toString().isNotEmpty) {
           historyMsg += " ($remark)";
         }
@@ -828,9 +890,11 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
 
     String message = "";
     if (outstandingBalance <= 0) {
-      message = "Dear ${widget.customerName}, your current account balance with us is settled (₹0.00). Thank you for doing business with us!";
+      message =
+          "Dear ${widget.customerName}, your current account balance with us is settled (₹0.00). Thank you for doing business with us!";
     } else {
-      message = "Dear ${widget.customerName}, this is a friendly reminder that you have an outstanding payment of ₹${outstandingBalance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+      message =
+          "Dear ${widget.customerName}, this is a friendly reminder that you have an outstanding payment of ₹${outstandingBalance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
     }
 
     message += historyMsg;
@@ -856,186 +920,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       Get.snackbar('Launch Failure', 'Could not launch URL helper.');
     }
-  }
-
-  // ── QR Modal Display ──────────────────────────────────────────────────
-
-  void _showQrDialog(BuildContext context, double outstanding) {
-    amountController.text =
-        outstanding > 0 ? outstanding.toStringAsFixed(2) : '';
-    final controller = Get.find<UdharController>();
-
-    // Initial QR generation
-    if (outstanding > 0) {
-      controller.generateDynamicQr(
-        widget.customerId,
-        outstanding.toStringAsFixed(2),
-      );
-      controller.startPaymentStatusListener(widget.customerId);
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return PopScope(
-          canPop: true,
-          onPopInvokedWithResult: (didPop, result) {
-            controller.stopPaymentStatusListener();
-          },
-          child: GetBuilder<UdharController>(
-            builder: (ctrl) {
-              final double payAmt =
-                  double.tryParse(amountController.text.trim()) ?? 0.0;
-              final String upiUrl =
-                  ctrl.generatedUpiUri ??
-                  "upi://pay?pa=paysecure@ybl&pn=PaySecure&am=${payAmt.toStringAsFixed(2)}";
-
-              return AlertDialog(
-                backgroundColor:
-                    Get.isDarkMode
-                        ? AppColors.darkCardColor
-                        : AppColors.whiteColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                contentPadding: EdgeInsets.all(20.r),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Collect Payments via UPI',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppThemes.getIconBlackColor(),
-                      ),
-                    ),
-                    VSpace(14.h),
-                    TextFormField(
-                      controller: amountController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        final double amt = double.tryParse(val) ?? 0.0;
-                        if (amt > 0) {
-                          ctrl.generateDynamicQr(
-                            widget.customerId,
-                            amt.toStringAsFixed(2),
-                          );
-                          ctrl.startPaymentStatusListener(widget.customerId);
-                        } else {
-                          ctrl.stopPaymentStatusListener();
-                        }
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Enter payment amount',
-                        prefixIcon: const Icon(Icons.currency_rupee),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 10.h,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                      ),
-                    ),
-                    VSpace(20.h),
-                    if (payAmt > 0) ...[
-                      if (ctrl.isQrLoading)
-                        SizedBox(
-                          height: 180.h,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      else ...[
-                        QrImageView(
-                          data: upiUrl,
-                          version: QrVersions.auto,
-                          size: 180.h,
-                          dataModuleStyle: QrDataModuleStyle(
-                            dataModuleShape: QrDataModuleShape.square,
-                            color: AppThemes.getIconBlackColor(),
-                          ),
-                        ),
-                        VSpace(10.h),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.mainColor,
-                              ),
-                            ),
-                            HSpace(8.w),
-                            Text(
-                              'Waiting for payment...',
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                color: AppColors.mainColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ] else
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.h),
-                        child: Text(
-                          'Please enter a valid amount to generate the payment QR code.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: AppColors.black50,
-                          ),
-                        ),
-                      ),
-                    VSpace(20.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          child: const Text('Close'),
-                          onPressed: () {
-                            ctrl.stopPaymentStatusListener();
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.mainColor,
-                          ),
-                          onPressed:
-                              payAmt > 0 && !ctrl.isQrLoading
-                                  ? () {
-                                    Clipboard.setData(
-                                      ClipboardData(text: upiUrl),
-                                    );
-                                    Get.snackbar(
-                                      'UPI URL Shared',
-                                      'Deep link copied to clipboard.',
-                                    );
-                                  }
-                                  : null,
-                          child: const Text(
-                            'Copy Link',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 }
 
@@ -1067,11 +951,17 @@ class _QuickActionBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: color.withValues(alpha: enabled ? 0.1 : 0.05),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: enabled ? 0.2 : 0.12)),
+          border: Border.all(
+            color: color.withValues(alpha: enabled ? 0.2 : 0.12),
+          ),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color.withValues(alpha: enabled ? 1 : 0.45), size: 20.sp),
+            Icon(
+              icon,
+              color: color.withValues(alpha: enabled ? 1 : 0.45),
+              size: 20.sp,
+            ),
             VSpace(4.h),
             Text(
               label,

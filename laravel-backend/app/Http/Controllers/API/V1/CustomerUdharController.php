@@ -3,74 +3,74 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\UdharCustomer;
-use App\Models\UdharLedger;
-use App\Traits\ApiValidation;
+use App\Models\Customer;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerUdharController extends Controller
 {
-    use ApiValidation;
-
     /**
-     * Get all active merchant ledgers linked to this customer account.
+     * Get all merchant ledgers linked to the authenticated customer account.
      */
     public function merchantsList()
     {
         try {
             $user = Auth::user();
-            $userId = $user ? $user->id : Auth::id();
-            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
-            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
-            if (strlen($cleanPhone) > 10) {
-                $cleanPhone = substr($cleanPhone, -10);
+            if (!$user) {
+                return response()->json($this->errorResponse('Unauthorized'), 401);
             }
 
-            // AUTO-LINK: Link any UdharCustomer with matching phone where customer_user_id is NULL
-            if (!empty($cleanPhone)) {
-                UdharCustomer::whereNull('customer_user_id')
-                    ->where(function($q) use ($userPhone, $cleanPhone) {
-                        $q->where('phone', $userPhone)
-                          ->orWhere('phone', 'like', '%' . $cleanPhone);
-                    })
-                    ->update(['customer_user_id' => $userId]);
-            }
+            $this->autoLinkCustomersToUser($user->id, $user->phone ?? $user->username ?? '');
+            $supportsLink = $this->supportsCustomerUserIdColumn();
 
-            // Fetch all udhar ledger nodes where customer_user_id or phone matches
-            $ledgers = UdharCustomer::with('merchant')
-                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
-                    $q->where('customer_user_id', $userId);
-                    if (!empty($cleanPhone)) {
-                        $q->orWhere('phone', $userPhone)
-                          ->orWhere('phone', 'like', '%' . $cleanPhone);
+            $customers = Customer::with('merchant')
+                ->where(function ($query) use ($user, $supportsLink) {
+                    if ($supportsLink) {
+                        $query->where('customer_user_id', $user->id);
                     }
+
+                    $query->orWhere(function ($phoneQuery) use ($user) {
+                            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
+                            $digits = $this->lastTenDigits($rawPhone);
+                            if ($rawPhone !== '') {
+                                $phoneQuery->where('phone', $rawPhone);
+                            }
+                            if ($digits !== '') {
+                                $phoneQuery->orWhere('phone', 'like', '%' . $digits);
+                            }
+                        });
                 })
-                ->where('status', 1)
-                ->get()
-                ->map(function ($cust) {
-                    return [
-                        'id' => $cust->id,
-                        'merchant_id' => $cust->merchant_id,
-                        'shop_name' => $cust->merchant->shop_name ?? ($cust->merchant->firstname . ' ' . $cust->merchant->lastname),
-                        'merchant_username' => $cust->merchant->username,
-                        'outstanding_balance' => (float)$cust->outstanding_balance,
-                        'credit_limit' => (float)$cust->credit_limit,
-                        'due_date' => $cust->due_date ? $cust->due_date->format('Y-m-d') : null,
-                        'updated_at' => $cust->updated_at->toDateTimeString(),
-                    ];
-                });
+                ->orderByDesc('updated_at')
+                ->get();
+
+            $data = $customers->map(function (Customer $customer) {
+                $merchantName = trim((string) (($customer->merchant->firstname ?? '') . ' ' . ($customer->merchant->lastname ?? '')));
+                if ($merchantName === '') {
+                    $merchantName = $customer->merchant->username ?? 'Merchant';
+                }
+
+                return [
+                    'id' => $customer->id,
+                    'merchant_id' => $customer->merchant_id,
+                    'shop_name' => $customer->merchant->shop_name ?? $merchantName,
+                    'merchant_username' => $customer->merchant->username ?? null,
+                    'outstanding_balance' => (float) $customer->outstanding_balance,
+                    'credit_limit' => (float) $customer->credit_limit,
+                    'due_date' => null,
+                    'updated_at' => optional($customer->updated_at)->toDateTimeString(),
+                ];
+            })->values();
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Customer ledgers retrieved successfully',
-                'data' => $ledgers
+                'data' => $data,
             ], 200);
-
         } catch (\Exception $e) {
-            return response()->json($this->withErrors($e->getMessage()), 500);
+            return response()->json($this->errorResponse($e->getMessage()), 500);
         }
     }
 
@@ -81,71 +81,87 @@ class CustomerUdharController extends Controller
     {
         try {
             $user = Auth::user();
-            $userId = $user ? $user->id : Auth::id();
-            $userPhone = $user ? ($user->phone ?? $user->username ?? '') : '';
-            $cleanPhone = preg_replace('/[^0-9]/', '', $userPhone);
-            if (strlen($cleanPhone) > 10) {
-                $cleanPhone = substr($cleanPhone, -10);
+            if (!$user) {
+                return response()->json($this->errorResponse('Unauthorized'), 401);
             }
 
-            // Find the specific customer record mapping the user to this merchant
-            $customer = UdharCustomer::where('merchant_id', $merchantId)
-                ->where(function($q) use ($userId, $userPhone, $cleanPhone) {
-                    $q->where('customer_user_id', $userId);
-                    if (!empty($cleanPhone)) {
-                        $q->orWhere('phone', $userPhone)
-                          ->orWhere('phone', 'like', '%' . $cleanPhone);
+            $this->autoLinkCustomersToUser($user->id, $user->phone ?? $user->username ?? '');
+            $supportsLink = $this->supportsCustomerUserIdColumn();
+
+            $customer = Customer::with('merchant')
+                ->where('merchant_id', $merchantId)
+                ->where(function ($query) use ($user, $supportsLink) {
+                    if ($supportsLink) {
+                        $query->where('customer_user_id', $user->id);
                     }
+
+                    $query->orWhere(function ($phoneQuery) use ($user) {
+                            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
+                            $digits = $this->lastTenDigits($rawPhone);
+                            if ($rawPhone !== '') {
+                                $phoneQuery->where('phone', $rawPhone);
+                            }
+                            if ($digits !== '') {
+                                $phoneQuery->orWhere('phone', 'like', '%' . $digits);
+                            }
+                        });
                 })
                 ->first();
 
             if (!$customer) {
-                return response()->json($this->withErrors('No ledger account found with this merchant.'), 404);
+                return response()->json($this->errorResponse('No ledger account found with this merchant.'), 404);
             }
 
-            if ($customer->customer_user_id != $userId) {
-                $customer->customer_user_id = $userId;
+            if ($supportsLink && (int) ($customer->customer_user_id ?? 0) !== (int) $user->id) {
+                $customer->customer_user_id = $user->id;
                 $customer->save();
             }
 
-            $ledgers = UdharLedger::where('customer_id', $customer->id)
+            $ledgers = Transaction::where('customer_id', $customer->id)
                 ->orderBy('created_at', 'desc')
                 ->paginate(20)
-                ->through(function ($tx) {
+                ->through(function (Transaction $tx) {
+                    $type = $tx->type === 'given' ? 'credit' : 'debit';
+
                     return [
                         'id' => $tx->id,
-                        'sync_id' => $tx->sync_id,
-                        'type' => $tx->type, // credit (given/debt), debit (received/paid)
-                        'amount' => (float)$tx->amount,
-                        'running_balance' => (float)$tx->running_balance,
+                        'sync_id' => $tx->uuid,
+                        'type' => $type,
+                        'raw_type' => $tx->type,
+                        'amount' => (float) $tx->amount,
+                        'running_balance' => null,
                         'payment_method' => $tx->payment_method,
-                        'transaction_id' => $tx->transaction_id,
-                        'notes' => $tx->notes,
-                        'due_date' => $tx->due_date ? $tx->due_date->format('Y-m-d') : null,
-                        'created_by' => $tx->created_by,
-                        'verification_status' => $tx->verification_status,
-                        'created_at' => $tx->created_at->toDateTimeString(),
+                        'transaction_id' => $tx->gateway_tx_id,
+                        'notes' => $tx->remarks,
+                        'due_date' => optional($tx->due_date)->format('Y-m-d'),
+                        'created_by' => $tx->created_by ?? 'merchant',
+                        'verification_status' => $tx->verification_status ?? 'unverified',
+                        'created_at' => optional($tx->created_at)->toDateTimeString(),
                     ];
                 });
+
+            $merchantName = trim((string) (($customer->merchant->firstname ?? '') . ' ' . ($customer->merchant->lastname ?? '')));
+            if ($merchantName === '') {
+                $merchantName = $customer->merchant->username ?? 'Merchant';
+            }
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'merchant' => [
                         'id' => $customer->merchant_id,
-                        'shop_name' => $customer->merchant->shop_name ?? ($customer->merchant->firstname . ' ' . $customer->merchant->lastname),
-                        'phone' => $customer->merchant->phone,
-                        'email' => $customer->merchant->email,
+                        'shop_name' => $customer->merchant->shop_name ?? $merchantName,
+                        'phone' => $customer->merchant->phone ?? null,
+                        'email' => $customer->merchant->email ?? null,
                     ],
-                    'outstanding_balance' => (float)$customer->outstanding_balance,
-                    'credit_limit' => (float)$customer->credit_limit,
-                    'due_date' => $customer->due_date ? $customer->due_date->format('Y-m-d') : null,
-                    'ledgers' => $ledgers
-                ]
+                    'outstanding_balance' => (float) $customer->outstanding_balance,
+                    'credit_limit' => (float) $customer->credit_limit,
+                    'due_date' => null,
+                    'ledgers' => $ledgers,
+                ],
             ], 200);
-
         } catch (\Exception $e) {
-            return response()->json($this->withErrors($e->getMessage()), 500);
+            return response()->json($this->errorResponse($e->getMessage()), 500);
         }
     }
 
@@ -160,39 +176,99 @@ class CustomerUdharController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($this->withErrors(collect($validator->errors())->collapse()->first()), 422);
+            return response()->json($this->errorResponse($validator->errors()->first()), 422);
         }
 
         try {
-            $userId = Auth::id();
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json($this->errorResponse('Unauthorized'), 401);
+            }
 
-            // Find transaction and make sure it belongs to a customer mapped to the authenticated user
-            $ledger = UdharLedger::findOrFail($ledgerId);
+            $ledger = Transaction::with('customer')->findOrFail($ledgerId);
             $customer = $ledger->customer;
 
-            if ($customer->customer_user_id !== $userId) {
-                return response()->json($this->withErrors('Unauthorized transaction access.'), 403);
+            if (!$customer) {
+                return response()->json($this->errorResponse('Unauthorized transaction access.'), 403);
             }
 
-            $ledger->verification_status = $request->status;
-            if ($request->status === 'disputed' && !empty($request->notes)) {
-                $ledger->notes = $ledger->notes . " [Customer Dispute: " . $request->notes . "]";
+            if ($this->supportsCustomerUserIdColumn()) {
+                if ((int) ($customer->customer_user_id ?? 0) !== (int) $user->id) {
+                    return response()->json($this->errorResponse('Unauthorized transaction access.'), 403);
+                }
+            } else {
+                $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
+                $digits = $this->lastTenDigits($rawPhone);
+                $custDigits = $this->lastTenDigits((string) ($customer->phone ?? ''));
+                if ($rawPhone === '' || ($rawPhone !== (string) ($customer->phone ?? '') && $digits !== $custDigits)) {
+                    return response()->json($this->errorResponse('Unauthorized transaction access.'), 403);
+                }
+            }
+
+            $ledger->verification_status = $request->input('status');
+            if ($request->input('status') === 'disputed' && trim((string) $request->input('notes')) !== '') {
+                $existingRemarks = trim((string) ($ledger->remarks ?? ''));
+                $suffix = '[Customer Dispute: ' . trim((string) $request->input('notes')) . ']';
+                $ledger->remarks = $existingRemarks === '' ? $suffix : ($existingRemarks . ' ' . $suffix);
             }
             $ledger->save();
-
-            // Trigger stubs for real-time socket events or Push alerts back to the merchant if disputed
-            if ($request->status === 'disputed') {
-                // Future: event(new UdharDisputed($ledger));
-            }
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Transaction status updated successfully',
-                'data' => $ledger
+                'data' => $ledger,
             ], 200);
-
         } catch (\Exception $e) {
-            return response()->json($this->withErrors($e->getMessage()), 500);
+            return response()->json($this->errorResponse($e->getMessage()), 500);
         }
+    }
+
+    private function autoLinkCustomersToUser(int $userId, string $userPhone): void
+    {
+        if (!$this->supportsCustomerUserIdColumn()) {
+            return;
+        }
+
+        $rawPhone = trim($userPhone);
+        if ($rawPhone === '') {
+            return;
+        }
+
+        $digits = $this->lastTenDigits($rawPhone);
+
+        Customer::whereNull('customer_user_id')
+            ->where(function ($query) use ($rawPhone, $digits) {
+                $query->where('phone', $rawPhone);
+                if ($digits !== '') {
+                    $query->orWhere('phone', 'like', '%' . $digits);
+                }
+            })
+            ->update(['customer_user_id' => $userId]);
+    }
+
+    private function supportsCustomerUserIdColumn(): bool
+    {
+        try {
+            return Schema::hasColumn('customers', 'customer_user_id');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function lastTenDigits(string $value): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', $value);
+        if (strlen($digits) > 10) {
+            return substr($digits, -10);
+        }
+        return $digits;
+    }
+
+    private function errorResponse(string $message): array
+    {
+        return [
+            'status' => 'error',
+            'message' => $message,
+        ];
     }
 }

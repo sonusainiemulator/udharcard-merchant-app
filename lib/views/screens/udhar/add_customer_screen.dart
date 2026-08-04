@@ -226,7 +226,11 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                         ? null
                         : () {
                             FocusScope.of(context).unfocus();
-                            ctrl.addCustomer();
+                            ctrl.addCustomer(
+                              address: _addressCtrl.text,
+                              note: _noteCtrl.text,
+                              type: _selectedType,
+                            );
                           },
                     child: ctrl.isAddingCustomer
                         ? SizedBox(

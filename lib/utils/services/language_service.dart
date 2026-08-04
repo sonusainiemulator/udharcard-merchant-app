@@ -35,6 +35,8 @@ class LanguageService {
     'Edit Profile': 'Edit Profile',
     'Security & PIN': 'Security & PIN',
     'Help & Support': 'Help & Support',
+    'Merchant QR': 'Merchant QR',
+    'Upload Merchant QR': 'Upload Merchant QR',
   };
 
   static const Map<String, String> hindi = {
@@ -66,6 +68,8 @@ class LanguageService {
     'Edit Profile': 'प्रोफ़ाइल संपादित करें',
     'Security & PIN': 'सुरक्षा एवं पिन',
     'Help & Support': 'सहायता एवं सपोर्ट',
+    'Merchant QR': 'मर्चेंट क्यूआर',
+    'Upload Merchant QR': 'मर्चेंट क्यूआर अपलोड करें',
   };
 
   static String get currentLanguageCode =>
@@ -86,9 +90,8 @@ class LanguageService {
     HiveHelp.write(Keys.languageData, map);
 
     // Update Get locale
-    final locale = langCode == 'hi'
-        ? const Locale('hi', 'IN')
-        : const Locale('en', 'US');
+    final locale =
+        langCode == 'hi' ? const Locale('hi', 'IN') : const Locale('en', 'US');
     Get.updateLocale(locale);
   }
 }

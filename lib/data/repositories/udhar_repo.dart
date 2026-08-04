@@ -12,7 +12,7 @@ class UdharRepo {
     String paymentMethod = "cash",
     String? createdAt,
   }) async {
-    final Map<String, dynamic> fields = {
+    final Map<String, dynamic> legacyFields = {
       "customer_id": customerId,
       "amount": amount,
       "type": type,
@@ -20,11 +20,34 @@ class UdharRepo {
       "notes": remarks,
     };
     if (createdAt != null && createdAt.isNotEmpty) {
-      fields["created_at"] = createdAt;
+      legacyFields["created_at"] = createdAt;
     }
-    return await ApiClient.post(
+
+    final legacyResponse = await ApiClient.post(
       ENDPOINT_URL: "${AppConstants.addUdharUrl}/$customerId/entry",
-      fields: fields,
+      fields: legacyFields,
+    );
+
+    if (legacyResponse.statusCode != 404 && legacyResponse.statusCode != 405) {
+      return legacyResponse;
+    }
+
+    // Compatibility fallback for backends using /merchant/udhar/ledger payload.
+    final Map<String, dynamic> modernFields = {
+      "customer_id": customerId,
+      "email_or_phone": customerId,
+      "amount": amount,
+      "type": type == "credit" ? "given" : "received",
+      "payment_method": paymentMethod,
+      "remarks": remarks,
+    };
+    if (createdAt != null && createdAt.isNotEmpty) {
+      modernFields["created_at"] = createdAt;
+    }
+
+    return await ApiClient.post(
+      ENDPOINT_URL: AppConstants.addUdharUrl,
+      fields: modernFields,
     );
   }
 
@@ -40,6 +63,9 @@ class UdharRepo {
     String? email,
     required String creditLimit,
     required String openingBalance,
+    String address = '',
+    String note = '',
+    String type = 'Customer',
   }) async {
     final Map<String, dynamic> payload = {
       "name": name,
@@ -49,6 +75,15 @@ class UdharRepo {
     };
     if (email != null && email.trim().isNotEmpty) {
       payload["email"] = email.trim();
+    }
+    if (address.trim().isNotEmpty) {
+      payload["address"] = address.trim();
+    }
+    if (note.trim().isNotEmpty) {
+      payload["note"] = note.trim();
+    }
+    if (type.trim().isNotEmpty) {
+      payload["type"] = type.trim();
     }
 
     return await ApiClient.post(
@@ -62,6 +97,17 @@ class UdharRepo {
     required String customerId,
     required String creditLimit,
   }) async {
+    final putResponse = await ApiClient.put(
+      ENDPOINT_URL:
+          "${AppConstants.updateCustomerUrl}/$customerId/credit-limit",
+      fields: {"credit_limit": creditLimit},
+    );
+
+    if (putResponse.statusCode != 404 && putResponse.statusCode != 405) {
+      return putResponse;
+    }
+
+    // Legacy fallback for older backend route style.
     return await ApiClient.post(
       ENDPOINT_URL: "${AppConstants.updateCustomerUrl}/$customerId",
       fields: {"credit_limit": creditLimit},
@@ -81,6 +127,14 @@ class UdharRepo {
   static Future<http.Response> getCustomerLedger({
     required String customerId,
   }) async {
+    final response = await ApiClient.get(
+      ENDPOINT_URL: "${AppConstants.addCustomerUrl}/$customerId/ledger",
+    );
+
+    if (response.statusCode != 404 && response.statusCode != 405) {
+      return response;
+    }
+
     return await ApiClient.get(
       ENDPOINT_URL: "${AppConstants.customerLedgerUrl}/$customerId",
     );
@@ -124,9 +178,11 @@ class UdharRepo {
       if (tx is Map) {
         final txMap = Map<String, dynamic>.from(tx);
         final String origCustId = txMap['customer_id']?.toString() ?? '';
-        
+
         final Map<String, dynamic> ledgerItem = {
-          'local_id': txMap['local_id']?.toString() ?? 'local_tx_${DateTime.now().millisecondsSinceEpoch}',
+          'local_id':
+              txMap['local_id']?.toString() ??
+              'local_tx_${DateTime.now().millisecondsSinceEpoch}',
           'amount': txMap['amount']?.toString() ?? '0.00',
           'type': txMap['type'] == 'given' ? 'credit' : 'debit',
           'payment_method': 'cash',
@@ -135,7 +191,7 @@ class UdharRepo {
           'user_identifier': txMap['user_identifier'],
           'created_at': txMap['created_at'],
         };
-        
+
         if (origCustId.startsWith('local_cust_')) {
           ledgerItem['customer_local_id'] = origCustId;
           ledgerItem['customer_id'] = null;
@@ -143,17 +199,14 @@ class UdharRepo {
           ledgerItem['customer_local_id'] = null;
           ledgerItem['customer_id'] = int.tryParse(origCustId);
         }
-        
+
         ledgers.add(ledgerItem);
       }
     }
 
     return await ApiClient.post(
       ENDPOINT_URL: AppConstants.udharSyncUrl,
-      fields: {
-        "customers": customers,
-        "ledgers": ledgers,
-      },
+      fields: {"customers": customers, "ledgers": ledgers},
     );
   }
 
@@ -162,6 +215,15 @@ class UdharRepo {
     required String customerId,
     required String amount,
   }) async {
+    final response = await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.customerQrUrl}/generate",
+      fields: {"customer_id": customerId, "amount": amount},
+    );
+
+    if (response.statusCode != 404 && response.statusCode != 405) {
+      return response;
+    }
+
     return await ApiClient.get(
       ENDPOINT_URL: "${AppConstants.customerQrUrl}/$customerId?amount=$amount",
     );
@@ -171,6 +233,15 @@ class UdharRepo {
   static Future<http.Response> sendPaymentReminder({
     required String customerId,
   }) async {
+    final response = await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.addCustomerUrl}/$customerId/remind",
+    );
+
+    if (response.statusCode != 404 && response.statusCode != 405) {
+      return response;
+    }
+
+    // Legacy fallback.
     return await ApiClient.post(
       ENDPOINT_URL: AppConstants.sendReminderUrl,
       fields: {"customer_id": customerId},
@@ -184,18 +255,13 @@ class UdharRepo {
     String? month,
     String cycle = "28_days",
   }) async {
-    final List<String> query = [
-      "channel=$channel",
-      "cycle=$cycle",
-    ];
+    final List<String> query = ["channel=$channel", "cycle=$cycle"];
     if (month != null && month.isNotEmpty) {
       query.add("month=$month");
     }
     return await ApiClient.get(
-      ENDPOINT_URL: "${AppConstants.generatePdfBillUrl}/$customerId?${query.join('&')}",
+      ENDPOINT_URL:
+          "${AppConstants.generatePdfBillUrl}/$customerId?${query.join('&')}",
     );
   }
 }
-
-
-

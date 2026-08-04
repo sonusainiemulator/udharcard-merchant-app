@@ -331,7 +331,11 @@ class UdharController extends GetxController {
   // Customer Add / Delete
   // ─────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> addCustomer() async {
+  Future<Map<String, dynamic>?> addCustomer({
+    String address = '',
+    String note = '',
+    String type = 'Customer',
+  }) async {
     final String name = nameCtrl.text.trim();
     final String phone = phoneCtrl.text.trim().replaceAll(
       RegExp(r'[^0-9]'),
@@ -396,6 +400,9 @@ class UdharController extends GetxController {
           email: email.isEmpty ? null : email,
           creditLimit: creditLimit,
           openingBalance: openingBalance,
+          address: address,
+          note: note,
+          type: type,
         );
 
         final Map<String, dynamic>? data = _decodeJsonMap(response.body);

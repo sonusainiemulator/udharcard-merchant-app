@@ -4,7 +4,10 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\UdharCustomer;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends Controller
@@ -64,7 +67,9 @@ class CustomerController extends Controller
             ], 400);
         }
 
-        $customer = Customer::create([
+        $customerUserId = $this->resolveCustomerUserIdFromPhone($request->input('phone'));
+
+        $payload = [
             'merchant_id' => $merchantId,
             'name' => $request->name,
             'phone' => $request->phone,
@@ -72,13 +77,108 @@ class CustomerController extends Controller
             'credit_limit' => $request->input('credit_limit', 5000.00),
             'opening_balance' => $openingBal,
             'outstanding_balance' => $openingBal, // Initial outstanding is opening balance
-        ]);
+        ];
+
+        if ($this->supportsCustomerUserIdColumn() && !empty($customerUserId)) {
+            $payload['customer_user_id'] = $customerUserId;
+        }
+
+        $customer = Customer::create($payload);
+        $this->syncToUdharCustomer($customer, $customerUserId);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Customer created successfully.',
             'data' => $customer
         ], 200);
+    }
+
+    private function resolveCustomerUserIdFromPhone(?string $phone): ?int
+    {
+        $rawPhone = trim((string) $phone);
+        if ($rawPhone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/[^0-9]/', '', $rawPhone);
+        if (strlen($digits) > 10) {
+            $digits = substr($digits, -10);
+        }
+
+        $query = User::query()->where('type', 'user');
+        $query->where(function ($builder) use ($rawPhone, $digits) {
+            $builder->where('phone', $rawPhone)
+                ->orWhere('username', $rawPhone);
+
+            if (!empty($digits)) {
+                $builder->orWhere('phone', 'like', '%' . $digits)
+                    ->orWhere('username', 'like', '%' . $digits);
+            }
+        });
+
+        $matched = $query->first();
+        return $matched ? (int) $matched->id : null;
+    }
+
+    private function supportsCustomerUserIdColumn(): bool
+    {
+        try {
+            return Schema::hasColumn('customers', 'customer_user_id');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function syncToUdharCustomer(Customer $customer, ?int $resolvedUserId): void
+    {
+        if (!Schema::hasTable('udhar_customers')) {
+            return;
+        }
+
+        $existing = UdharCustomer::where('merchant_id', $customer->merchant_id)
+            ->where('phone', $customer->phone)
+            ->first();
+
+        $userId = $resolvedUserId;
+        if (is_null($userId) && isset($customer->customer_user_id)) {
+            $userId = !empty($customer->customer_user_id)
+                ? (int) $customer->customer_user_id
+                : null;
+        }
+
+        $attrs = [
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'credit_limit' => (float) $customer->credit_limit,
+            'opening_balance' => (float) $customer->opening_balance,
+            'outstanding_balance' => (float) $customer->outstanding_balance,
+            'status' => 1,
+        ];
+        if (!is_null($userId)) {
+            $attrs['customer_user_id'] = $userId;
+        }
+
+        if ($existing) {
+            $existing->fill($attrs);
+            $existing->save();
+            return;
+        }
+
+        UdharCustomer::create(array_merge($attrs, [
+            'merchant_id' => $customer->merchant_id,
+            'phone' => $customer->phone,
+        ]));
+    }
+
+    private function deleteMirroredUdharCustomer(Customer $customer): void
+    {
+        if (!Schema::hasTable('udhar_customers')) {
+            return;
+        }
+
+        UdharCustomer::where('merchant_id', $customer->merchant_id)
+            ->where('phone', $customer->phone)
+            ->delete();
     }
 
     /**
@@ -112,6 +212,7 @@ class CustomerController extends Controller
 
         $customer->credit_limit = (float) $request->input('credit_limit');
         $customer->save();
+        $this->syncToUdharCustomer($customer, null);
 
         return response()->json([
             'status' => 'success',
@@ -139,6 +240,7 @@ class CustomerController extends Controller
             ], 404);
         }
 
+        $this->deleteMirroredUdharCustomer($customer);
         $customer->delete();
 
         return response()->json([

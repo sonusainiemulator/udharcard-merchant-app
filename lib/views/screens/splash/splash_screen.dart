@@ -25,6 +25,8 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _taglineOpacityAnimation;
   String _appVersion = '';
 
   @override
@@ -49,6 +51,20 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
+    _logoScaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
+      ),
+    );
+
+    _taglineOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
     _controller.forward();
     _loadAppVersion();
 
@@ -61,10 +77,11 @@ class _SplashScreenState extends State<SplashScreen>
       if (isLoggedIn) {
         final bool onboardingCompleted =
             (HiveHelp.read('onboarding_completed') ?? false) == true;
-        if (!onboardingCompleted) {
-          Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
-          return;
-        }
+        // TEMP DISABLE ONBOARDING WIZARD (Requested by user)
+        // if (!onboardingCompleted) {
+        //   Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
+        //   return;
+        // }
 
         if (!SubscriptionGateService.isPlanEnrollmentRequired()) {
           Get.offAllNamed(RoutesName.bottomNavBar);
@@ -81,7 +98,9 @@ class _SplashScreenState extends State<SplashScreen>
       } else if (HiveHelp.read(Keys.isNewUser) != null) {
         Get.offAllNamed(RoutesName.loginScreen);
       } else {
-        Get.offAllNamed(RoutesName.onbordingScreen);
+        // TEMP DISABLE INTRO ONBOARDING
+        // Get.offAllNamed(RoutesName.onbordingScreen);
+        Get.offAllNamed(RoutesName.loginScreen);
       }
     });
     AppController.to.getBasicCtrl();
@@ -127,28 +146,31 @@ class _SplashScreenState extends State<SplashScreen>
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         // Premium App Logo
-                        Container(
-                        width: 100.w,
-                        height: 100.w,
-                        decoration: BoxDecoration(
-                          color: AppColors.whiteColor,
-                          borderRadius: BorderRadius.circular(28.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.blackColor.withValues(alpha: 0.06),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
+                        ScaleTransition(
+                          scale: _logoScaleAnimation,
+                          child: Container(
+                            width: 100.w,
+                            height: 100.w,
+                            decoration: BoxDecoration(
+                              color: AppColors.whiteColor,
+                              borderRadius: BorderRadius.circular(28.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.blackColor.withValues(alpha: 0.06),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(20.w),
-                          child: Image.asset(
-                            "$rootImageDir/app_logo.png",
-                            fit: BoxFit.contain,
+                            child: Padding(
+                              padding: EdgeInsets.all(20.w),
+                              child: Image.asset(
+                                "$rootImageDir/app_logo.png",
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
                       SizedBox(height: 32.h),
                       
                       // App Name
@@ -164,12 +186,15 @@ class _SplashScreenState extends State<SplashScreen>
                       SizedBox(height: 8.h),
                       
                       // Tagline
-                      Text(
-                        'Merchant Dashboard',
-                        style: context.t.bodyMedium?.copyWith(
-                          color: AppColors.black50,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
+                      FadeTransition(
+                        opacity: _taglineOpacityAnimation,
+                        child: Text(
+                          'Merchant Dashboard',
+                          style: context.t.bodyMedium?.copyWith(
+                            color: AppColors.black50,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],

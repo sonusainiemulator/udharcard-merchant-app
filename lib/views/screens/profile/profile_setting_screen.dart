@@ -108,18 +108,29 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           : const SizedBox(),
                 ),
                 body: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
+                  ),
                   child: Column(
                     children: [
                       // ── Profile Hero Header ────────────────────────────────
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 20.h,
+                          horizontal: 16.w,
+                        ),
                         decoration: BoxDecoration(
                           color: AppThemes.getFillColor(),
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
-                            color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+                            color:
+                                Get.isDarkMode
+                                    ? AppColors.black70
+                                    : AppColors.borderColor.withValues(
+                                      alpha: 0.5,
+                                    ),
                             width: 0.5,
                           ),
                         ),
@@ -127,13 +138,15 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           children: [
                             GestureDetector(
                               onTap: () {
-                                if (Get.find<ProfileController>().userPhoto != '') {
+                                if (Get.find<ProfileController>().userPhoto !=
+                                    '') {
                                   Get.to(
                                     () => Scaffold(
                                       appBar: const CustomAppBar(title: ""),
                                       body: PhotoView(
                                         imageProvider: NetworkImage(
-                                          Get.find<ProfileController>().userPhoto,
+                                          Get.find<ProfileController>()
+                                              .userPhoto,
                                         ),
                                       ),
                                     ),
@@ -152,18 +165,28 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                         width: 3.h,
                                       ),
                                       color: AppColors.imageBgColor,
-                                      image: Get.find<ProfileController>().isLoading ||
-                                              Get.find<ProfileController>().userPhoto == ''
-                                          ? DecorationImage(
-                                              image: AssetImage("$rootImageDir/avatar.webp"),
-                                              fit: BoxFit.cover,
-                                            )
-                                          : DecorationImage(
-                                              image: CachedNetworkImageProvider(
-                                                Get.find<ProfileController>().userPhoto,
+                                      image:
+                                          Get.find<ProfileController>()
+                                                      .isLoading ||
+                                                  Get.find<ProfileController>()
+                                                          .userPhoto ==
+                                                      ''
+                                              ? DecorationImage(
+                                                image: AssetImage(
+                                                  "$rootImageDir/avatar.webp",
+                                                ),
+                                                fit: BoxFit.cover,
+                                              )
+                                              : DecorationImage(
+                                                image:
+                                                    CachedNetworkImageProvider(
+                                                      Get.find<
+                                                            ProfileController
+                                                          >()
+                                                          .userPhoto,
+                                                    ),
+                                                fit: BoxFit.cover,
                                               ),
-                                              fit: BoxFit.cover,
-                                            ),
                                     ),
                                   ),
                                   Positioned(
@@ -199,10 +222,13 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             Text(
                               Get.find<ProfileController>().isLoading
                                   ? ""
-                                  : (Get.find<ProfileController>().join_date != "null" &&
-                                          Get.find<ProfileController>().join_date.isNotEmpty)
-                                      ? "Member since ${DateFormat('MMM yyyy').format(DateTime.parse(Get.find<ProfileController>().join_date))}"
-                                      : "Active Merchant Account",
+                                  : (Get.find<ProfileController>().join_date !=
+                                          "null" &&
+                                      Get.find<ProfileController>()
+                                          .join_date
+                                          .isNotEmpty)
+                                  ? "Member since ${DateFormat('MMM yyyy').format(DateTime.parse(Get.find<ProfileController>().join_date))}"
+                                  : "Active Merchant Account",
                               style: t.bodySmall?.copyWith(
                                 color: AppThemes.getBlack50Color(),
                                 fontSize: 12.sp,
@@ -220,7 +246,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           color: AppThemes.getFillColor(),
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
-                            color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+                            color:
+                                Get.isDarkMode
+                                    ? AppColors.black70
+                                    : AppColors.borderColor.withValues(
+                                      alpha: 0.5,
+                                    ),
                             width: 0.5,
                           ),
                         ),
@@ -229,7 +260,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.brightness_6_outlined, size: 18.sp, color: AppColors.mainColor),
+                                Icon(
+                                  Icons.brightness_6_outlined,
+                                  size: 18.sp,
+                                  color: AppColors.mainColor,
+                                ),
                                 HSpace(8.w),
                                 Text(
                                   storedLanguage['Theme Mode'] ?? "Theme Mode",
@@ -245,14 +280,20 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                               height: 42.h,
                               padding: EdgeInsets.all(4.h),
                               decoration: BoxDecoration(
-                                color: Get.isDarkMode ? AppColors.darkBgColor : AppColors.black10.withValues(alpha: 0.1),
+                                color:
+                                    Get.isDarkMode
+                                        ? AppColors.darkBgColor
+                                        : AppColors.black10.withValues(
+                                          alpha: 0.1,
+                                        ),
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
                               child: Row(
                                 children: [
                                   _buildSegmentTab(
                                     label: storedLanguage['Auto'] ?? "Auto",
-                                    isSelected: appController.selectedIndex == 0,
+                                    isSelected:
+                                        appController.selectedIndex == 0,
                                     onTap: () {
                                       appController.selectedIndex = 0;
                                       appController.onChanged(null);
@@ -261,7 +302,8 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                   ),
                                   _buildSegmentTab(
                                     label: storedLanguage['Dark'] ?? "Dark",
-                                    isSelected: appController.selectedIndex == 1,
+                                    isSelected:
+                                        appController.selectedIndex == 1,
                                     onTap: () {
                                       appController.selectedIndex = 1;
                                       appController.onChanged(true);
@@ -270,7 +312,8 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                   ),
                                   _buildSegmentTab(
                                     label: storedLanguage['Light'] ?? "Light",
-                                    isSelected: appController.selectedIndex == 2,
+                                    isSelected:
+                                        appController.selectedIndex == 2,
                                     onTap: () {
                                       appController.selectedIndex = 2;
                                       appController.onChanged(false);
@@ -295,9 +338,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             color: AppThemes.getFillColor(),
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
-                              color: Get.isDarkMode
-                                  ? AppColors.black70
-                                  : AppColors.borderColor.withValues(alpha: 0.5),
+                              color:
+                                  Get.isDarkMode
+                                      ? AppColors.black70
+                                      : AppColors.borderColor.withValues(
+                                        alpha: 0.5,
+                                      ),
                               width: 0.5,
                             ),
                           ),
@@ -349,28 +395,45 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
 
                       // ── Section 1: Store & Payments ───────────────────────
                       _buildGroupedSection(
-                        title: storedLanguage['Store & Payments'] ?? "Store & Payments",
+                        title:
+                            storedLanguage['Store & Payments'] ??
+                            "Store & Payments",
                         items: [
                           _ProfileMenuItem(
-                            title: storedLanguage['Edit Profile'] ?? "Edit Profile",
+                            title:
+                                storedLanguage['Edit Profile'] ??
+                                "Edit Profile",
                             iconData: Icons.person_outline_rounded,
-                            onTap: () => Get.toNamed(RoutesName.editProfileScreen),
+                            onTap:
+                                () => Get.toNamed(RoutesName.editProfileScreen),
                           ),
                           _ProfileMenuItem(
-                            title: storedLanguage['Merchant UPI Address'] ?? "Merchant UPI Address",
+                            title:
+                                storedLanguage['Merchant UPI Address'] ??
+                                "Merchant UPI Address",
                             iconData: Icons.account_balance_wallet_outlined,
-                            subtitle: profileController.merchantUpiId != null &&
-                                    profileController.merchantUpiId!.isNotEmpty
-                                ? profileController.merchantUpiId
-                                : "Add personal/shop UPI ID",
-                            onTap: () => _showUpiAddressBottomSheet(context, profileController),
+                            subtitle:
+                                profileController.merchantUpiId != null &&
+                                        profileController
+                                            .merchantUpiId!
+                                            .isNotEmpty
+                                    ? profileController.merchantUpiId
+                                    : "Add personal/shop UPI ID",
+                            onTap:
+                                () => _showUpiAddressBottomSheet(
+                                  context,
+                                  profileController,
+                                ),
                           ),
                           _ProfileMenuItem(
-                            title: storedLanguage['Upload QR Code'] ?? "Upload QR Code",
+                            title:
+                                storedLanguage['Upload Merchant QR'] ??
+                                "Upload Merchant QR",
                             iconData: Icons.qr_code_scanner_rounded,
-                            subtitle: profileController.customQrCodePath != null
-                                ? "Merchant QR Uploaded"
-                                : "Upload store QR image",
+                            subtitle:
+                                profileController.customQrCodePath != null
+                                    ? "Merchant QR Uploaded"
+                                    : "Upload your online payment QR image",
                             onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
                           ),
                         ],
@@ -382,34 +445,55 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       GetBuilder<WorkListController>(
                         builder: (workListController) {
                           return _buildGroupedSection(
-                            title: storedLanguage['Data & Backup'] ?? "Data & Backup",
+                            title:
+                                storedLanguage['Data & Backup'] ??
+                                "Data & Backup",
                             items: [
                               _ProfileMenuItem(
-                                title: storedLanguage['Export Ledger Backup'] ?? "Export Ledger Backup",
+                                title:
+                                    storedLanguage['Export Ledger Backup'] ??
+                                    "Export Ledger Backup",
                                 iconData: Icons.upload_file_rounded,
                                 subtitle: "Save JSON backup to phone/share",
-                                onTap: () => UdharController.to.exportLedgerBackup(),
+                                onTap:
+                                    () =>
+                                        UdharController.to.exportLedgerBackup(),
                               ),
                               _ProfileMenuItem(
-                                title: storedLanguage['Restore Backup'] ?? "Restore Backup",
+                                title:
+                                    storedLanguage['Restore Backup'] ??
+                                    "Restore Backup",
                                 iconData: Icons.download_for_offline_rounded,
-                                subtitle: "Restore customer ledgers from backup file",
-                                onTap: () => UdharController.to.importLedgerBackup(),
+                                subtitle:
+                                    "Restore customer ledgers from backup file",
+                                onTap:
+                                    () =>
+                                        UdharController.to.importLedgerBackup(),
                               ),
                               _ProfileMenuItem(
-                                title: storedLanguage['Google Drive Backup'] ?? "Google Drive Backup",
+                                title:
+                                    storedLanguage['Google Drive Backup'] ??
+                                    "Google Drive Backup",
                                 iconData: Icons.cloud_sync_rounded,
                                 badgeText: "Coming Soon",
-                                onTap: () => _showGoogleDriveComingSoonSheet(context),
+                                onTap:
+                                    () => _showGoogleDriveComingSoonSheet(
+                                      context,
+                                    ),
                               ),
                               _ProfileMenuItem(
-                                title: storedLanguage['Today Work List'] ?? "Today Work List",
+                                title:
+                                    storedLanguage['Today Work List'] ??
+                                    "Today Work List",
                                 iconData: Icons.event_note_rounded,
-                                subtitle: workListController.pendingBadgeText == null
-                                    ? "Plan today, tomorrow, and follow-ups"
-                                    : workListController.pendingSummaryText,
+                                subtitle:
+                                    workListController.pendingBadgeText == null
+                                        ? "Plan today, tomorrow, and follow-ups"
+                                        : workListController.pendingSummaryText,
                                 badgeText: workListController.pendingBadgeText,
-                                onTap: () => Get.toNamed(RoutesName.workListScreen),
+                                onTap:
+                                    () =>
+                                        Get.toNamed(RoutesName.workListScreen),
                               ),
                             ],
                             t: t,
@@ -420,23 +504,35 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
 
                       // ── Section 3: Security & Preferences ───────────────
                       _buildGroupedSection(
-                        title: storedLanguage['Security & Preferences'] ?? "Security & Preferences",
+                        title:
+                            storedLanguage['Security & Preferences'] ??
+                            "Security & Preferences",
                         items: [
                           _ProfileMenuItem(
-                            title: storedLanguage['Notification'] ?? "Notification",
+                            title:
+                                storedLanguage['Notification'] ??
+                                "Notification",
                             iconData: Icons.notifications_none_rounded,
-                            onTap: () => Get.toNamed(RoutesName.notificationPermissionScreen),
+                            onTap:
+                                () => Get.toNamed(
+                                  RoutesName.notificationPermissionScreen,
+                                ),
                           ),
                           _ProfileMenuItem(
-                            title: storedLanguage['Identity Verification'] ?? "Identity Verification",
+                            title:
+                                storedLanguage['Identity Verification'] ??
+                                "Identity Verification",
                             iconData: Icons.verified_user_outlined,
                             onTap: () {
-                              Get.find<VerificationController>().getVerificationList();
+                              Get.find<VerificationController>()
+                                  .getVerificationList();
                               Get.toNamed(RoutesName.verificationListScreen);
                             },
                           ),
                           _ProfileMenuItem(
-                            title: storedLanguage['2FA Security'] ?? "2FA Security",
+                            title:
+                                storedLanguage['2FA Security'] ??
+                                "2FA Security",
                             iconData: Icons.security_outlined,
                             onTap: () {
                               Get.find<VerificationController>().getTwoFa();
@@ -444,9 +540,13 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             },
                           ),
                           _ProfileMenuItem(
-                            title: storedLanguage['Delete Account'] ?? "Delete Account",
+                            title:
+                                storedLanguage['Delete Account'] ??
+                                "Delete Account",
                             iconData: Icons.delete_outline_rounded,
-                            onTap: () => Get.toNamed(RoutesName.deleteAccountScreen),
+                            onTap:
+                                () =>
+                                    Get.toNamed(RoutesName.deleteAccountScreen),
                           ),
                         ],
                         t: t,
@@ -464,7 +564,9 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           ),
                         ),
                         child: ListTile(
-                          onTap: () => buildLogoutDialog(context, t, storedLanguage),
+                          onTap:
+                              () =>
+                                  buildLogoutDialog(context, t, storedLanguage),
                           leading: Container(
                             height: 36.h,
                             width: 36.h,
@@ -472,7 +574,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                               shape: BoxShape.circle,
                               color: AppColors.redColor.withValues(alpha: 0.1),
                             ),
-                            child: Icon(Icons.logout_rounded, color: AppColors.redColor, size: 20.sp),
+                            child: Icon(
+                              Icons.logout_rounded,
+                              color: AppColors.redColor,
+                              size: 20.sp,
+                            ),
                           ),
                           title: Text(
                             storedLanguage['Log Out'] ?? "Log Out",
@@ -505,19 +611,23 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected
-                ? (Get.isDarkMode ? AppColors.darkCardColor : AppColors.whiteColor)
-                : Colors.transparent,
+            color:
+                isSelected
+                    ? (Get.isDarkMode
+                        ? AppColors.darkCardColor
+                        : AppColors.whiteColor)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(10.r),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : [],
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                    : [],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -525,9 +635,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             style: TextStyle(
               fontSize: 13.sp,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? (Get.isDarkMode ? AppColors.whiteColor : AppColors.blackColor)
-                  : AppColors.black50,
+              color:
+                  isSelected
+                      ? (Get.isDarkMode
+                          ? AppColors.whiteColor
+                          : AppColors.blackColor)
+                      : AppColors.black50,
             ),
           ),
         ),
@@ -545,7 +658,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
         color: AppThemes.getFillColor(),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.5),
+          color:
+              Get.isDarkMode
+                  ? AppColors.black70
+                  : AppColors.borderColor.withValues(alpha: 0.5),
           width: 0.5,
         ),
       ),
@@ -553,7 +669,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 14.h, bottom: 6.h),
+            padding: EdgeInsets.only(
+              left: 16.w,
+              right: 16.w,
+              top: 14.h,
+              bottom: 6.h,
+            ),
             child: Text(
               title.toUpperCase(),
               style: t.bodySmall?.copyWith(
@@ -568,16 +689,23 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              indent: 52.w,
-              endIndent: 16.w,
-              color: Get.isDarkMode ? AppColors.black70 : AppColors.borderColor.withValues(alpha: 0.3),
-            ),
+            separatorBuilder:
+                (_, __) => Divider(
+                  height: 1,
+                  indent: 52.w,
+                  endIndent: 16.w,
+                  color:
+                      Get.isDarkMode
+                          ? AppColors.black70
+                          : AppColors.borderColor.withValues(alpha: 0.3),
+                ),
             itemBuilder: (context, index) {
               final item = items[index];
               return ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 2.h,
+                ),
                 onTap: item.onTap,
                 leading: Container(
                   height: 36.h,
@@ -586,9 +714,18 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                     shape: BoxShape.circle,
                     color: AppColors.mainColor.withValues(alpha: 0.12),
                   ),
-                  child: item.iconData != null
-                      ? Icon(item.iconData, size: 20.sp, color: AppColors.blackColor)
-                      : Icon(Icons.tune, size: 20.sp, color: AppColors.blackColor),
+                  child:
+                      item.iconData != null
+                          ? Icon(
+                            item.iconData,
+                            size: 20.sp,
+                            color: AppColors.blackColor,
+                          )
+                          : Icon(
+                            Icons.tune,
+                            size: 20.sp,
+                            color: AppColors.blackColor,
+                          ),
                 ),
                 title: Row(
                   children: [
@@ -603,11 +740,17 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                     ),
                     if (item.badgeText != null) ...[
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 2.h,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.shade700.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: Colors.amber.shade700, width: 0.8),
+                          border: Border.all(
+                            color: Colors.amber.shade700,
+                            width: 0.8,
+                          ),
                         ),
                         child: Text(
                           item.badgeText!,
@@ -621,15 +764,16 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                     ],
                   ],
                 ),
-                subtitle: item.subtitle != null
-                    ? Text(
-                        item.subtitle!,
-                        style: t.bodySmall?.copyWith(
-                          color: AppThemes.getBlack50Color(),
-                          fontSize: 11.sp,
-                        ),
-                      )
-                    : null,
+                subtitle:
+                    item.subtitle != null
+                        ? Text(
+                          item.subtitle!,
+                          style: t.bodySmall?.copyWith(
+                            color: AppThemes.getBlack50Color(),
+                            fontSize: 11.sp,
+                          ),
+                        )
+                        : null,
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   size: 20.sp,
@@ -662,7 +806,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
           bottom: true,
           child: Padding(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16.h + MediaQuery.of(context).padding.bottom,
+              bottom:
+                  MediaQuery.of(context).viewInsets.bottom +
+                  16.h +
+                  MediaQuery.of(context).padding.bottom,
               left: 20.w,
               right: 20.w,
               top: 16.h,
@@ -697,7 +844,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       icon: Icon(Icons.close, size: 20.sp),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                    )
+                    ),
                   ],
                 ),
                 VSpace(10.h),
@@ -719,7 +866,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       color: AppColors.textFieldHintColor,
                       fontSize: 14.sp,
                     ),
-                    prefixIcon: Icon(Icons.qr_code_2, color: AppColors.mainColor, size: 22.sp),
+                    prefixIcon: Icon(
+                      Icons.qr_code_2,
+                      color: AppColors.mainColor,
+                      size: 22.sp,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12.r),
                       borderSide: BorderSide(color: AppColors.borderColor),
@@ -730,11 +881,17 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12.r),
-                      borderSide: BorderSide(color: AppColors.mainColor, width: 1.5),
+                      borderSide: BorderSide(
+                        color: AppColors.mainColor,
+                        width: 1.5,
+                      ),
                     ),
                     filled: true,
                     fillColor: AppThemes.getFillColor(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 14.h,
+                    ),
                   ),
                 ),
                 VSpace(20.h),
@@ -757,7 +914,11 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           },
                           child: Text(
                             "Remove",
-                            style: TextStyle(color: Colors.redAccent, fontSize: 14.sp, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -775,10 +936,14 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                         ),
                         onPressed: () {
                           if (upiCtrl.text.trim().isEmpty) {
-                            Helpers.showSnackBar(msg: "Please enter a valid UPI ID");
+                            Helpers.showSnackBar(
+                              msg: "Please enter a valid UPI ID",
+                            );
                             return;
                           }
-                          profileController.saveMerchantUpiId(upiCtrl.text.trim());
+                          profileController.saveMerchantUpiId(
+                            upiCtrl.text.trim(),
+                          );
                           Navigator.pop(context);
                         },
                         child: Text(
@@ -836,7 +1001,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 ),
                 VSpace(8.h),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 4.h,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade700.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12.r),
