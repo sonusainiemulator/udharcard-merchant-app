@@ -412,8 +412,8 @@ class UdharController extends GetxController {
           Helpers.showSnackBar(
             msg: data?['message'] ?? 'Customer added successfully',
           );
-          if (data?['data'] != null) {
-            resultCustomer = Map<String, dynamic>.from(data!['data']);
+          if (data != null && data['data'] is Map) {
+            resultCustomer = Map<String, dynamic>.from(data['data']);
             // Optimistic update
             usersList.insert(0, resultCustomer);
             if (searchCtrl.text.isEmpty) {

@@ -25,16 +25,25 @@ class CustomerUdharController extends Controller
 
             $this->autoLinkCustomersToUser($user->id, $user->phone ?? $user->username ?? '');
             $supportsLink = $this->supportsCustomerUserIdColumn();
+            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
+            $digits = $this->lastTenDigits($rawPhone);
+
+            if (!$supportsLink && $rawPhone === '' && $digits === '') {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Customer ledgers retrieved successfully',
+                    'data' => [],
+                ], 200);
+            }
 
             $customers = Customer::with('merchant')
-                ->where(function ($query) use ($user, $supportsLink) {
+                ->where(function ($query) use ($user, $supportsLink, $rawPhone, $digits) {
                     if ($supportsLink) {
                         $query->where('customer_user_id', $user->id);
                     }
 
-                    $query->orWhere(function ($phoneQuery) use ($user) {
-                            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
-                            $digits = $this->lastTenDigits($rawPhone);
+                    if ($rawPhone !== '' || $digits !== '') {
+                        $query->orWhere(function ($phoneQuery) use ($rawPhone, $digits) {
                             if ($rawPhone !== '') {
                                 $phoneQuery->where('phone', $rawPhone);
                             }
@@ -42,6 +51,7 @@ class CustomerUdharController extends Controller
                                 $phoneQuery->orWhere('phone', 'like', '%' . $digits);
                             }
                         });
+                    }
                 })
                 ->orderByDesc('updated_at')
                 ->get();
@@ -87,17 +97,22 @@ class CustomerUdharController extends Controller
 
             $this->autoLinkCustomersToUser($user->id, $user->phone ?? $user->username ?? '');
             $supportsLink = $this->supportsCustomerUserIdColumn();
+            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
+            $digits = $this->lastTenDigits($rawPhone);
+
+            if (!$supportsLink && $rawPhone === '' && $digits === '') {
+                return response()->json($this->errorResponse('No ledger account found with this merchant.'), 404);
+            }
 
             $customer = Customer::with('merchant')
                 ->where('merchant_id', $merchantId)
-                ->where(function ($query) use ($user, $supportsLink) {
+                ->where(function ($query) use ($user, $supportsLink, $rawPhone, $digits) {
                     if ($supportsLink) {
                         $query->where('customer_user_id', $user->id);
                     }
 
-                    $query->orWhere(function ($phoneQuery) use ($user) {
-                            $rawPhone = trim((string) ($user->phone ?? $user->username ?? ''));
-                            $digits = $this->lastTenDigits($rawPhone);
+                    if ($rawPhone !== '' || $digits !== '') {
+                        $query->orWhere(function ($phoneQuery) use ($rawPhone, $digits) {
                             if ($rawPhone !== '') {
                                 $phoneQuery->where('phone', $rawPhone);
                             }
@@ -105,6 +120,7 @@ class CustomerUdharController extends Controller
                                 $phoneQuery->orWhere('phone', 'like', '%' . $digits);
                             }
                         });
+                    }
                 })
                 ->first();
 

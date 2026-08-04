@@ -577,7 +577,7 @@ class _WorkListScreenState extends State<WorkListScreen> {
                       ),
                       VSpace(12.h),
                       DropdownButtonFormField<String>(
-                        initialValue: selectedPriority,
+                        value: selectedPriority,
                         decoration: _inputDecoration('Priority'),
                         items: const [
                           DropdownMenuItem(value: 'high', child: Text('High')),
