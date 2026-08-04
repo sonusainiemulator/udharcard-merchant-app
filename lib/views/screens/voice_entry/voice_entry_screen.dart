@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -33,6 +34,13 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = Get.find<VoiceEntryController>();
+    unawaited(controller.initializeVoiceFeatures());
   }
 
   @override
@@ -576,7 +584,69 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
                           VSpace(15.h),
                         ],
 
-                        // Quick examples
+                        if (controller.recentVoiceContacts.isNotEmpty) ...[
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Recent customers:",
+                                style: context.t.bodySmall?.copyWith(
+                                  color: AppColors.black50,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              VSpace(8.h),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children:
+                                      controller.recentVoiceContacts.map((
+                                        contact,
+                                      ) {
+                                        return GestureDetector(
+                                          onTap:
+                                              () => controller.useRecentContact(
+                                                contact,
+                                              ),
+                                          child: Container(
+                                            margin: EdgeInsets.only(right: 8.w),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 12.w,
+                                              vertical: 6.h,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Get.isDarkMode
+                                                      ? AppColors.darkCardColor
+                                                      : AppColors
+                                                          .fillColorColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(20.r),
+                                              border: Border.all(
+                                                color:
+                                                    Get.isDarkMode
+                                                        ? AppColors.black70
+                                                        : AppColors.borderColor,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              contact,
+                                              style: context.t.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    AppThemes.getIconBlackColor(),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          VSpace(12.h),
+                        ],
+
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

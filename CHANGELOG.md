@@ -5,6 +5,19 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.43] - 2026-08-04
+
+### 🔄 Merchant Panel API Alignment
+- **Udhar URL Paths Standardized**: Restructured `AppConstants` Udhar endpoint URLs to strictly adhere to the Merchant Panel API documentation (e.g., changed `/merchant/udhar/customers` to `/merchant/udhar/customers/store` and `/merchant/udhar/customers/update`).
+- **HTTP Method Corrections**: Adapted `UdharRepo` to respect updated HTTP methods from the latest API spec. Specifically, `generateQr` and `generatePdfBill` now fire as `GET` requests passing required data as query parameters, and `updateCustomerCreditLimit` now fires as a `POST` request.
+
+## [1.0.42] - 2026-08-04
+
+### 🚀 Udhar Entry & Customer Real-Time Sync Fixes
+- **Optimistic UI Updates**: Instantly update the customer list and ledger locally when adding a customer or posting an Udhar transaction before the background API sync completes. This makes the UI feel instantly responsive.
+- **Pusher Race Condition Fix**: Ensured WebSocket (Pusher) events can bypass `isUsersLoading` / `isLedgerLoading` locks via a new `force` parameter so background remote updates are never silently dropped.
+- **Search State Persistence**: Fixed a bug where a background sync would accidentally clear an active user search filter, ensuring `searchCtrl.text` re-applies properly after fetching.
+
 ## [1.0.41] - 2026-08-04
 
 ### 🎙️ AI Voice Entry & One-Tap Udhar Posting

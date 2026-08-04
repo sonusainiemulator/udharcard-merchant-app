@@ -23,7 +23,7 @@ class UdharRepo {
       fields["created_at"] = createdAt;
     }
     return await ApiClient.post(
-      ENDPOINT_URL: AppConstants.addUdharUrl,
+      ENDPOINT_URL: "${AppConstants.addUdharUrl}/$customerId/entry",
       fields: fields,
     );
   }
@@ -62,8 +62,8 @@ class UdharRepo {
     required String customerId,
     required String creditLimit,
   }) async {
-    return await ApiClient.put(
-      ENDPOINT_URL: "${AppConstants.updateCustomerUrl}/$customerId/credit-limit",
+    return await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.updateCustomerUrl}/$customerId",
       fields: {"credit_limit": creditLimit},
     );
   }
@@ -82,7 +82,7 @@ class UdharRepo {
     required String customerId,
   }) async {
     return await ApiClient.get(
-      ENDPOINT_URL: "${AppConstants.customerLedgerUrl}/$customerId/ledger",
+      ENDPOINT_URL: "${AppConstants.customerLedgerUrl}/$customerId",
     );
   }
 
@@ -162,9 +162,8 @@ class UdharRepo {
     required String customerId,
     required String amount,
   }) async {
-    return await ApiClient.post(
-      ENDPOINT_URL: AppConstants.customerQrUrl,
-      fields: {"customer_id": customerId, "amount": amount},
+    return await ApiClient.get(
+      ENDPOINT_URL: "${AppConstants.customerQrUrl}/$customerId?amount=$amount",
     );
   }
 
@@ -173,8 +172,8 @@ class UdharRepo {
     required String customerId,
   }) async {
     return await ApiClient.post(
-      ENDPOINT_URL: "${AppConstants.sendReminderUrl}/$customerId/remind",
-      fields: {}, // Assuming no extra body fields needed, just trigger push
+      ENDPOINT_URL: AppConstants.sendReminderUrl,
+      fields: {"customer_id": customerId},
     );
   }
 
@@ -185,16 +184,15 @@ class UdharRepo {
     String? month,
     String cycle = "28_days",
   }) async {
-    final Map<String, dynamic> fields = {
-      "channel": channel,
-      "cycle": cycle,
-    };
+    final List<String> query = [
+      "channel=$channel",
+      "cycle=$cycle",
+    ];
     if (month != null && month.isNotEmpty) {
-      fields["month"] = month;
+      query.add("month=$month");
     }
-    return await ApiClient.post(
-      ENDPOINT_URL: "${AppConstants.generatePdfBillUrl}/$customerId/generate-pdf-bill",
-      fields: fields,
+    return await ApiClient.get(
+      ENDPOINT_URL: "${AppConstants.generatePdfBillUrl}/$customerId?${query.join('&')}",
     );
   }
 }

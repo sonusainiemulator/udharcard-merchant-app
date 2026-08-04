@@ -75,15 +75,15 @@ class AppConstants {
 
   //----UDHAR
   static const String addUdharUrl = "/merchant/udhar/ledger";
-  static const String addCustomerUrl = "/merchant/udhar/customers";
-  static const String updateCustomerUrl = "/merchant/udhar/customers";
-  static const String deleteCustomerUrl = "/merchant/udhar/customers";
-  static const String customerLedgerUrl = "/merchant/udhar/customers";
-  static const String customerQrUrl = "/merchant/udhar/qr/generate";
+  static const String addCustomerUrl = "/merchant/udhar/customers/store";
+  static const String updateCustomerUrl = "/merchant/udhar/customers/update";
+  static const String deleteCustomerUrl = "/merchant/udhar/customers/delete";
+  static const String customerLedgerUrl = "/merchant/udhar/ledger";
+  static const String customerQrUrl = "/merchant/udhar/qr";
   static const String udharSyncUrl = "/merchant/udhar/sync";
-  static const String sendReminderUrl = "/merchant/udhar/customers";
+  static const String sendReminderUrl = "/merchant/udhar/reminder/generate";
   static const String sendAppReminderUrl = "/merchant/udhar/customer"; // id/remind is appended in repo
-  static const String generatePdfBillUrl = "/merchant/udhar/customers";
+  static const String generatePdfBillUrl = "/merchant/udhar/bill/download";
   static const String udharReportsUrl = "/merchant/udhar/reports";
   static const String workListUrl = "/merchant/work-list";
   static const String workListSyncUrl = "/merchant/work-list/sync";

@@ -1,7 +1,18 @@
+// ignore_for_file: must_call_super
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:paysecure/controllers/udhar_controller.dart';
 import 'package:paysecure/controllers/voice_entry_controller.dart';
+
+class TestVoiceEntryController extends VoiceEntryController {
+  bool openQuickAddEntryCalled = false;
+
+  @override
+  Future<void> openQuickAddEntry() async {
+    openQuickAddEntryCalled = true;
+  }
+}
 
 class TestUdharController extends UdharController {
   bool submitCalled = false;
@@ -11,13 +22,11 @@ class TestUdharController extends UdharController {
 
   @override
   void onInit() {
-    super.onInit();
+    // Skip connectivity/network bootstrapping in unit tests.
   }
 
   @override
-  void onClose() {
-    super.onClose();
-  }
+  void onClose() {}
 
   @override
   void applyVoiceEntryPrefill({String? name, double? amount, String? type}) {
@@ -58,6 +67,19 @@ void main() {
       expect(udharController.lastName, 'Ramesh');
       expect(udharController.lastAmount, 500);
       expect(udharController.lastType, 'Given');
+    },
+  );
+
+  test(
+    'useRecentContact opens the add form with the selected customer',
+    () async {
+      final controller = TestVoiceEntryController();
+
+      await controller.useRecentContact('Ramesh');
+
+      expect(controller.parsedName, 'Ramesh');
+      expect(controller.parsedAmount, 0);
+      expect(controller.openQuickAddEntryCalled, isTrue);
     },
   );
 

@@ -181,8 +181,8 @@ class UdharController extends GetxController {
   // User / contact loading
   // ─────────────────────────────────────────────────────────────
 
-  Future<void> fetchUsers() async {
-    if (isUsersLoading) return;
+  Future<void> fetchUsers({bool force = false}) async {
+    if (isUsersLoading && !force) return;
 
     isUsersLoading = true;
     update();
@@ -230,7 +230,11 @@ class UdharController extends GetxController {
       }
     }
 
-    filteredUsers = List.from(usersList);
+    if (searchCtrl.text.isNotEmpty) {
+      searchUsers(searchCtrl.text);
+    } else {
+      filteredUsers = List.from(usersList);
+    }
     isUsersLoading = false;
     update();
   }
@@ -403,9 +407,17 @@ class UdharController extends GetxController {
           );
           if (data?['data'] != null) {
             resultCustomer = Map<String, dynamic>.from(data!['data']);
+            // Optimistic update
+            usersList.insert(0, resultCustomer);
+            if (searchCtrl.text.isEmpty) {
+              filteredUsers = List.from(usersList);
+            } else {
+              searchUsers(searchCtrl.text);
+            }
+            update();
           }
           _resetCustomerForm();
-          await fetchUsers();
+          await fetchUsers(force: true);
           _closeAddCustomerScreen(resultCustomer);
         } else {
           final String apiMessage = _extractApiMessage(data, response.body);
@@ -576,8 +588,9 @@ class UdharController extends GetxController {
   Future<void> fetchCustomerLedger(
     String customerId, {
     bool showLoading = true,
+    bool force = false,
   }) async {
-    if (isLedgerLoading) return;
+    if (isLedgerLoading && !force) return;
 
     if (showLoading) {
       isLedgerLoading = true;
@@ -721,14 +734,35 @@ class UdharController extends GetxController {
         final data = jsonDecode(response.body);
 
         if (response.statusCode == 200 && data['status'] == 'success') {
+          // Optimistic update
+          final newLedger = {
+            'amount': double.tryParse(amountStr) ?? 0.0,
+            'type': typeStr == 'given' ? 'credit' : 'debit',
+            'notes': remarksStr,
+            'payment_method': paymentMethodStr,
+            'created_at': DateTime.now().toIso8601String(),
+          };
+          
+          if (selectedCustomerId == (selectedUser?['id']?.toString())) {
+             ledgerTransactions.insert(0, newLedger);
+             final amount = double.tryParse(amountStr) ?? 0.0;
+             if (typeStr == 'given') {
+               currentOutstandingBalance += amount;
+             } else {
+               currentOutstandingBalance -= amount;
+             }
+             _applyLedgerDateFilter();
+             update();
+          }
+
           Helpers.showSnackBar(
             msg: data['message'] ?? 'Udhar transaction added successfully',
           );
           _resetForm();
           if (Get.context != null) Navigator.of(Get.context!).pop();
-          await fetchUsers();
+          await fetchUsers(force: true);
           if (selectedCustomerId.isNotEmpty) {
-            await fetchCustomerLedger(selectedCustomerId);
+            await fetchCustomerLedger(selectedCustomerId, force: true);
           }
         } else {
           Helpers.showSnackBar(

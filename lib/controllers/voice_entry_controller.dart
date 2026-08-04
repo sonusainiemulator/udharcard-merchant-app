@@ -63,8 +63,10 @@ class VoiceEntryController extends GetxController {
   double parsedAmount = 0.0;
   String parsedType = ""; // "Given" or "Received" or ""
   bool get hasQuickEntry => parsedName.isNotEmpty && parsedAmount > 0;
+  bool get hasCustomerSelection => parsedName.isNotEmpty;
 
   List<Map<String, dynamic>> voiceTransactions = [];
+  List<String> recentVoiceContacts = [];
 
   final TextEditingController sandboxTextCtrl = TextEditingController();
 
@@ -72,9 +74,12 @@ class VoiceEntryController extends GetxController {
   void onInit() {
     super.onInit();
     loadTalkBackSettings();
-    initSpeech();
-    initTts();
     loadTransactions();
+  }
+
+  Future<void> initializeVoiceFeatures() async {
+    await initSpeech();
+    await initTts();
   }
 
   @override
@@ -541,6 +546,13 @@ class VoiceEntryController extends GetxController {
       "date": DateTime.now().toString(),
     };
 
+    if (parsedName.trim().isNotEmpty) {
+      recentVoiceContacts.remove(parsedName.trim());
+      recentVoiceContacts.insert(0, parsedName.trim());
+      recentVoiceContacts = recentVoiceContacts.take(5).toList();
+      HiveHelp.write('voice_recent_contacts', recentVoiceContacts);
+    }
+
     voiceTransactions.insert(0, newTx);
 
     List<String> jsonList =
@@ -571,7 +583,24 @@ class VoiceEntryController extends GetxController {
     } else {
       voiceTransactions = [];
     }
+
+    final savedContacts = HiveHelp.read('voice_recent_contacts');
+    if (savedContacts is List) {
+      recentVoiceContacts = savedContacts.map((e) => e.toString()).toList();
+    } else {
+      recentVoiceContacts = [];
+    }
     update();
+  }
+
+  Future<void> useRecentContact(String contactName) async {
+    if (contactName.trim().isEmpty) return;
+    sandboxTextCtrl.text = contactName;
+    parsedName = contactName.trim();
+    parsedAmount = 0;
+    parsedType = 'Given';
+    update();
+    await openQuickAddEntry();
   }
 
   void postToUdharLedger(Map<String, dynamic> tx) {

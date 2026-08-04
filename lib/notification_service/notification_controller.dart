@@ -91,11 +91,11 @@ class PushNotificationController extends GetxController {
     // Realtime Udhar Sync Trigger
     if (Get.isRegistered<UdharController>()) {
       final udharCtrl = Get.find<UdharController>();
-      udharCtrl.fetchUsers();
+      udharCtrl.fetchUsers(force: true);
       if (udharCtrl.selectedUser != null) {
         final custId = udharCtrl.selectedUser!['id']?.toString() ?? '';
         if (custId.isNotEmpty) {
-          udharCtrl.fetchCustomerLedger(custId);
+          udharCtrl.fetchCustomerLedger(custId, force: true);
         }
       }
     }
