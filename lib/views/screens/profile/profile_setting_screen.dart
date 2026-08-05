@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -615,6 +616,73 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             }),
                           );
                         },
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 3.5: App Version ───────────────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: AppColors.mainColor.withValues(alpha: 0.15),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: FutureBuilder<PackageInfo>(
+                          future: PackageInfo.fromPlatform(),
+                          builder: (context, snapshot) {
+                            final version = snapshot.data?.version ?? '1.0.47';
+                            final buildNumber = snapshot.data?.buildNumber ?? '';
+                            final versionStr = buildNumber.isNotEmpty ? 'v$version ($buildNumber)' : 'v$version';
+                            return ListTile(
+                              leading: Container(
+                                height: 36.h,
+                                width: 36.h,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.mainColor.withValues(alpha: 0.1),
+                                ),
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  color: AppColors.mainColor,
+                                  size: 20.sp,
+                                ),
+                              ),
+                              title: Text(
+                                storedLanguage['App Version'] ?? "App Version",
+                                style: t.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'UdharCard Merchant App',
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              trailing: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.mainColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(
+                                    color: AppColors.mainColor.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  versionStr,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.mainColor,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       VSpace(16.h),
 

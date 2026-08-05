@@ -5,6 +5,12 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.48] - 2026-08-05
+
+### ℹ️ App Version Display in Merchant & Profile Settings
+- **Merchant Settings App Version Card**: Added a prominent **App Version** information card in [merchant_settings_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/merchant-settings/merchant_settings_screen.dart) dynamically fetching app version details via `package_info_plus`.
+- **Profile Settings Integration**: Added a matching **App Version** tile under Security & Preferences in [profile_setting_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/profile/profile_setting_screen.dart).
+
 ## [1.0.47] - 2026-08-05
 
 ### 🔒 App Lock (Fingerprint, PIN, and Pattern Lock)

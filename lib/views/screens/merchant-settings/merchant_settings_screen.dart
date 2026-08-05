@@ -18,6 +18,8 @@ import '../../widgets/app_custom_dropdown.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/spacing.dart';
 
+import 'package:package_info_plus/package_info_plus.dart';
+
 class MerchantSettingScreen extends StatelessWidget {
   final bool? isFromDrawerSection;
   const MerchantSettingScreen({super.key, this.isFromDrawerSection = false});
@@ -90,6 +92,77 @@ class MerchantSettingScreen extends StatelessWidget {
                             Icon(Icons.chevron_right_rounded, color: AppColors.mainColor),
                           ],
                         ),
+                      ),
+                    ),
+                    VSpace(16.h),
+                    // App Information & Version Display Card
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(16.r),
+                      decoration: BoxDecoration(
+                        color: Get.isDarkMode ? const Color(0xFF121A2A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: Get.isDarkMode ? const Color(0xFF23304A) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10.r),
+                            decoration: BoxDecoration(
+                              color: AppColors.mainColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Icon(Icons.info_outline_rounded, color: AppColors.mainColor, size: 22.sp),
+                          ),
+                          HSpace(12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  storedLanguage['App Version'] ?? 'App Version',
+                                  style: context.t.displayMedium?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                VSpace(4.h),
+                                Text(
+                                  'UdharCard Merchant App',
+                                  style: context.t.bodySmall?.copyWith(
+                                    color: AppColors.black60,
+                                    fontSize: 12.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          FutureBuilder<PackageInfo>(
+                            future: PackageInfo.fromPlatform(),
+                            builder: (context, snapshot) {
+                              final version = snapshot.data?.version ?? '1.0.47';
+                              final buildNumber = snapshot.data?.buildNumber ?? '';
+                              final versionStr = buildNumber.isNotEmpty ? 'v$version ($buildNumber)' : 'v$version';
+                              return Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.mainColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(
+                                    color: AppColors.mainColor.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  versionStr,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.mainColor,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     VSpace(24.h),
