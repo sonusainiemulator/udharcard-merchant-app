@@ -5,6 +5,20 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.47] - 2026-08-05
+
+### 🔒 App Lock (Fingerprint, PIN, and Pattern Lock)
+- **Local Device Security**: Added support to secure the app with native phone lock using fingerprint, PIN, pattern, or face ID via `local_auth`.
+- **Profile Settings Integration**: Added an App Lock toggle tile under *Security & Preferences* in [profile_setting_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/profile/profile_setting_screen.dart).
+- **Dedicated Lock Screen & Lifecycle Observer**: Added [app_lock_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/app_lock/app_lock_screen.dart) and [app_lock_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/app_lock_controller.dart) to automatically lock the app when backgrounded or launched.
+- **Android Biometric Permissions**: Added `<uses-permission android:name="android.permission.USE_BIOMETRIC"/>` permission to Android manifest.
+
+### 👤 Add Customer Flow & API Error Handling Fixes
+- **API Status Code Interceptor Fix**: Resolved issue in [api_error.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/source/errors/api_error.dart) where 2xx status codes (e.g. `201 Created`) and 400/422 validation errors were throwing unexpected `HttpException`s instead of passing response data to feature controllers.
+- **Phone Number Normalization**: Added automatic phone number sanitization in [udhar_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/udhar_controller.dart) to strip `+91` / leading zeros for consistent 10-digit customer registration.
+- **Screen Popping Reliability**: Fixed `_closeAddCustomerScreen` in [udhar_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/udhar_controller.dart) to ensure the form screen pops cleanly upon successful customer creation.
+- **Exact Validation Error Display**: Improved `_extractApiMessage` to display backend validation errors (e.g. duplicate phone number messages) clearly.
+
 ## [1.0.46] - 2026-08-04
 
 ### 🎙️ Voice Entry Stability & Fast Add UX

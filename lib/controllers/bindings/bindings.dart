@@ -1,4 +1,5 @@
 
+import 'package:paysecure/controllers/app_lock_controller.dart';
 import 'package:paysecure/controllers/pin_reset_controller.dart';
 
 import '../merchant_setting_controller.dart';
@@ -8,6 +9,7 @@ class InitBindings implements Bindings {
   @override
   void dependencies() {
     Get.put(AppController());
+    Get.put(AppLockController(), permanent: true);
     Get.put(ProfileController());
     Get.put(PushNotificationController());
 

@@ -29,4 +29,5 @@ class Keys {
   static String subscriptionEnrollmentRequired = "subscriptionEnrollmentRequired";
   static String subscriptionSoftRolloutEnabled = "subscriptionSoftRolloutEnabled";
   static String subscriptionHardLimitEnabled = "subscriptionHardLimitEnabled";
+  static String isAppLockEnabled = "isAppLockEnabled";
 }

@@ -8,6 +8,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import '../../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
+import '../../../controllers/app_lock_controller.dart';
 import '../../../controllers/profile_controller.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../controllers/verification_controller.dart';
@@ -550,6 +551,70 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           ),
                         ],
                         t: t,
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 3.5: App Security (Fingerprint, PIN, Pattern Lock)
+                      GetBuilder<AppLockController>(
+                        builder: (appLockCtrl) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: AppThemes.getFillColor(),
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(
+                                color:
+                                    Get.isDarkMode
+                                        ? AppColors.black70
+                                        : AppColors.borderColor.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Obx(() {
+                              return ListTile(
+                                leading: Container(
+                                  height: 36.h,
+                                  width: 36.h,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.mainColor.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.fingerprint_rounded,
+                                    color: AppColors.mainColor,
+                                    size: 20.sp,
+                                  ),
+                                ),
+                                title: Text(
+                                  storedLanguage['App Lock'] ?? "App Lock",
+                                  style: t.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  storedLanguage[
+                                        'Use fingerprint, PIN, or pattern lock'
+                                      ] ??
+                                      "Use fingerprint, PIN, or pattern lock",
+                                  style: t.bodySmall?.copyWith(
+                                    fontSize: 12.sp,
+                                    color: AppThemes.getParagraphColor(),
+                                  ),
+                                ),
+                                trailing: Switch.adaptive(
+                                  activeColor: AppColors.mainColor,
+                                  value: appLockCtrl.isAppLockEnabled.value,
+                                  onChanged: (val) {
+                                    appLockCtrl.toggleAppLock(val);
+                                  },
+                                ),
+                              );
+                            }),
+                          );
+                        },
                       ),
                       VSpace(16.h),
 

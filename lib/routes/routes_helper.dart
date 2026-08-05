@@ -1,3 +1,4 @@
+import '../views/screens/app_lock/app_lock_screen.dart';
 import '../views/screens/auth/merchant_onboarding_wizard_screen.dart';
 import '../views/screens/merchant-settings/merchant_settings_screen.dart';
 import '../views/screens/pin_setup/security_pin_setup_screen.dart';
@@ -15,6 +16,7 @@ import '../routes/page_index.dart';
 class RouteHelper {
   static List<GetPage> routes() => [
     GetPage(name: RoutesName.INITIAL, page: () => SplashScreen()),
+    GetPage(name: RoutesName.appLockScreen, page: () => const AppLockScreen()),
     GetPage(name: RoutesName.onbordingScreen, page: () => OnbordingScreen()),
     GetPage(name: RoutesName.bottomNavBar, page: () => BottomNavBar()),
     GetPage(name: RoutesName.loginScreen, page: () => LoginScreen()),

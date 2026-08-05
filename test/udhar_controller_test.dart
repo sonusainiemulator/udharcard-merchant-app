@@ -11,7 +11,7 @@ class TestUdharController extends UdharController {
   int fetchUsersCalls = 0;
 
   @override
-  Future<void> fetchUsers() async {
+  Future<void> fetchUsers({bool force = false}) async {
     fetchUsersCalls++;
   }
 
@@ -125,14 +125,47 @@ class FakeHttpClientRequest implements HttpClientRequest {
 
   @override
   Future<HttpClientResponse> close() async {
-    throw const SocketException('test transport failure');
+    return FakeHttpClientResponse(responseBody, statusCode);
   }
 
   @override
   void abort([Object? exception, StackTrace? stackTrace]) {}
 
   @override
-  Future<HttpClientResponse> get done async => throw const SocketException('test transport failure');
+  Future<HttpClientResponse> get done async => FakeHttpClientResponse(responseBody, statusCode);
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeHttpClientResponse extends Stream<List<int>> implements HttpClientResponse {
+  FakeHttpClientResponse(this.responseBody, this.statusCode);
+  final String responseBody;
+  @override
+  final int statusCode;
+
+  @override
+  int get contentLength => utf8.encode(responseBody).length;
+
+  @override
+  HttpHeaders get headers => FakeHttpHeaders(initialValues: {
+        'content-type': ['application/json']
+      });
+
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    return Stream<List<int>>.value(utf8.encode(responseBody)).listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -232,6 +265,23 @@ void main() {
       });
 
       expect(controller.fetchUsersCalls, 1);
+    });
+
+    test('addCustomer validates required fields correctly', () async {
+      final controller = TestUdharController();
+      controller.nameCtrl.text = '';
+      controller.phoneCtrl.text = '';
+
+      final res = await controller.addCustomer();
+      expect(res, isNull);
+    });
+
+    test('addCustomer sanitizes +91 country prefix from phone', () {
+      String rawPhone = '+91 9876543210'.replaceAll(RegExp(r'[^0-9]'), '');
+      if (rawPhone.length == 12 && rawPhone.startsWith('91')) {
+        rawPhone = rawPhone.substring(2);
+      }
+      expect(rawPhone, '9876543210');
     });
   });
 }

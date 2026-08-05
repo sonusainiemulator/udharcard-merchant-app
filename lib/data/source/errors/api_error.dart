@@ -13,59 +13,62 @@ class ApiResponse {
   /// Process the HTTP response and handle different status codes efficiently.
   static Future<http.Response> processResponse(http.Response response) async {
     int STATUS_CODE = response.statusCode;
-    String URL = response.request!.url.toString();
-    String METHOD = response.request!.method.toString();
+    String URL = response.request?.url.toString() ?? '';
+    String METHOD = response.request?.method.toString() ?? '';
 
-    if (response.headers['content-type']?.contains('application/json') ??
-        false) {
-      switch (response.statusCode) {
-        case 200:
-          if (kDebugMode) print('✅ $METHOD: $URL');
-          return response;
+    if (kDebugMode) {
+      print('🌐 $METHOD [$STATUS_CODE]: $URL');
+    }
 
-        case 401:
-          if (FirebaseAuth.instance.currentUser == null &&
-              (HiveHelp.read(Keys.token) == null || HiveHelp.read(Keys.token).toString().isEmpty)) {
-            Get.offAll(() => const LoginScreen());
-          }
-          if (kDebugMode) print('⚠️ 401 Unauthorized: $URL');
-          return response;
+    // Pass all 2xx success responses (200 OK, 201 Created, 202 Accepted, 204 No Content)
+    if (STATUS_CODE >= 200 && STATUS_CODE < 300) {
+      return response;
+    }
 
-        case 404:
-          return _logError(
-            STATUS_CODE,
-            URL,
-            'Resource not found',
-            response.body,
-          );
+    // Pass 400 Bad Request and 422 Unprocessable Entity (validation errors)
+    // so feature controllers can read and display specific error messages.
+    if (STATUS_CODE == 400 || STATUS_CODE == 422) {
+      return response;
+    }
 
-        case 429:
-          return _logError(
-            STATUS_CODE,
-            URL,
-            'Too many requests',
-            response.body,
-          );
-
-        case 500:
-          return _logError(
-            STATUS_CODE,
-            URL,
-            'Internal server error',
-            response.body,
-          );
-
-        default:
-          return _logError(STATUS_CODE, URL, 'Unexpected error', response.body);
+    if (STATUS_CODE == 401) {
+      if (FirebaseAuth.instance.currentUser == null &&
+          (HiveHelp.read(Keys.token) == null ||
+              HiveHelp.read(Keys.token).toString().isEmpty)) {
+        Get.offAll(() => const LoginScreen());
       }
-    } else {
+      if (kDebugMode) print('⚠️ 401 Unauthorized: $URL');
+      return response;
+    }
+
+    if (STATUS_CODE == 404) {
       return _logError(
         STATUS_CODE,
         URL,
-        'An unexpected error occurred. Please try to login again. status code',
+        'Resource not found',
         response.body,
       );
     }
+
+    if (STATUS_CODE == 429) {
+      return _logError(
+        STATUS_CODE,
+        URL,
+        'Too many requests',
+        response.body,
+      );
+    }
+
+    if (STATUS_CODE >= 500) {
+      return _logError(
+        STATUS_CODE,
+        URL,
+        'Internal server error',
+        response.body,
+      );
+    }
+
+    return response;
   }
 
   /// Handle exceptions during API calls and return a custom HTTP response.

@@ -337,10 +337,16 @@ class UdharController extends GetxController {
     String type = 'Customer',
   }) async {
     final String name = nameCtrl.text.trim();
-    final String phone = phoneCtrl.text.trim().replaceAll(
+    String phone = phoneCtrl.text.trim().replaceAll(
       RegExp(r'[^0-9]'),
       '',
     );
+    if (phone.length == 12 && phone.startsWith('91')) {
+      phone = phone.substring(2);
+    } else if (phone.length == 11 && phone.startsWith('0')) {
+      phone = phone.substring(1);
+    }
+
     final String email = emailCtrl.text.trim();
     final String creditLimit =
         limitCtrl.text.trim().isEmpty ? "5000" : limitCtrl.text.trim();
@@ -424,7 +430,7 @@ class UdharController extends GetxController {
             update();
           }
           _resetCustomerForm();
-          await fetchUsers(force: true);
+          fetchUsers(force: true);
           _closeAddCustomerScreen(resultCustomer);
         } else {
           final String apiMessage = _extractApiMessage(data, response.body);
@@ -435,7 +441,8 @@ class UdharController extends GetxController {
                     : 'Unable to add customer. Please verify details and try again.',
           );
         }
-      } catch (_) {
+      } catch (e) {
+        debugPrint("addCustomer error: $e");
         Helpers.showSnackBar(msg: 'Unable to add customer. Please try again.');
       }
     }
@@ -454,8 +461,25 @@ class UdharController extends GetxController {
   }
 
   String _extractApiMessage(Map<String, dynamic>? data, String rawBody) {
-    final String fromData = data?['message']?.toString().trim() ?? '';
-    if (fromData.isNotEmpty) return fromData;
+    if (data != null) {
+      if (data['message'] != null && data['message'].toString().trim().isNotEmpty) {
+        return data['message'].toString().trim();
+      }
+      if (data['errors'] != null) {
+        if (data['errors'] is Map && (data['errors'] as Map).isNotEmpty) {
+          final firstVal = (data['errors'] as Map).values.first;
+          if (firstVal is List && firstVal.isNotEmpty) {
+            return firstVal.first.toString();
+          }
+          return firstVal.toString();
+        } else if (data['errors'] is String) {
+          return data['errors'].toString();
+        }
+      }
+      if (data['error'] != null && data['error'].toString().trim().isNotEmpty) {
+        return data['error'].toString().trim();
+      }
+    }
 
     final String plain = rawBody.trim();
     if (plain.isNotEmpty && !plain.startsWith('{') && !plain.startsWith('[')) {
@@ -465,8 +489,19 @@ class UdharController extends GetxController {
   }
 
   void _closeAddCustomerScreen(Map<String, dynamic>? resultCustomer) {
-    if (Get.key.currentState?.canPop() ?? false) {
-      Get.back(result: resultCustomer);
+    try {
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+      if (Get.key.currentState?.canPop() ?? false) {
+        Get.back(result: resultCustomer);
+      } else if (Get.context != null && Navigator.canPop(Get.context!)) {
+        Navigator.pop(Get.context!, resultCustomer);
+      } else {
+        Get.back(result: resultCustomer);
+      }
+    } catch (e) {
+      debugPrint("Error closing add customer screen: $e");
     }
   }
 

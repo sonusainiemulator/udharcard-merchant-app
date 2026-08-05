@@ -38,8 +38,12 @@ class ApiClient {
   }
 
   static Future<bool> _isOfflineNow() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult == ConnectivityResult.none;
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      return connectivityResult == ConnectivityResult.none;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<void> syncQueuedRequests() async {}

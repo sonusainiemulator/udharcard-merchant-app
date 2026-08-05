@@ -75,13 +75,12 @@ class _SplashScreenState extends State<SplashScreen>
           FirebaseAuth.instance.currentUser != null;
 
       if (isLoggedIn) {
-        final bool onboardingCompleted =
-            (HiveHelp.read('onboarding_completed') ?? false) == true;
-        // TEMP DISABLE ONBOARDING WIZARD (Requested by user)
-        // if (!onboardingCompleted) {
-        //   Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
-        //   return;
-        // }
+        final bool isAppLockEnabled =
+            (HiveHelp.read(Keys.isAppLockEnabled) ?? false) == true;
+        if (isAppLockEnabled) {
+          Get.offAllNamed(RoutesName.appLockScreen);
+          return;
+        }
 
         if (!SubscriptionGateService.isPlanEnrollmentRequired()) {
           Get.offAllNamed(RoutesName.bottomNavBar);
