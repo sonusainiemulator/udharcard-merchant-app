@@ -161,11 +161,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             title: storedLanguage['Customers'] ?? 'Customer Directory',
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: controller.isOffline
-                ? null
-                : () => openAddCustomerScreen(
-                      storedLanguage: storedLanguage,
-                    ),
+            onPressed: () => openAddCustomerScreen(
+              storedLanguage: storedLanguage,
+            ),
             backgroundColor: AppColors.mainColor,
             elevation: 6,
             icon: const Icon(Icons.person_add_alt_1_rounded,

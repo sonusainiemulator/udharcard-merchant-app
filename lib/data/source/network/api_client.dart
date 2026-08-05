@@ -48,8 +48,8 @@ class ApiClient {
 
   static Future<void> syncQueuedRequests() async {}
 
-  static void _triggerInternetIssueNotice() {
-    if (Get.isRegistered<AppController>()) {
+  static Future<void> _triggerInternetIssueNotice() async {
+    if (await _isOfflineNow() && Get.isRegistered<AppController>()) {
       Get.find<AppController>().updateConnectionStatus(ConnectivityResult.none);
     }
   }
@@ -67,7 +67,7 @@ class ApiClient {
 
     // Check internet connection before making live API call
     if (await _isOfflineNow()) {
-      _triggerInternetIssueNotice();
+      await _triggerInternetIssueNotice();
       return http.Response(
         jsonEncode({
           'status': 'error',
@@ -97,7 +97,7 @@ class ApiClient {
       response = await http.Response.fromStream(streamedResponse);
       return await ApiResponse.processResponse(response);
     } catch (e) {
-      _triggerInternetIssueNotice();
+      await _triggerInternetIssueNotice();
       return ApiResponse.handleException(
         e,
         response == null ? 503 : response.statusCode,

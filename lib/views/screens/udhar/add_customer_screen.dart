@@ -16,15 +16,12 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
   String? initialName,
   String? initialPhone,
 }) async {
-  if (Get.isRegistered<UdharController>()) {
-    final ctrl = Get.find<UdharController>();
-    await ctrl.checkConnection();
-    if (ctrl.isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Adding customers requires realtime sync.');
-      return null;
-    }
-    ctrl.showCustomerLimitNudgeIfNeeded();
+  if (!Get.isRegistered<UdharController>()) {
+    Get.put(UdharController());
   }
+  final ctrl = Get.find<UdharController>();
+  await ctrl.checkConnection();
+  ctrl.showCustomerLimitNudgeIfNeeded();
 
   return Get.toNamed<Map<String, dynamic>?>(
     RoutesName.addCustomerScreen,

@@ -5,6 +5,21 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.50] - 2026-08-05
+
+### 🍔 Hamburger Menu & Left Navigation Drawer + Add Customer Fix
+
+- **Hamburger Menu in AppBar**: Added a menu icon button at the leading position of the HomeScreen AppBar that opens a left-side navigation drawer.
+- **Left Navigation Drawer**: Added a full `Drawer` to [home_screen.dart](lib/views/screens/home/home_screen.dart) with a gradient header showing merchant name & phone, and navigation items: Home, Business Dashboard, Customer Directory, Add Customer, Voice Entry, Reports, Work List, Transactions, My QR Code, Support, Notifications, Merchant Settings, and Profile.
+- **Fix Add Customer Always Opens**: Removed the offline pre-check gate in `openAddCustomerScreen` in [add_customer_screen.dart](lib/views/screens/udhar/add_customer_screen.dart) so the Add Customer form always opens. The submit button is already disabled with an "Internet required" notice when offline, giving better UX than blocking navigation entirely.
+
+## [1.0.49] - 2026-08-05
+
+### 📶 Internet Issue Notice & Add Customer Navigation Fixes
+- **Offline Check Gate for Internet Dialog**: Fixed `_triggerInternetIssueNotice` in [api_client.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/source/network/api_client.dart) so the full-screen "Internet Connection Issue" modal ONLY triggers if the device is actually offline (`ConnectivityResult.none`). API exception and backend error responses (e.g. 400 validation error, 500 error) are now properly returned and displayed as in-app error SnackBars to the merchant.
+- **Reliable Add Customer Navigation**: Removed redundant `if (Get.isRegistered<UdharController>())` guards from [home_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/home/home_screen.dart) and auto-initialized `UdharController` inside `openAddCustomerScreen` in [add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart) to fix non-responsive buttons when tapping **+ Add Customer**.
+- **Customer List FAB Responsiveness**: Fixed FAB `onPressed` handler in [customer_list_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/customer_list_screen.dart) to enable tapping even during network state transitions with clear feedback.
+
 ## [1.0.48] - 2026-08-05
 
 ### ℹ️ App Version Display in Merchant & Profile Settings

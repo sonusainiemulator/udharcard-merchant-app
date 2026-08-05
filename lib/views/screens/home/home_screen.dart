@@ -111,8 +111,26 @@ class _HomeScreenState extends State<HomeScreen> {
       key: _scaffoldKey,
       backgroundColor:
           isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
+      drawer: _buildNavDrawer(context, isDark, merchantDisplayName),
       appBar: CustomAppBar(
-        leading: const SizedBox.shrink(),
+        leading: IconButton(
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: Container(
+            padding: EdgeInsets.all(8.r),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Icon(
+              Icons.menu_rounded,
+              color: isDark ? Colors.white : const Color(0xFF334155),
+              size: 19.sp,
+            ),
+          ),
+        ),
         toolberHeight: 68.h,
         prefferSized: 68.h,
         bgColor: isDark ? const Color(0xFF0B0F19) : Colors.white,
@@ -757,11 +775,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     iconColor: const Color(0xFF0284C7),
                     icon: Icons.person_add_alt_1_rounded,
                     onTap: () async {
-                      if (Get.isRegistered<UdharController>()) {
-                        await openAddCustomerScreen(
-                          storedLanguage: storedLanguage,
-                        );
-                      }
+                      await openAddCustomerScreen(
+                        storedLanguage: storedLanguage,
+                      );
                     },
                   ),
                 ],
@@ -783,11 +799,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   InkWell(
                     onTap: () async {
-                      if (Get.isRegistered<UdharController>()) {
-                        await openAddCustomerScreen(
-                          storedLanguage: storedLanguage,
-                        );
-                      }
+                      await openAddCustomerScreen(
+                        storedLanguage: storedLanguage,
+                      );
                     },
                     borderRadius: BorderRadius.circular(8.r),
                     child: Padding(
@@ -1003,11 +1017,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(height: 14.h),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              if (Get.isRegistered<UdharController>()) {
-                                await openAddCustomerScreen(
-                                  storedLanguage: storedLanguage,
-                                );
-                              }
+                              await openAddCustomerScreen(
+                                storedLanguage: storedLanguage,
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.mainColor,
@@ -1385,6 +1397,288 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavDrawer(
+      BuildContext context, bool isDark, String merchantDisplayName) {
+    final String phone =
+        (HiveHelp.read(Keys.userPhone) ?? '').toString().trim();
+
+    return Drawer(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Drawer Header ────────────────────────────────────────────
+            Container(
+              padding: EdgeInsets.all(20.r),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 28.r,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    child: Icon(
+                      Icons.storefront_rounded,
+                      color: Colors.white,
+                      size: 28.sp,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    merchantDisplayName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (phone.isNotEmpty) ...[
+                    SizedBox(height: 4.h),
+                    Text(
+                      phone,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // ── Nav Items ────────────────────────────────────────────────
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
+                children: [
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    color: AppColors.mainColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.dashboard_rounded,
+                    label: 'Business Dashboard',
+                    color: const Color(0xFF6366F1),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (Get.isRegistered<BottomNavController>()) {
+                        Get.find<BottomNavController>().changeScreen(1);
+                      }
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.people_alt_rounded,
+                    label: 'Customer Directory',
+                    color: const Color(0xFF0284C7),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.customerListScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.person_add_alt_1_rounded,
+                    label: 'Add Customer',
+                    color: const Color(0xFF10B981),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final storedLanguage =
+                          HiveHelp.read(Keys.languageData) ?? {};
+                      await openAddCustomerScreen(
+                          storedLanguage: storedLanguage);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.mic_rounded,
+                    label: 'Voice Entry',
+                    color: const Color(0xFF8B5CF6),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (Get.isRegistered<UdharController>()) {
+                        Get.find<UdharController>()
+                            .openVoiceEntryWithSoftGate();
+                      } else {
+                        Get.toNamed(RoutesName.voiceEntryScreen);
+                      }
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.bar_chart_rounded,
+                    label: 'Reports',
+                    color: const Color(0xFFF59E0B),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.udharReportsScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.checklist_rounded,
+                    label: 'Work List',
+                    color: const Color(0xFFEF4444),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.workListScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Transactions',
+                    color: const Color(0xFF0891B2),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.transactionScreen);
+                    },
+                  ),
+                  Divider(
+                    height: 24.h,
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFE2E8F0),
+                    indent: 16.w,
+                    endIndent: 16.w,
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: 'My QR Code',
+                    color: const Color(0xFF7C3AED),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.qrCodeScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.support_agent_rounded,
+                    label: 'Support',
+                    color: const Color(0xFF64748B),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.supportTicketListScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.notifications_none_rounded,
+                    label: 'Notifications',
+                    color: const Color(0xFFF97316),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.notificationScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.settings_rounded,
+                    label: 'Merchant Settings',
+                    color: const Color(0xFF475467),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Get.toNamed(RoutesName.merchantSettingScreen);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.person_outline_rounded,
+                    label: 'Profile',
+                    color: const Color(0xFF0F172A),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (Get.isRegistered<BottomNavController>()) {
+                        Get.find<BottomNavController>().changeScreen(3);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // ── App Version Footer ───────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.all(16.r),
+              child: Text(
+                'PaySecure Merchant App',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  color: isDark
+                      ? const Color(0xFF475467)
+                      : const Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required BuildContext context,
+    required bool isDark,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        width: 36.w,
+        height: 36.w,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Icon(icon, color: color, size: 18.sp),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14.sp,
+          fontWeight: FontWeight.w700,
+          color: isDark ? Colors.white : const Color(0xFF0F172A),
+        ),
+      ),
+      onTap: onTap,
+      dense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
       ),
     );
   }
