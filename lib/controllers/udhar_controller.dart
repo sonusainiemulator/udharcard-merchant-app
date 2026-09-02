@@ -390,26 +390,20 @@ class UdharController extends GetxController {
 
     isAddingCustomer = true;
     update();
-    await checkConnection();
 
     Map<String, dynamic>? resultCustomer;
 
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'No internet. Customer add requires live sync.',
+    try {
+      final response = await UdharRepo.addCustomer(
+        name: name,
+        phone: phone,
+        email: email.isEmpty ? null : email,
+        creditLimit: creditLimit,
+        openingBalance: openingBalance,
+        address: address,
+        note: note,
+        type: type,
       );
-    } else {
-      try {
-        final response = await UdharRepo.addCustomer(
-          name: name,
-          phone: phone,
-          email: email.isEmpty ? null : email,
-          creditLimit: creditLimit,
-          openingBalance: openingBalance,
-          address: address,
-          note: note,
-          type: type,
-        );
 
         final Map<String, dynamic>? data = _decodeJsonMap(response.body);
         final bool isSuccess = _isApiSuccess(response.statusCode, data);
@@ -445,7 +439,6 @@ class UdharController extends GetxController {
         debugPrint("addCustomer error: $e");
         Helpers.showSnackBar(msg: 'Unable to add customer. Please try again.');
       }
-    }
 
     isAddingCustomer = false;
     update();
@@ -514,14 +507,6 @@ class UdharController extends GetxController {
   }
 
   Future<void> deleteCustomer(String id) async {
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'You are offline. Unable to delete this customer now.',
-      );
-      return;
-    }
-
     try {
       final response = await UdharRepo.deleteCustomer(customerId: id);
       final data = _decodeJsonMap(response.body) ?? {};
@@ -553,16 +538,6 @@ class UdharController extends GetxController {
 
     isUpdatingLimit = true;
     update();
-
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'No internet. Credit limit update requires live sync.',
-      );
-      isUpdatingLimit = false;
-      update();
-      return;
-    }
 
     try {
       final response = await UdharRepo.updateCustomerCreditLimit(
@@ -750,7 +725,6 @@ class UdharController extends GetxController {
 
     isSubmitting = true;
     update();
-    await checkConnection();
 
     final String selectedCustomerId = selectedUser!['id']?.toString() ?? '';
     final amountStr = amountCtrl.text.trim();
@@ -758,13 +732,8 @@ class UdharController extends GetxController {
     final typeStr = transactionType;
     final paymentMethodStr = paymentMethod;
 
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'No internet. Transaction add requires live sync.',
-      );
-    } else {
-      try {
-        final response = await UdharRepo.addUdhar(
+    try {
+      final response = await UdharRepo.addUdhar(
           customerId: selectedCustomerId,
           amount: amountStr,
           type: typeStr == 'given' ? 'credit' : 'debit',
@@ -818,7 +787,6 @@ class UdharController extends GetxController {
           msg: 'Unable to add transaction. Please try again.',
         );
       }
-    }
 
     isSubmitting = false;
     update();
@@ -837,14 +805,6 @@ class UdharController extends GetxController {
   Future<void> sendPaymentReminder(String customerId) async {
     isSendingReminder = true;
     update();
-    await checkConnection();
-
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'You are offline. Cannot send reminder.');
-      isSendingReminder = false;
-      update();
-      return;
-    }
 
     try {
       final response = await UdharRepo.sendPaymentReminder(
@@ -897,14 +857,6 @@ class UdharController extends GetxController {
   }) async {
     isGeneratingPdf = true;
     update();
-    await checkConnection();
-
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'You are offline. Cannot generate PDF bill.');
-      isGeneratingPdf = false;
-      update();
-      return;
-    }
 
     try {
       final response = await UdharRepo.generatePdfBill(

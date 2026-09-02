@@ -6,7 +6,6 @@ import 'package:paysecure/config/dimensions.dart';
 import 'package:paysecure/controllers/app_lock_controller.dart';
 import 'package:paysecure/themes/themes.dart';
 import 'package:paysecure/utils/app_constants.dart';
-import 'package:paysecure/utils/services/helpers.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:paysecure/utils/services/localstorage/keys.dart';
 import 'package:paysecure/views/widgets/app_button.dart';

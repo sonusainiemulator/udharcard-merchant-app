@@ -7,7 +7,6 @@ import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
-import '../../../utils/services/helpers.dart';
 import '../../widgets/spacing.dart';
 import '../../widgets/text_theme_extension.dart';
 
@@ -199,7 +198,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                   Padding(
                     padding: EdgeInsets.only(bottom: 6.h),
                     child: Text(
-                      'Internet required to save customer.',
+                      'Unable to reach server right now. Please check your internet and try again.',
                       style: TextStyle(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w600,
@@ -219,7 +218,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                         borderRadius: BorderRadius.circular(7.r),
                       ),
                     ),
-                    onPressed: (ctrl.isAddingCustomer || ctrl.isOffline)
+                    onPressed: ctrl.isAddingCustomer
                         ? null
                         : () {
                             FocusScope.of(context).unfocus();
