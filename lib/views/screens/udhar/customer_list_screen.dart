@@ -279,25 +279,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(18.r),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                            : [const Color(0xFF1E1B4B), const Color(0xFF312E81)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: isDark
+                          ? const Color(0xFF0F62E2)
+                          : const Color(0xFF0857E6), // solid brand blue
                       borderRadius: BorderRadius.circular(20.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark
-                              ? Colors.black.withValues(alpha: 0.35)
-                              : const Color(0xFF312E81).withValues(alpha: 0.2),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: Colors.white.withValues(alpha: 0.06),
+                        width: 1,
                       ),
                     ),
                     child: Row(

@@ -162,14 +162,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
                             vertical: 14.h,
                           ),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.mainColor.withValues(alpha: .15),
-                                AppColors.greenColor.withValues(alpha: .1),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: AppColors.mainColor.withValues(alpha: .08),
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
                               color: AppColors.mainColor.withValues(alpha: .3),
@@ -505,20 +498,9 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
                                   height: 80.w,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors:
-                                          controller.isListening
-                                              ? [
-                                                AppColors.redColor,
-                                                Colors.orangeAccent,
-                                              ]
-                                              : [
-                                                AppColors.mainColor,
-                                                AppColors.yellowColor,
-                                              ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
+                                    color: controller.isListening
+                                        ? AppColors.redColor
+                                        : AppColors.mainColor,
                                     boxShadow: [
                                       BoxShadow(
                                         color:

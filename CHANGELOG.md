@@ -5,6 +5,15 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.51] - 2026-09-03
+
+### 🎨 Fintech Flatten — Khatabook-Style Clean Look (Zero Gradients)
+
+- **Ledger Dashboard redesigned** ([udhar_dashboard_screen.dart](lib/views/screens/udhar/udhar_dashboard_screen.dart)): Flat, professional fintech dashboard inspired by Khatabook. White cards on a neutral grey background, solid brand-blue as the single emphasis colour, two clear **Total Diya** (red) / **Total Mila** (green) balance cards, a clean pending strip, one prominent **New Entry** CTA, simple flat quick-action tiles, and tidy activity rows. All gradients removed.
+- **Home screen flattened** ([home_screen.dart](lib/views/screens/home/home_screen.dart)): Replaced the purple/indigo gradient hero, App-bar logo box and navigation-drawer header with solid brand-blue surfaces. Consistent slate-on-white typography.
+- **Customer list hero flattened** ([customer_list_screen.dart](lib/views/screens/udhar/customer_list_screen.dart)): The dual summary banner now uses a solid brand-blue card instead of a gradient.
+- **Voice entry flattened** ([voice_entry_screen.dart](lib/views/screens/voice_entry/voice_entry_screen.dart)): Listening affordance box and the main mic ring are now flat solid colours (red while listening, brand-blue when idle).
+
 ## [1.0.50] - 2026-09-02
 
 ### 🐛 Fix: Offline Blocking Disabled — Customer Add & Live Actions Always Work

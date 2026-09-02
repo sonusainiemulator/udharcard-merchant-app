@@ -140,19 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(7.r),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFF0857E6), // solid brand blue
                 borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
               ),
               child: Image.asset(
                 "$rootImageDir/app_logo.png",
@@ -355,25 +344,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(18.r),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDark
-                            ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
-                            : [const Color(0xFF1E1B4B), const Color(0xFF312E81)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: isDark
+                          ? const Color(0xFF0F62E2)
+                          : const Color(0xFF0857E6), // solid brand blue, no gradient
                       borderRadius: BorderRadius.circular(22.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark
-                              ? Colors.black.withValues(alpha: 0.4)
-                              : const Color(0xFF312E81).withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: Colors.white.withValues(alpha: 0.06),
                         width: 1,
                       ),
                     ),
@@ -1416,11 +1392,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(20.r),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFF0857E6), // solid brand blue
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
