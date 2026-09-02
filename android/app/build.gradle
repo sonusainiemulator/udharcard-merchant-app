@@ -72,7 +72,7 @@ android {
                 storeFile keyProperties['storeFile'] ? file(keyProperties['storeFile']) : null
                 storePassword keyProperties['storePassword']
             } else {
-                signingConfig signingConfigs.debug
+                signingConfig = signingConfigs.debug
             }
         }
     }
