@@ -5,13 +5,20 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.50] - 2026-08-05
+## [1.0.50] - 2026-09-02
 
-### 🍔 Hamburger Menu & Left Navigation Drawer + Add Customer Fix
+### 🐛 Fix: Offline Blocking Disabled — Customer Add & Live Actions Always Work
+
+- **Save Button No Longer Disabled by Offline Flag** ([add_customer_screen.dart](lib/views/screens/udhar/add_customer_screen.dart)): The **Add Customer** Save button is disabled only while a submit is in progress. It no longer gets locked when the device reports offline, so tapping **Save** always attempts the live API instead of silently doing nothing.
+- **Offline Early-Returns Removed** ([udhar_controller.dart](lib/controllers/udhar_controller.dart)): Removed the hard offline gates from `addCustomer`, `submitUdhar`, `deleteCustomer`, `updateCustomerCreditLimit`, `sendPaymentReminder` and `generateAndSendPdfBill`. Every live action now always attempts the real request; genuine connectivity failures surface through the API client (HTTP 503 / clear error SnackBar) rather than being silently swallowed by a false-offline flag.
+- **Clearer Server Warning Text**: When the device is truly offline, the form now shows an explicit *"Unable to reach server right now. Please check your internet and try again."* hint above the button.
+- **Cleanup**: Removed an unused `helpers.dart` import from [app_lock_screen.dart](lib/views/screens/app_lock/app_lock_screen.dart).
+
+### 🍔 Hamburger Menu & Left Navigation Drawer + Add Customer Navigation
 
 - **Hamburger Menu in AppBar**: Added a menu icon button at the leading position of the HomeScreen AppBar that opens a left-side navigation drawer.
-- **Left Navigation Drawer**: Added a full `Drawer` to [home_screen.dart](lib/views/screens/home/home_screen.dart) with a gradient header showing merchant name & phone, and navigation items: Home, Business Dashboard, Customer Directory, Add Customer, Voice Entry, Reports, Work List, Transactions, My QR Code, Support, Notifications, Merchant Settings, and Profile.
-- **Fix Add Customer Always Opens**: Removed the offline pre-check gate in `openAddCustomerScreen` in [add_customer_screen.dart](lib/views/screens/udhar/add_customer_screen.dart) so the Add Customer form always opens. The submit button is already disabled with an "Internet required" notice when offline, giving better UX than blocking navigation entirely.
+- **Left Navigation Drawer**: Added a full `Drawer` to [home_screen.dart](lib/views/screens/home/home_screen.dart) with a gradient header showing merchant name & phone, plus navigation items (Home, Business Dashboard, Customer Directory, Add Customer, Voice Entry, Reports, Work List, Transactions, My QR Code, Support, Notifications, Merchant Settings, Profile).
+- **Add Customer Always Opens**: The form always opens and the submit flow proceeds; a visible notice only appears when the server is genuinely unreachable.
 
 ## [1.0.49] - 2026-08-05
 
