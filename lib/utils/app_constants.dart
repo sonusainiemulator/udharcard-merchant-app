@@ -94,6 +94,9 @@ class AppConstants {
   static const String subscriptionHistoryUrl = "/merchant/subscription/history";
   static const String subscriptionCheckoutUrl = "/merchant/subscription/checkout";
   static const String subscriptionVerifyUrl = "/merchant/subscription/verify";
+  static const String subscriptionOfflineRequestUrl = "/merchant/subscription/offline-request";
+  static const String myUpgradeStatusUrl = "/merchant/subscription/my-upgrade-status";
+  static const String subscriptionCancelRequestUrl = "/merchant/subscription/cancel-request";
 }
 
 //----------IMAGE DIRECTORY---------//

@@ -5,6 +5,16 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.52] - 2026-09-03
+
+### 🛒 In-App Subscription — Offline Upgrade Request (Admin Approval)
+
+- **Plans screen upgraded** ([subscription_plans_screen.dart](lib/views/screens/subscription/subscription_plans_screen.dart)): Clean fintech-style plan cards with the merchant's current plan banner, a pending-request notice, monthly/yearly toggle, and a **Request Offline Upgrade** button on every plan.
+- **Online card payment shown as coming soon**: Razorpay checkout is kept in the codebase but is not surfaced; merchants upgrade by requesting an offline plan and paying via admin.
+- **Confirm dialog + state** so merchants understand the admin-approval flow before submitting.
+- **Subscription repo/controller** ([subscription_repo.dart](lib/data/repositories/subscription_repo.dart), [subscription_controller.dart](lib/controllers/subscription_controller.dart)): new `offlineRequest()`, `myUpgradeStatus()`, `requestOfflineUpgrade()`, `fetchMyUpgradeStatus()` wiring to the new live backend endpoints.
+- **Backend (pay.udharcard.shop)** now exposes subscription plans, merchant current plan/history, offline-request submission, and admin approve/reject/stats endpoints (admin bearer token protected).
+
 ## [1.0.51] - 2026-09-03
 
 ### 🎨 Fintech Flatten — Khatabook-Style Clean Look (Zero Gradients)

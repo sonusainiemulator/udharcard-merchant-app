@@ -32,6 +32,12 @@ class SubscriptionController extends GetxController {
 
   String selectedBillingCycle = 'monthly';
 
+  // Offline (admin-approval) upgrade request state
+  bool _isRequestingOffline = false;
+  bool get isRequestingOffline => _isRequestingOffline;
+  Map<String, dynamic>? latestUpgradeRequest; // pending/approved/rejected request shown to merchant
+  Map<String, dynamic>? pendingOfflineRequest;
+
   @override
   void onInit() {
     super.onInit();
@@ -41,6 +47,7 @@ class SubscriptionController extends GetxController {
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
     getPlans();
     getCurrentSubscription();
+    fetchMyUpgradeStatus();
   }
 
   @override
@@ -178,6 +185,76 @@ class SubscriptionController extends GetxController {
 
   bool get isPlanEnrollmentRequired =>
       SubscriptionGateService.isPlanEnrollmentRequired();
+
+  /// Fetch merchant's upgrade state (active subscription + latest offline request).
+  Future<void> fetchMyUpgradeStatus() async {
+    try {
+      final response = await SubscriptionRepo.myUpgradeStatus();
+      final data = _decode(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        final d = data?['data'];
+        latestUpgradeRequest = d?['latest_request'] is Map
+            ? Map<String, dynamic>.from(d['latest_request'])
+            : null;
+        final hasPending = d?['has_pending_request'] == true;
+        if (hasPending && latestUpgradeRequest != null) {
+          pendingOfflineRequest = latestUpgradeRequest;
+        } else {
+          pendingOfflineRequest = null;
+        }
+      }
+    } catch (_) {}
+    update();
+  }
+
+  /// Submit an OFFLINE upgrade request for admin approval (no online payment).
+  Future<void> requestOfflineUpgrade({
+    required String planCode,
+    required String planName,
+    String? note,
+  }) async {
+    if (_isRequestingOffline) return;
+    _isRequestingOffline = true;
+    update();
+
+    try {
+      final response = await SubscriptionRepo.offlineRequest(
+        planCode: planCode,
+        billingCycle: selectedBillingCycle,
+        note: note,
+      );
+      final data = _decode(response.body);
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        Helpers.showSnackBar(
+          msg: data?['message'] ??
+              'Upgrade request submitted. Admin will activate it after payment confirmation.',
+        );
+        await fetchMyUpgradeStatus();
+        await getCurrentSubscription();
+      } else {
+        Helpers.showSnackBar(
+          msg: data?['message']?.toString() ??
+              'Unable to submit request. Please try again.',
+        );
+      }
+    } catch (_) {
+      Helpers.showSnackBar(
+        msg: 'Unable to submit request. Please check your internet and retry.',
+      );
+    }
+
+    _isRequestingOffline = false;
+    update();
+  }
+
+  Map<String, dynamic>? _decode(String raw) {
+    try {
+      final dynamic d = jsonDecode(raw);
+      if (d is Map<String, dynamic>) return d;
+      if (d is Map) return Map<String, dynamic>.from(d);
+    } catch (_) {}
+    return null;
+  }
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
     final orderId = response.orderId?.toString().trim().isNotEmpty == true

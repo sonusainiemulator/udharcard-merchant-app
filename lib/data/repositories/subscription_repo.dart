@@ -40,4 +40,23 @@ class SubscriptionRepo {
 
   static Future<http.Response> getPaymentHistory() async =>
       await ApiClient.get(ENDPOINT_URL: AppConstants.subscriptionHistoryUrl);
+
+  /// POST offline upgrade request (no payment) -> admin approves later.
+  static Future<http.Response> offlineRequest({
+    required String planCode,
+    required String billingCycle,
+    String? note,
+  }) async =>
+      await ApiClient.post(
+        ENDPOINT_URL: AppConstants.subscriptionOfflineRequestUrl,
+        fields: {
+          'plan_code': planCode,
+          'billing_cycle': billingCycle,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      );
+
+  /// GET current merchant's upgrade state (active sub + latest request).
+  static Future<http.Response> myUpgradeStatus() async =>
+      await ApiClient.get(ENDPOINT_URL: AppConstants.myUpgradeStatusUrl);
 }
