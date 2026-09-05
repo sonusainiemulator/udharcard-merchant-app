@@ -12,20 +12,26 @@ import '../../views/widgets/spacing.dart';
 import '../app_constants.dart';
 
 class Helpers {
-  static showToast(
-      {Color? bgColor,
-      Color? textColor,
-      String? msg,
-      ToastGravity? gravity = ToastGravity.CENTER}) {
-    return Fluttertoast.showToast(
-      msg: msg ?? 'Field must not be empty!',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: gravity ?? ToastGravity.CENTER,
-      timeInSecForIosWeb: 1,
-      backgroundColor: bgColor ?? Colors.red,
-      textColor: textColor ?? Colors.white,
-      fontSize: 16.sp,
-    );
+  static Future<bool?> showToast({
+    Color? bgColor,
+    Color? textColor,
+    String? msg,
+    ToastGravity? gravity = ToastGravity.CENTER,
+  }) async {
+    try {
+      return await Fluttertoast.showToast(
+        msg: msg ?? 'Field must not be empty!',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: gravity ?? ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: bgColor ?? Colors.red,
+        textColor: textColor ?? Colors.white,
+        fontSize: 15.0,
+      );
+    } catch (_) {
+      // In headless test environments where Fluttertoast plugin is not registered
+      return false;
+    }
   }
 
   /// hide keyboard automatically when click anywhere in screen
@@ -54,7 +60,7 @@ class Helpers {
         ),
       );
 
-  /// SHOW VALIDATION ERROR DIALOG
+  /// SHOW VALIDATION ERROR DIALOG / TOAST
   static showSnackBar({
     String msg = "Field must not be empty!",
     String title = "Error!",
@@ -66,8 +72,26 @@ class Helpers {
     Color? bgColor,
     SnackPosition? snackPosition = SnackPosition.TOP,
   }) {
-    // Top popup notifications removed across all screens
-    return;
+    if (msg.trim().isEmpty) return;
+    final lowerTitle = title.toLowerCase();
+    final lowerMsg = msg.toLowerCase();
+    final bool isError = lowerTitle.contains('error') ||
+        lowerTitle.contains('failed') ||
+        lowerMsg.contains('error') ||
+        lowerMsg.contains('failed') ||
+        lowerMsg.contains('please') ||
+        lowerMsg.contains('required') ||
+        lowerMsg.contains('invalid') ||
+        lowerMsg.contains('cannot') ||
+        lowerMsg.contains('unable');
+
+    showToast(
+      msg: msg,
+      bgColor: bgColor ??
+          (isError ? const Color(0xFFE53935) : const Color(0xFF10B981)),
+      textColor: textColor ?? Colors.white,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   static appLoader({Color? color}) => Center(

@@ -314,6 +314,65 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Subscription Plan Usage Banner ─────────────────────
+              GetBuilder<UdharController>(
+                builder: (udharCtrl) {
+                  final limitState = udharCtrl.customerLimitState;
+                  return Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      vertical: 10.h,
+                      horizontal: 12.w,
+                    ),
+                    decoration: BoxDecoration(
+                      color: limitState.isAtOrOverLimit
+                          ? const Color(0xFFFEF3C7)
+                          : (isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFEFF6FF)),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: limitState.isAtOrOverLimit
+                            ? const Color(0xFFF59E0B)
+                            : (isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFBFDBFE)),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          limitState.summaryLabel,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1E3A8A),
+                          ),
+                        ),
+                        if (limitState.isNearLimit)
+                          Padding(
+                            padding: EdgeInsets.only(top: 4.h),
+                            child: Text(
+                              limitState.isAtOrOverLimit
+                                  ? 'Soft-gating active: Add customer remains enabled temporarily.'
+                                  : 'You are near plan limit. Upgrade recommended.',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFB45309),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               // ── 1. Hero 3-Metric Balance Ledger Banner ────────────────────
               GetBuilder<UdharController>(
                 builder: (udharCtrl) {
@@ -544,114 +603,63 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-              SizedBox(height: 20.h),
-
-              // ── 2. Home to Dashboard Bridge ───────────────────────────────
-              GetBuilder<AppController>(
-                builder: (appCtrl) {
-                  final recipientCount = appCtrl.recipientList.length;
-                  final walletCount = appCtrl.walletList.length;
-                  final primaryWalletBalance = appCtrl.walletList.isNotEmpty
-                      ? double.tryParse(
-                          appCtrl.walletList.first.totalBalance.toString()) ??
-                          0.0
-                      : 0.0;
-
-                  return Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(14.r),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF111827) : Colors.white,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF334155)
-                            : const Color(0xFFE2E8F0),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(6.r),
-                              decoration: BoxDecoration(
-                                color: AppColors.mainColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: Icon(
-                                Icons.dashboard_customize_rounded,
-                                size: 15.sp,
-                                color: AppColors.mainColor,
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Expanded(
-                              child: Text(
-                                "Business Dashboard",
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color:
-                                      isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                if (Get.isRegistered<BottomNavController>()) {
-                                  Get.find<BottomNavController>().changeScreen(1);
-                                }
-                              },
-                              child: Text(
-                                "Open",
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.mainColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10.h),
+                        SizedBox(height: 14.h),
                         Row(
                           children: [
                             Expanded(
-                              child: _buildDashboardMetric(
-                                title: "Recipients",
-                                value: recipientCount.toString(),
-                                isDark: isDark,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  if (Get.isRegistered<BottomNavController>()) {
+                                    Get.find<BottomNavController>().changeScreen(1);
+                                  } else {
+                                    Get.toNamed(RoutesName.customerListScreen);
+                                  }
+                                },
+                                icon: const Icon(Icons.menu_book_rounded, size: 16),
+                                label: const Text('Open ledgers'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF0F172A),
+                                  elevation: 0,
+                                  padding: EdgeInsets.symmetric(vertical: 11.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  textStyle: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
                             ),
-                            SizedBox(width: 8.w),
+                            SizedBox(width: 10.w),
                             Expanded(
-                              child: _buildDashboardMetric(
-                                title: "Wallets",
-                                value: walletCount.toString(),
-                                isDark: isDark,
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Expanded(
-                              child: _buildDashboardMetric(
-                                title: "Balance",
-                                value: "₹${primaryWalletBalance.toStringAsFixed(0)}",
-                                isDark: isDark,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  final newCust = await openAddCustomerScreen(
+                                    storedLanguage: storedLanguage,
+                                  );
+                                  if (newCust != null &&
+                                      Get.isRegistered<UdharController>()) {
+                                    Get.find<UdharController>().fetchUsers(force: true);
+                                  }
+                                },
+                                icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                                label: const Text('Add customer'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(
+                                    color: Colors.white.withValues(alpha: 0.28),
+                                  ),
+                                  padding: EdgeInsets.symmetric(vertical: 11.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  textStyle: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -751,9 +759,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     iconColor: const Color(0xFF0284C7),
                     icon: Icons.person_add_alt_1_rounded,
                     onTap: () async {
-                      await openAddCustomerScreen(
+                      final newCust = await openAddCustomerScreen(
                         storedLanguage: storedLanguage,
                       );
+                      if (newCust != null &&
+                          Get.isRegistered<UdharController>()) {
+                        Get.find<UdharController>().fetchUsers(force: true);
+                      }
                     },
                   ),
                 ],
@@ -775,9 +787,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   InkWell(
                     onTap: () async {
-                      await openAddCustomerScreen(
+                      final newCust = await openAddCustomerScreen(
                         storedLanguage: storedLanguage,
                       );
+                      if (newCust != null &&
+                          Get.isRegistered<UdharController>()) {
+                        Get.find<UdharController>().fetchUsers(force: true);
+                      }
                     },
                     borderRadius: BorderRadius.circular(8.r),
                     child: Padding(
@@ -993,9 +1009,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(height: 14.h),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              await openAddCustomerScreen(
+                              final newCust = await openAddCustomerScreen(
                                 storedLanguage: storedLanguage,
                               );
+                              if (newCust != null &&
+                                  Get.isRegistered<UdharController>()) {
+                                Get.find<UdharController>().fetchUsers(force: true);
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.mainColor,
@@ -1341,42 +1361,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDashboardMetric({
-    required String title,
-    required String value,
-    required bool isDark,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF64748B),
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF0F172A),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildNavDrawer(
       BuildContext context, bool isDark, String merchantDisplayName) {
     final String phone =
@@ -1438,22 +1422,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     context: context,
                     isDark: isDark,
                     icon: Icons.home_rounded,
-                    label: 'Home',
+                    label: 'Home Dashboard',
                     color: AppColors.mainColor,
                     onTap: () {
                       Navigator.pop(context);
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    isDark: isDark,
-                    icon: Icons.dashboard_rounded,
-                    label: 'Business Dashboard',
-                    color: const Color(0xFF6366F1),
-                    onTap: () {
-                      Navigator.pop(context);
                       if (Get.isRegistered<BottomNavController>()) {
-                        Get.find<BottomNavController>().changeScreen(1);
+                        Get.find<BottomNavController>().changeScreen(0);
                       }
                     },
                   ),
@@ -1465,7 +1439,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFF0284C7),
                     onTap: () {
                       Navigator.pop(context);
-                      Get.toNamed(RoutesName.customerListScreen);
+                      if (Get.isRegistered<BottomNavController>()) {
+                        Get.find<BottomNavController>().changeScreen(1);
+                      } else {
+                        Get.toNamed(RoutesName.customerListScreen);
+                      }
                     },
                   ),
                   _buildDrawerItem(
@@ -1478,8 +1456,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.pop(context);
                       final storedLanguage =
                           HiveHelp.read(Keys.languageData) ?? {};
-                      await openAddCustomerScreen(
+                      final newCust = await openAddCustomerScreen(
                           storedLanguage: storedLanguage);
+                      if (newCust != null &&
+                          Get.isRegistered<UdharController>()) {
+                        Get.find<UdharController>().fetchUsers(force: true);
+                      }
                     },
                   ),
                   _buildDrawerItem(

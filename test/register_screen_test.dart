@@ -11,7 +11,11 @@ class TestAuthController extends AuthController {
   int submitCalls = 0;
 
   @override
-  Future sendFirebaseOtp(String phoneNumber, {bool isLogin = false}) async {
+  Future sendFirebaseOtp(
+    String phoneNumber, {
+    bool isLogin = false,
+    bool isResend = false,
+  }) async {
     submitCalls += 1;
     submittedPhone = phoneNumber;
     submittedIsLogin = isLogin;

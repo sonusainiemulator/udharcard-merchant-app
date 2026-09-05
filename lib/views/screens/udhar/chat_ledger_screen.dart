@@ -74,28 +74,6 @@ class _ChatLedgerScreenState extends State<ChatLedgerScreen> {
           ),
           body: Column(
             children: [
-              if (controller.isOffline)
-                Container(
-                  width: double.infinity,
-                  color: Colors.redAccent.withValues(alpha: 0.9),
-                  padding: EdgeInsets.symmetric(vertical: 6.h),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.wifi_off, color: Colors.white, size: 14.sp),
-                      HSpace(6.w),
-                      Text(
-                        'Offline - Realtime Sync Paused',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               // Ledger Balance Sticky Header
               Container(
                 width: double.infinity,
@@ -236,18 +214,16 @@ class _ChatLedgerScreenState extends State<ChatLedgerScreen> {
                           style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      onPressed: controller.isOffline
-                          ? null
-                          : () {
-                              Get.toNamed(
-                                RoutesName.addUdharScreen,
-                                arguments: {
-                                  'customerId': widget.customerId,
-                                  'customerName': widget.customerName,
-                                  'transactionType': 'given',
-                                },
-                              );
-                            },
+                      onPressed: () {
+                        Get.toNamed(
+                          RoutesName.addUdharScreen,
+                          arguments: {
+                            'customerId': widget.customerId,
+                            'customerName': widget.customerName,
+                            'transactionType': 'given',
+                          },
+                        );
+                      },
                     ),
                   ),
                   HSpace(12.w),
@@ -268,38 +244,22 @@ class _ChatLedgerScreenState extends State<ChatLedgerScreen> {
                           style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      onPressed: controller.isOffline
-                          ? null
-                          : () {
-                              Get.toNamed(
-                                RoutesName.addUdharScreen,
-                                arguments: {
-                                  'customerId': widget.customerId,
-                                  'customerName': widget.customerName,
-                                  'transactionType': 'received',
-                                },
-                              );
-                            },
+                      onPressed: () {
+                        Get.toNamed(
+                          RoutesName.addUdharScreen,
+                          arguments: {
+                            'customerId': widget.customerId,
+                            'customerName': widget.customerName,
+                            'transactionType': 'received',
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          persistentFooterButtons: controller.isOffline
-              ? [
-                  Center(
-                    child: Text(
-                      'Internet required to add new ledger entries.',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.black50,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ]
-              : null,
         );
       },
     );

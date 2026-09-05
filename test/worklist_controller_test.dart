@@ -5,11 +5,6 @@ import 'package:paysecure/data/models/worklist_model.dart';
 class TestWorkListController extends WorkListController {
   TestWorkListController({required DateTime Function() nowProvider})
       : super(nowProvider: nowProvider);
-
-  @override
-  Future<void> checkConnection() async {
-    // Tests control connectivity state directly via `isOffline`.
-  }
 }
 
 void main() {
@@ -22,7 +17,6 @@ void main() {
     setUp(() {
       now = DateTime(2026, 8, 3, 9, 0);
       controller = TestWorkListController(nowProvider: () => now);
-      controller.isOffline = true;
     });
 
     WorkListItem buildItem({
@@ -42,7 +36,7 @@ void main() {
         priority: priority,
         customerId: customerId,
         customerName: customerName,
-        isSynced: false,
+        isSynced: true,
         createdAt: now,
         updatedAt: now,
       );
@@ -71,13 +65,6 @@ void main() {
       expect(controller.pendingCount, 4);
       expect(controller.pendingBadgeText, '4');
       expect(controller.pendingSummaryText, '4 pending items');
-    });
-
-    test('saveItem does not mutate local items when offline in realtime mode', () async {
-      final original = buildItem(id: 'local_task_1', dueDate: now);
-      await controller.saveItem(original);
-
-      expect(controller.items, isEmpty);
     });
   });
 

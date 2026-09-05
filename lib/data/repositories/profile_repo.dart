@@ -7,10 +7,22 @@ class ProfileRepo {
   static Future<http.Response> getProfile() async =>
       await ApiClient.get(ENDPOINT_URL: AppConstants.profileUrl);
 
-  static Future<http.Response> profileUpdate(
-          {required Map<String, String> data, MultipartFile? files}) async =>
-      await ApiClient.postMultipart(
-          ENDPOINT_URL: AppConstants.profileUrl, fields: data, files: files);
+  static Future<http.Response> profileUpdate({
+    required Map<String, String> data,
+    MultipartFile? files,
+  }) async {
+    if (files == null) {
+      return await ApiClient.post(
+        ENDPOINT_URL: AppConstants.profileUrl,
+        fields: data,
+      );
+    }
+    return await ApiClient.postMultipart(
+      ENDPOINT_URL: AppConstants.profileUrl,
+      fields: data,
+      files: files,
+    );
+  }
 
   static Future<http.Response> profilePassUpdate(
           {required Map<String, dynamic> data}) async =>

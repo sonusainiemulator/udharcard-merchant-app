@@ -11,6 +11,7 @@ import '../../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/app_lock_controller.dart';
 import '../../../controllers/profile_controller.dart';
+import '../../../controllers/subscription_controller.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../controllers/verification_controller.dart';
 import '../../../controllers/worklist_controller.dart';
@@ -238,6 +239,117 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      VSpace(16.h),
+
+                      // ── My Subscription Card ──────────────────────────────
+                      GetBuilder<SubscriptionController>(
+                        init: SubscriptionController.to,
+                        builder: (subCtrl) {
+                          final sub = subCtrl.currentSubscription;
+                          final status = sub?['status']?.toString() ?? '';
+                          final plan = sub?['plan'];
+                          final planName = (plan is Map
+                                  ? plan['name']?.toString()
+                                  : null) ??
+                              'No active plan';
+                          final isActive = status == 'active' ||
+                              status == 'grace_period';
+                          return InkWell(
+                            onTap: () => Get.toNamed(
+                              RoutesName.subscriptionPlansScreen,
+                            ),
+                            borderRadius: BorderRadius.circular(16.r),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 14.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.mainColor
+                                    .withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(
+                                  color: AppColors.mainColor
+                                      .withValues(alpha: 0.22),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    height: 40.h,
+                                    width: 40.h,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.mainColor
+                                          .withValues(alpha: 0.12),
+                                    ),
+                                    child: Icon(
+                                      Icons.workspace_premium_rounded,
+                                      size: 20.sp,
+                                      color: AppColors.mainColor,
+                                    ),
+                                  ),
+                                  HSpace(14.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'My Subscription',
+                                          style: t.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14.sp,
+                                          ),
+                                        ),
+                                        VSpace(2.h),
+                                        Text(
+                                          isActive
+                                              ? planName
+                                              : 'Upgrade to unlock more features',
+                                          style: t.bodySmall?.copyWith(
+                                            color:
+                                                AppThemes.getBlack50Color(),
+                                            fontSize: 11.sp,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isActive)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.w,
+                                        vertical: 3.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.greenColor
+                                            .withValues(alpha: 0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(8.r),
+                                      ),
+                                      child: Text(
+                                        'Active',
+                                        style: TextStyle(
+                                          color: AppColors.greenColor,
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 14.sp,
+                                      color: AppThemes.getBlack50Color(),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       VSpace(16.h),
 
@@ -606,7 +718,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                   ),
                                 ),
                                 trailing: Switch.adaptive(
-                                  activeColor: AppColors.mainColor,
+                                  activeTrackColor: AppColors.mainColor,
                                   value: appLockCtrl.isAppLockEnabled.value,
                                   onChanged: (val) {
                                     appLockCtrl.toggleAppLock(val);

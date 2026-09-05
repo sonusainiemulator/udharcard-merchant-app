@@ -109,32 +109,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
                     children: [
-                      if (controller.isOffline)
-                        Container(
-                          width: double.infinity,
-                          color: Colors.redAccent.withValues(alpha: 0.9),
-                          padding: EdgeInsets.symmetric(vertical: 6.h),
-                          alignment: Alignment.center,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.wifi_off,
-                                color: Colors.white,
-                                size: 14.sp,
-                              ),
-                              HSpace(6.w),
-                              Text(
-                                'Offline - Realtime Sync Paused',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       // ── Ledger Balance Header Card ────────────────────────
                       Container(
                         padding: EdgeInsets.all(20.r),
@@ -227,7 +201,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'WhatsApp',
                                 icon: Icons.chat,
                                 color: const Color(0xFF25D366),
-                                enabled: !controller.isOffline,
                                 onTap:
                                     () => controller.sendWhatsAppReminder({
                                       'name': widget.customerName,
@@ -245,7 +218,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'PDF Bill',
                                 icon: Icons.picture_as_pdf_outlined,
                                 color: Colors.deepOrangeAccent,
-                                enabled: !controller.isOffline,
                                 onTap:
                                     () => _showPdfBillModal(
                                       context,
@@ -259,7 +231,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'Remind',
                                 icon: Icons.notifications_active_outlined,
                                 color: Colors.green,
-                                enabled: !controller.isOffline,
                                 onTap:
                                     () => _showReminderOptions(
                                       context,
@@ -274,7 +245,6 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 label: 'Merchant QR',
                                 icon: Icons.qr_code_scanner,
                                 color: AppColors.mainColor,
-                                enabled: !controller.isOffline,
                                 onTap: () {
                                   Get.toNamed(RoutesName.qrCodeScreen);
                                   Get.snackbar(
@@ -483,23 +453,20 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed:
-                          controller.isOffline
-                              ? null
-                              : () {
-                                final userMap = controller.usersList.firstWhere(
-                                  (u) =>
-                                      u['id'].toString() == widget.customerId,
-                                  orElse:
-                                      () => {
-                                        "id": widget.customerId,
-                                        "name": widget.customerName,
-                                      },
-                                );
-                                controller.selectUser(userMap);
-                                controller.setType('given');
-                                Get.toNamed('/addUdharScreen');
+                      onPressed: () {
+                        final userMap = controller.usersList.firstWhere(
+                          (u) =>
+                              u['id'].toString() == widget.customerId,
+                          orElse:
+                              () => {
+                                "id": widget.customerId,
+                                "name": widget.customerName,
                               },
+                        );
+                        controller.selectUser(userMap);
+                        controller.setType('given');
+                        Get.toNamed('/addUdharScreen');
+                      },
                     ),
                   ),
                   HSpace(12.w),
@@ -525,44 +492,26 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                           ),
                         ),
                       ),
-                      onPressed:
-                          controller.isOffline
-                              ? null
-                              : () {
-                                final userMap = controller.usersList.firstWhere(
-                                  (u) =>
-                                      u['id'].toString() == widget.customerId,
-                                  orElse:
-                                      () => {
-                                        "id": widget.customerId,
-                                        "name": widget.customerName,
-                                      },
-                                );
-                                controller.selectUser(userMap);
-                                controller.setType('received');
-                                Get.toNamed('/addUdharScreen');
+                      onPressed: () {
+                        final userMap = controller.usersList.firstWhere(
+                          (u) =>
+                              u['id'].toString() == widget.customerId,
+                          orElse:
+                              () => {
+                                "id": widget.customerId,
+                                "name": widget.customerName,
                               },
+                        );
+                        controller.selectUser(userMap);
+                        controller.setType('received');
+                        Get.toNamed('/addUdharScreen');
+                      },
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          persistentFooterButtons:
-              controller.isOffline
-                  ? [
-                    Center(
-                      child: Text(
-                        'Internet required to add transactions and send reminders.',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: AppColors.black50,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ]
-                  : null,
         );
       },
     );
@@ -933,33 +882,31 @@ class _QuickActionBtn extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
-    this.enabled = true,
   });
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: enabled ? onTap : null,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: enabled ? 0.1 : 0.05),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: color.withValues(alpha: enabled ? 0.2 : 0.12),
+            color: color.withValues(alpha: 0.2),
           ),
         ),
         child: Column(
           children: [
             Icon(
               icon,
-              color: color.withValues(alpha: enabled ? 1 : 0.45),
+              color: color,
               size: 20.sp,
             ),
             VSpace(4.h),
@@ -968,20 +915,9 @@ class _QuickActionBtn extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.sp,
                 fontWeight: FontWeight.bold,
-                color: color.withValues(alpha: enabled ? 1 : 0.45),
+                color: color,
               ),
             ),
-            if (!enabled) ...[
-              VSpace(2.h),
-              Text(
-                'Needs internet',
-                style: TextStyle(
-                  fontSize: 9.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black50,
-                ),
-              ),
-            ],
           ],
         ),
       ),

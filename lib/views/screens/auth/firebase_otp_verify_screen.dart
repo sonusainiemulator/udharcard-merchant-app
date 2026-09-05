@@ -26,6 +26,8 @@ class _FirebaseOtpVerifyScreenState extends State<FirebaseOtpVerifyScreen> {
   }
 
   void _refreshForm() {
+    _authController.firebaseOtpVal =
+        _authController.firebaseOtpController.text.trim();
     if (mounted) setState(() {});
   }
 
@@ -40,13 +42,14 @@ class _FirebaseOtpVerifyScreenState extends State<FirebaseOtpVerifyScreen> {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
     final otpCode = _authController.firebaseOtpController.text.trim();
     final canVerify = otpCode.length >= 6;
+    final phoneDisplay = _authController.activeAuthPhoneNumber.isNotEmpty
+        ? _authController.activeAuthPhoneNumber
+        : "your mobile number";
 
     return FintechAuthPage(
       eyebrow: 'OTP Verification',
       title: storedLanguage['Verify OTP'] ?? "Verify OTP",
-      subtitle:
-          storedLanguage['Enter the 6-digit code sent to your phone'] ??
-          "Enter the 6-digit verification code sent to your mobile number.",
+      subtitle: "Enter the 6-digit verification code sent to $phoneDisplay.",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,6 +66,10 @@ class _FirebaseOtpVerifyScreenState extends State<FirebaseOtpVerifyScreen> {
             textInputAction: TextInputAction.done,
             onChanged: (val) {
               _authController.firebaseOtpVal = val.trim();
+              if (val.trim().length == 6) {
+                Helpers.hideKeyboard();
+                _authController.verifyFirebaseOtp();
+              }
             },
             prefix: const Icon(
               Icons.lock_clock_outlined,
@@ -88,13 +95,60 @@ class _FirebaseOtpVerifyScreenState extends State<FirebaseOtpVerifyScreen> {
                         }
                       : null,
                 ),
+                SizedBox(height: 16.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Didn't receive code? ",
+                      style: TextStyle(
+                        color: const Color(0xFF667085),
+                        fontSize: 13.sp,
+                      ),
+                    ),
+                    if (controller.otpCountdown > 0)
+                      Text(
+                        'Resend in ${controller.otpCountdown}s',
+                        style: TextStyle(
+                          color: const Color(0xFF101828),
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    else
+                      TextButton(
+                        onPressed: controller.isLoading
+                            ? null
+                            : () async {
+                                Helpers.hideKeyboard();
+                                await controller.resendFirebaseOtp();
+                              },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Resend OTP',
+                          style: TextStyle(
+                            color: const Color(0xFF175CD3),
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
           SizedBox(height: 18.h),
           Center(
             child: TextButton(
-              onPressed: () => Get.back(),
+              onPressed: () {
+                Get.back();
+                _authController.clearFirebaseOtpController();
+              },
               child: Text(
                 'Change phone number',
                 style: TextStyle(
@@ -109,4 +163,5 @@ class _FirebaseOtpVerifyScreenState extends State<FirebaseOtpVerifyScreen> {
       ),
     );
   }
+
 }

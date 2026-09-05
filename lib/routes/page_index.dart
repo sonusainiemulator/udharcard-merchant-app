@@ -28,4 +28,5 @@ export '../views/screens/verification/verification_list_screen.dart';
 export '../views/screens/voice_entry/voice_entry_screen.dart';
 export '../views/screens/udhar/add_udhar_screen.dart';
 export '../views/screens/subscription/subscription_plans_screen.dart';
+export '../views/screens/subscription/subscription_history_screen.dart';
 export '../views/screens/worklist/worklist_screen.dart';

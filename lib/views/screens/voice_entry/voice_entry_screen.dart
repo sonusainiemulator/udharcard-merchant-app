@@ -246,7 +246,7 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
                                   ),
                                   Switch(
                                     value: controller.isTalkBackEnabled,
-                                    activeColor: AppColors.mainColor,
+                                    activeThumbColor: AppColors.mainColor,
                                     onChanged:
                                         (val) => controller.toggleTalkBack(val),
                                   ),

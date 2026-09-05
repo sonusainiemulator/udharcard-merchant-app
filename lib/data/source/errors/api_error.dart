@@ -90,7 +90,7 @@ class ApiResponse {
     }
 
     // Keep 404 route errors silent here so feature-level handlers can show
-    // clearer fallback messages (for example, queueing data offline).
+    // clearer contextual fallback messages.
     if (!message.contains('Resource not found || 404')) {
       Helpers.showSnackBar(msg: message);
     }

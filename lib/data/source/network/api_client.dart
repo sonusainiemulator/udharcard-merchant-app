@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:get/get.dart' hide Response, MultipartFile;
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
-import '../../../../../controllers/app_controller.dart';
 import '../../../../../utils/app_constants.dart';
 import '../../../../../utils/services/localstorage/hive.dart';
 import '../../../../../utils/services/localstorage/keys.dart';
@@ -14,14 +11,19 @@ class ApiClient {
   static final String _BASE_URL = AppConstants.baseUrl;
   static const int _TIMEOUT_DURATION = 30; // 30 seconds timeout for real-time calls
 
-  static Map<String, String> _getHeaders({bool isFormUrlEncoded = true}) {
+  static Map<String, String> _getHeaders({
+    bool isFormUrlEncoded = true,
+    bool isMultipart = false,
+  }) {
     final token = HiveHelp.read(Keys.token) ?? '';
     final headers = <String, String>{
       'Accept': 'application/json',
-      'Content-Type': isFormUrlEncoded
-          ? 'application/x-www-form-urlencoded'
-          : 'application/json',
     };
+    if (!isMultipart) {
+      headers['Content-Type'] = isFormUrlEncoded
+          ? 'application/x-www-form-urlencoded'
+          : 'application/json';
+    }
     if (token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     } else {
@@ -37,23 +39,6 @@ class ApiClient {
     return headers;
   }
 
-  static Future<bool> _isOfflineNow() async {
-    try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      return connectivityResult == ConnectivityResult.none;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<void> syncQueuedRequests() async {}
-
-  static Future<void> _triggerInternetIssueNotice() async {
-    if (await _isOfflineNow() && Get.isRegistered<AppController>()) {
-      Get.find<AppController>().updateConnectionStatus(ConnectivityResult.none);
-    }
-  }
-
   static Future<http.Response> _request({
     required String method,
     required String ENDPOINT_URL,
@@ -64,19 +49,6 @@ class ApiClient {
     Response? response;
     final Map<String, String> resolvedHeaders =
         headers ?? _getHeaders(isFormUrlEncoded: isFormUrlEncoded);
-
-    // Check internet connection before making live API call
-    if (await _isOfflineNow()) {
-      await _triggerInternetIssueNotice();
-      return http.Response(
-        jsonEncode({
-          'status': 'error',
-          'message': 'Internet Connection Issue. Please check your network connection.',
-        }),
-        503,
-        headers: const {'content-type': 'application/json'},
-      );
-    }
 
     try {
       final uri = Uri.parse(_BASE_URL + ENDPOINT_URL);
@@ -97,7 +69,6 @@ class ApiClient {
       response = await http.Response.fromStream(streamedResponse);
       return await ApiResponse.processResponse(response);
     } catch (e) {
-      await _triggerInternetIssueNotice();
       return ApiResponse.handleException(
         e,
         response == null ? 503 : response.statusCode,
@@ -133,22 +104,12 @@ class ApiClient {
     Iterable<MultipartFile>? fileList,
   }) async {
     Response? response;
-    if (await _isOfflineNow()) {
-      _triggerInternetIssueNotice();
-      return ApiResponse.handleException(
-        http.ClientException(
-          'Internet Connection Issue. Please check your network connection.',
-        ),
-        503,
-      );
-    }
-
     try {
       MultipartRequest request = http.MultipartRequest(
         'POST',
         Uri.parse(_BASE_URL + ENDPOINT_URL),
       );
-      request.headers.addAll(_getHeaders());
+      request.headers.addAll(_getHeaders(isMultipart: true));
       if (fields != null) {
         request.fields.addAll(fields);
       }
@@ -167,7 +128,6 @@ class ApiClient {
       response = await http.Response.fromStream(streamedResponse);
       return await ApiResponse.processResponse(response);
     } catch (e) {
-      _triggerInternetIssueNotice();
       return ApiResponse.handleException(
         e,
         response == null ? 503 : response.statusCode,

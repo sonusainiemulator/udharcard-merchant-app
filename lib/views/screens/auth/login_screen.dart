@@ -90,9 +90,19 @@ class LoginScreen extends StatelessWidget {
                       await controller.sendFirebaseOtp(phone, isLogin: true);
                     },
                   ),
+                  const FintechAuthDivider(),
+                  FintechGoogleButton(
+                    label: 'Sign in with Google',
+                    isLoading: controller.isGoogleLoading,
+                    onPressed: () async {
+                      Helpers.hideKeyboard();
+                      await controller.signInWithGoogle();
+                    },
+                  ),
                 ],
               ),
             ),
+
             SizedBox(height: 16.h),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,

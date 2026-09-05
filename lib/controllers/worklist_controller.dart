@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:paysecure/data/models/worklist_model.dart';
@@ -14,34 +13,21 @@ class WorkListController extends GetxController {
   static WorkListController get to => Get.find<WorkListController>();
 
   WorkListController({
-    Connectivity? connectivity,
     DateTime Function()? nowProvider,
-  }) : _connectivity = connectivity ?? Connectivity(),
-       _nowProvider = nowProvider ?? DateTime.now;
+  }) : _nowProvider = nowProvider ?? DateTime.now;
 
   final List<WorkListItem> items = [];
-  final Connectivity _connectivity;
   final DateTime Function() _nowProvider;
-
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
 
   bool isLoaded = false;
   bool isSyncing = false;
-  bool isOffline = false;
 
   @override
   void onInit() {
     super.onInit();
     loadFromStorage().then((_) {
-      initConnectivityListener();
       fetchWorkItems();
     });
-  }
-
-  @override
-  void onClose() {
-    _connectivitySubscription?.cancel();
-    super.onClose();
   }
 
   List<WorkListItem> get overdueItems =>
@@ -95,13 +81,6 @@ class WorkListController extends GetxController {
   }
 
   Future<void> fetchWorkItems() async {
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Realtime work list sync is unavailable.');
-      update();
-      return;
-    }
-
     isSyncing = true;
     update();
     try {
@@ -147,30 +126,7 @@ class WorkListController extends GetxController {
     }
   }
 
-  Future<void> checkConnection() async {
-    final connectivityResult = await _connectivity.checkConnectivity();
-    isOffline = connectivityResult == ConnectivityResult.none;
-  }
-
-  void initConnectivityListener() {
-    _connectivitySubscription?.cancel();
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
-      final wasOffline = isOffline;
-      isOffline = result == ConnectivityResult.none;
-      update();
-      if (wasOffline && !isOffline) {
-        syncWorkItems();
-      }
-    });
-  }
-
   Future<void> saveItem(WorkListItem item) async {
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Saving tasks requires live sync.');
-      return;
-    }
-
     isSyncing = true;
     update();
 
@@ -215,12 +171,6 @@ class WorkListController extends GetxController {
     final index = items.indexWhere((element) => element.id == id);
     if (index < 0) return;
 
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Status update requires live sync.');
-      return;
-    }
-
     final current = items[index];
     final payload = {
       'title': current.title,
@@ -254,12 +204,6 @@ class WorkListController extends GetxController {
   }
 
   Future<void> deleteItem(String id) async {
-    await checkConnection();
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Delete requires live sync.');
-      return;
-    }
-
     try {
       final response = await WorkListRepo.deleteItem(itemId: id);
       final data = _decodeJsonMap(response.body);

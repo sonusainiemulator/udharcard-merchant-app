@@ -1,8 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:paysecure/controllers/udhar_controller.dart';
@@ -14,256 +9,23 @@ class TestUdharController extends UdharController {
   Future<void> fetchUsers({bool force = false}) async {
     fetchUsersCalls++;
   }
-
-  @override
-  Future<void> checkConnection() async {
-    isOffline = false;
-  }
-}
-
-class FakeConnectivityPlatform extends ConnectivityPlatform {
-  @override
-  Future<ConnectivityResult> checkConnectivity() async {
-    return ConnectivityResult.wifi;
-  }
-
-  @override
-  Stream<ConnectivityResult> get onConnectivityChanged =>
-      const Stream<ConnectivityResult>.empty();
-}
-
-class FakeHttpOverrides extends HttpOverrides {
-  FakeHttpOverrides(this.responseBody, this.statusCode);
-
-  final String responseBody;
-  final int statusCode;
-
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return FakeHttpClient(responseBody: responseBody, statusCode: statusCode);
-  }
-}
-
-class FakeHttpClient implements HttpClient {
-  FakeHttpClient({required this.responseBody, required this.statusCode});
-
-  final String responseBody;
-  final int statusCode;
-
-  @override
-  Future<HttpClientRequest> openUrl(String method, Uri url) async {
-    return FakeHttpClientRequest(
-      method: method,
-      url: url,
-      responseBody: responseBody,
-      statusCode: statusCode,
-    );
-  }
-
-  @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class FakeHttpClientRequest implements HttpClientRequest {
-  FakeHttpClientRequest({
-    required this.method,
-    required this.url,
-    required this.responseBody,
-    required this.statusCode,
-  });
-
-  @override
-  final String method;
-
-  final Uri url;
-
-  final String responseBody;
-  final int statusCode;
-
-  final FakeHttpHeaders _headers = FakeHttpHeaders();
-
-  @override
-  HttpHeaders get headers => _headers;
-
-  @override
-  int contentLength = 0;
-
-  @override
-  bool followRedirects = true;
-
-  @override
-  int maxRedirects = 5;
-
-  @override
-  bool persistentConnection = true;
-
-  @override
-  bool bufferOutput = true;
-
-  @override
-  Encoding encoding = utf8;
-
-  @override
-  void add(List<int> data) {}
-
-  @override
-  Future addStream(Stream<List<int>> stream) async {
-    await stream.drain<void>();
-  }
-
-  @override
-  void write(Object? obj) {}
-
-  @override
-  void writeAll(Iterable objects, [String separator = '']) {}
-
-  @override
-  void writeCharCode(int charCode) {}
-
-  @override
-  void writeln([Object? obj = '']) {}
-
-  @override
-  Future<HttpClientResponse> close() async {
-    return FakeHttpClientResponse(responseBody, statusCode);
-  }
-
-  @override
-  void abort([Object? exception, StackTrace? stackTrace]) {}
-
-  @override
-  Future<HttpClientResponse> get done async => FakeHttpClientResponse(responseBody, statusCode);
-
-  @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class FakeHttpClientResponse extends Stream<List<int>> implements HttpClientResponse {
-  FakeHttpClientResponse(this.responseBody, this.statusCode);
-  final String responseBody;
-  @override
-  final int statusCode;
-
-  @override
-  int get contentLength => utf8.encode(responseBody).length;
-
-  @override
-  HttpHeaders get headers => FakeHttpHeaders(initialValues: {
-        'content-type': ['application/json']
-      });
-
-  @override
-  StreamSubscription<List<int>> listen(
-    void Function(List<int> event)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-  }) {
-    return Stream<List<int>>.value(utf8.encode(responseBody)).listen(
-      onData,
-      onError: onError,
-      onDone: onDone,
-      cancelOnError: cancelOnError,
-    );
-  }
-
-  @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class FakeHttpHeaders implements HttpHeaders {
-  FakeHttpHeaders({Map<String, List<String>>? initialValues}) {
-    if (initialValues != null) {
-      _values.addAll(initialValues);
-    }
-  }
-
-  final Map<String, List<String>> _values = {};
-
-  void _setValue(String name, String value) {
-    _values[name.toLowerCase()] = [value];
-  }
-
-  @override
-  void add(String name, Object value, {bool preserveHeaderCase = false}) {
-    _values.putIfAbsent(name.toLowerCase(), () => []).add(value.toString());
-  }
-
-  void addAll(Map<String, String> values) {
-    values.forEach((key, value) => _setValue(key, value));
-  }
-
-  @override
-  void set(String name, Object value, {bool preserveHeaderCase = false}) {
-    _setValue(name, value.toString());
-  }
-
-  @override
-  void forEach(void Function(String name, List<String> values) action) {
-    _values.forEach(action);
-  }
-
-  @override
-  String? value(String name) {
-    final values = _values[name.toLowerCase()];
-    if (values == null || values.isEmpty) {
-      return null;
-    }
-    return values.first;
-  }
-
-  @override
-  void removeAll(String name, {bool preserveHeaderCase = false}) {
-    _values.remove(name.toLowerCase());
-  }
-
-  @override
-  void clear() {
-    _values.clear();
-  }
-
-  @override
-  List<String>? operator [](String name) => _values[name.toLowerCase()];
-
-  void operator []=(String name, Object value) =>
-      _setValue(name, value.toString());
-
-  @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('UdharController sync flow', () {
-    late ConnectivityPlatform originalPlatform;
-
+  group('UdharController sync and add customer tests', () {
     setUp(() {
       Get.testMode = true;
-      originalPlatform = ConnectivityPlatform.instance;
-      ConnectivityPlatform.instance = FakeConnectivityPlatform();
     });
 
     tearDown(() {
-      ConnectivityPlatform.instance = originalPlatform;
       Get.reset();
     });
 
     test('syncManual triggers one realtime refresh via fetchUsers', () async {
       final controller = TestUdharController();
-
-      await HttpOverrides.runZoned(() async {
-        await controller.syncManual();
-      }, createHttpClient: (_) {
-        return FakeHttpClient(
-          responseBody: jsonEncode({
-            'status': 'success',
-            'data': {'customers': [], 'contacts': []},
-          }),
-          statusCode: 200,
-        );
-      });
-
+      await controller.syncManual();
       expect(controller.fetchUsersCalls, 1);
     });
 
@@ -276,12 +38,70 @@ void main() {
       expect(res, isNull);
     });
 
-    test('addCustomer sanitizes +91 country prefix from phone', () {
+    test('addCustomer validates short name and invalid email', () async {
+      final controller = TestUdharController();
+      controller.nameCtrl.text = 'A';
+      controller.phoneCtrl.text = '9876543210';
+      var res = await controller.addCustomer();
+      expect(res, isNull);
+
+      controller.nameCtrl.text = 'Valid Name';
+      controller.emailCtrl.text = 'not-an-email';
+      res = await controller.addCustomer();
+      expect(res, isNull);
+    });
+
+    test('addCustomer validates numeric limit and opening balance', () async {
+      final controller = TestUdharController();
+      controller.nameCtrl.text = 'Ramesh';
+      controller.phoneCtrl.text = '9876543210';
+      controller.limitCtrl.text = '-50';
+      var res = await controller.addCustomer();
+      expect(res, isNull);
+
+      controller.limitCtrl.text = 'abc';
+      res = await controller.addCustomer();
+      expect(res, isNull);
+
+      controller.limitCtrl.text = '1000';
+      controller.openingBalanceCtrl.text = '-10';
+      res = await controller.addCustomer();
+      expect(res, isNull);
+    });
+
+    test('addCustomer sanitizes +91 and 0 country prefixes from phone', () {
       String rawPhone = '+91 9876543210'.replaceAll(RegExp(r'[^0-9]'), '');
       if (rawPhone.length == 12 && rawPhone.startsWith('91')) {
         rawPhone = rawPhone.substring(2);
       }
       expect(rawPhone, '9876543210');
+
+      String zeroPhone = '09876543210'.replaceAll(RegExp(r'[^0-9]'), '');
+      if (zeroPhone.length == 11 && zeroPhone.startsWith('0')) {
+        zeroPhone = zeroPhone.substring(1);
+      }
+      expect(zeroPhone, '9876543210');
+    });
+
+    test('customer list correctly filters and searches customers', () {
+      final controller = TestUdharController();
+      controller.usersList = [
+        {'id': 1, 'name': 'Ramesh Kumar', 'phone': '9876543210'},
+        {'id': 2, 'name': 'Suresh Patel', 'phone': '9123456780'},
+        {'id': 3, 'name': 'Anita Sharma', 'phone': '9988776655'},
+      ];
+      controller.filteredUsers = List.from(controller.usersList);
+
+      controller.searchUsers('Patel');
+      expect(controller.filteredUsers.length, 1);
+      expect(controller.filteredUsers.first['name'], 'Suresh Patel');
+
+      controller.searchUsers('98765');
+      expect(controller.filteredUsers.length, 1);
+      expect(controller.filteredUsers.first['name'], 'Ramesh Kumar');
+
+      controller.searchUsers('');
+      expect(controller.filteredUsers.length, 3);
     });
   });
 }

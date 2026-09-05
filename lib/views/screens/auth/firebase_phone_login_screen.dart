@@ -139,9 +139,19 @@ class _FirebasePhoneLoginScreenState extends State<FirebasePhoneLoginScreen> {
                     ],
                   ),
                 ),
+                const FintechAuthDivider(),
+                FintechGoogleButton(
+                  label: storedLanguage['Sign in with Google'] ?? 'Sign in with Google',
+                  isLoading: controller.isGoogleLoading,
+                  onPressed: () async {
+                    Helpers.hideKeyboard();
+                    await controller.signInWithGoogle();
+                  },
+                ),
               ],
             ),
           ),
+
           SizedBox(height: 18.h),
           Center(
             child: TextButton(

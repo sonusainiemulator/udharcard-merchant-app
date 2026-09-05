@@ -19,17 +19,28 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
     Get.put(UdharController());
   }
   final ctrl = Get.find<UdharController>();
-  await ctrl.checkConnection();
   ctrl.showCustomerLimitNudgeIfNeeded();
 
-  return Get.toNamed<Map<String, dynamic>?>(
-    RoutesName.addCustomerScreen,
-    arguments: {
-      'storedLanguage': storedLanguage,
-      'initialName': initialName,
-      'initialPhone': initialPhone,
-    },
-  ) ?? Future.value(null);
+  final args = {
+    'storedLanguage': storedLanguage,
+    'initialName': initialName,
+    'initialPhone': initialPhone,
+  };
+
+  try {
+    final result = await Get.toNamed<Map<String, dynamic>?>(
+      RoutesName.addCustomerScreen,
+      arguments: args,
+    );
+    if (result != null) return result;
+  } catch (_) {
+    final result = await Get.to<Map<String, dynamic>?>(
+      () => const AddCustomerScreen(),
+      arguments: args,
+    );
+    if (result != null) return result;
+  }
+  return null;
 }
 
 class AddCustomerScreen extends StatefulWidget {
@@ -52,6 +63,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   bool _showMoreInfo = true;
   String _selectedType = 'Customer';
 
+  void _onNameChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,10 +82,12 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
     _controller.emailCtrl.clear();
     _controller.nameCtrl.text = (args['initialName'] ?? '').toString();
     _controller.phoneCtrl.text = (args['initialPhone'] ?? '').toString();
+    _controller.nameCtrl.addListener(_onNameChanged);
   }
 
   @override
   void dispose() {
+    _controller.nameCtrl.removeListener(_onNameChanged);
     _addressCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
@@ -143,7 +160,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                   VSpace(24.h),
                   _buildLabeledField(
                     context: context,
-                    label: 'Email Address',
+                    label: 'Email Address (Optional)',
                     child: _buildTextField(
                       context: context,
                       controller: _controller.emailCtrl,
@@ -153,24 +170,56 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                     ),
                   ),
                   VSpace(16.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildLabeledField(
+                          context: context,
+                          label: 'Opening Balance (₹)',
+                          child: _buildTextField(
+                            context: context,
+                            controller: _controller.openingBalanceCtrl,
+                            hint: '0',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            fillColor: cardColor,
+                          ),
+                        ),
+                      ),
+                      HSpace(12.w),
+                      Expanded(
+                        child: _buildLabeledField(
+                          context: context,
+                          label: 'Credit Limit (₹)',
+                          child: _buildTextField(
+                            context: context,
+                            controller: _controller.limitCtrl,
+                            hint: '5000',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            fillColor: cardColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  VSpace(16.h),
                   _buildLabeledField(
                     context: context,
-                    label: 'Address',
+                    label: 'Address (Optional)',
                     child: _buildTextField(
                       context: context,
                       controller: _addressCtrl,
-                      hint: 'Plocentia, California(CA), 92870',
+                      hint: 'City, State, Pincode',
                       fillColor: cardColor,
                     ),
                   ),
                   VSpace(16.h),
                   _buildLabeledField(
                     context: context,
-                    label: 'Note',
+                    label: 'Note (Optional)',
                     child: _buildTextField(
                       context: context,
                       controller: _noteCtrl,
-                      hint: 'Text...',
+                      hint: 'Any notes about this party...',
                       fillColor: cardColor,
                       maxLines: 4,
                     ),
@@ -194,18 +243,6 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             builder: (ctrl) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (ctrl.isOffline)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 6.h),
-                    child: Text(
-                      'Unable to reach server right now. Please check your internet and try again.',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.black50,
-                      ),
-                    ),
-                  ),
                 SizedBox(
                   height: 52.h,
                   width: double.infinity,
@@ -220,9 +257,9 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                     ),
                     onPressed: ctrl.isAddingCustomer
                         ? null
-                        : () {
+                        : () async {
                             FocusScope.of(context).unfocus();
-                            ctrl.addCustomer(
+                            await ctrl.addCustomer(
                               address: _addressCtrl.text,
                               note: _noteCtrl.text,
                               type: _selectedType,
@@ -237,13 +274,25 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(
-                            'Save',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 19.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_add_alt_1_rounded,
+                                color: Colors.white,
+                                size: 20.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                _storedLanguage['Add Customer'] ??
+                                    'Add Customer',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17.sp,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                   ),
                 ),
@@ -331,9 +380,23 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                     fontSize: 13.sp,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.only(right: 14.w),
+                  contentPadding: EdgeInsets.symmetric(vertical: 14.h),
                 ),
               ),
+            ),
+            IconButton(
+              onPressed: () async {
+                final contact = await _controller.pickContactFromPhonebook();
+                if (contact != null && mounted) {
+                  setState(() {});
+                }
+              },
+              icon: Icon(
+                Icons.contacts_rounded,
+                color: _accentColor,
+                size: 22.sp,
+              ),
+              tooltip: 'Import from Contacts',
             ),
           ],
         ),
@@ -432,6 +495,17 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   }
 
   Widget _buildAvatarSection() {
+    final name = _controller.nameCtrl.text.trim();
+    String initials = '';
+    if (name.isNotEmpty) {
+      final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+      } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
+        initials = parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+      }
+    }
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -442,10 +516,21 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             color: Color(0xFFFDECEF),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Icons.person,
-            color: _accentColor,
-            size: 48.sp,
+          child: Center(
+            child: initials.isNotEmpty
+                ? Text(
+                    initials,
+                    style: TextStyle(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w800,
+                      color: _accentColor,
+                    ),
+                  )
+                : Icon(
+                    Icons.person,
+                    color: _accentColor,
+                    size: 48.sp,
+                  ),
           ),
         ),
         Positioned(
@@ -456,11 +541,16 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: () {},
+              onTap: () async {
+                final contact = await _controller.pickContactFromPhonebook();
+                if (contact != null && mounted) {
+                  setState(() {});
+                }
+              },
               child: Padding(
                 padding: EdgeInsets.all(8.w),
                 child: Icon(
-                  Icons.camera_alt_rounded,
+                  Icons.contacts_rounded,
                   color: Colors.white,
                   size: 18.sp,
                 ),

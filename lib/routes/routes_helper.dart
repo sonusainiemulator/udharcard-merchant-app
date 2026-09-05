@@ -9,7 +9,6 @@ import '../views/screens/udhar/customer_list_screen.dart';
 import '../views/screens/udhar/customer_ledger_screen.dart';
 import '../views/screens/udhar/chat_ledger_screen.dart';
 import '../views/screens/udhar/reports_dashboard_screen.dart';
-import '../views/screens/udhar/udhar_dashboard_screen.dart';
 import 'routes_name.dart';
 import '../routes/page_index.dart';
 
@@ -28,6 +27,10 @@ class RouteHelper {
     GetPage(
       name: RoutesName.subscriptionPlansScreen,
       page: () => const SubscriptionPlansScreen(),
+    ),
+    GetPage(
+      name: RoutesName.subscriptionHistoryScreen,
+      page: () => const SubscriptionHistoryScreen(),
     ),
     GetPage(name: RoutesName.forgotPassScreen, page: () => ForgotPassScreen()),
     GetPage(name: RoutesName.otpScreen, page: () => OtpScreen()),
@@ -144,15 +147,11 @@ class RouteHelper {
     ),
     GetPage(
       name: RoutesName.udharDashboardScreen,
-      page: () => const UdharDashboardScreen(),
+      page: () => const HomeScreen(),
     ),
     GetPage(
       name: RoutesName.workListScreen,
       page: () => const WorkListScreen(),
-    ),
-    GetPage(
-      name: RoutesName.voiceEntryScreen,
-      page: () => const VoiceEntryScreen(),
     ),
     GetPage(
       name: RoutesName.chatLedgerScreen,

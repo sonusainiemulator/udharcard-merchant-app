@@ -42,5 +42,6 @@ class RoutesName {
   static String chatLedgerScreen = "/chatLedgerScreen";
   static String merchantOnboardingWizardScreen = "/merchantOnboardingWizardScreen";
   static String subscriptionPlansScreen = "/subscriptionPlansScreen";
+  static String subscriptionHistoryScreen = "/subscriptionHistoryScreen";
   static String appLockScreen = "/appLockScreen";
 }

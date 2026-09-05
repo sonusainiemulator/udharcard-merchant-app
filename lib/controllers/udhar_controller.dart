@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -45,7 +44,6 @@ class UdharController extends GetxController {
     Get.toNamed(RoutesName.voiceEntryScreen);
   }
 
-  bool isOffline = false;
   bool isSyncing = false;
 
   // QR Payment Status variables
@@ -160,21 +158,7 @@ class UdharController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    initConnectivityListener();
     fetchUsers();
-  }
-
-  Future<void> checkConnection() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    isOffline = connectivityResult == ConnectivityResult.none;
-    update();
-  }
-
-  void initConnectivityListener() {
-    Connectivity().onConnectivityChanged.listen((result) {
-      isOffline = result == ConnectivityResult.none;
-      update();
-    });
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -187,47 +171,39 @@ class UdharController extends GetxController {
     isUsersLoading = true;
     update();
 
-    await checkConnection();
-
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'No internet. Unable to fetch latest customers.',
-      );
-    } else {
-      try {
-        final response = await UdharRepo.getUsers();
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          if (data['status'] == 'success') {
-            if (data['data'] != null) {
-              if (data['data'] is Map && data['data']['data'] != null) {
-                usersList = List<dynamic>.from(data['data']['data']);
-              } else if (data['data'] is Map &&
-                  data['data']['contacts'] != null) {
-                usersList = List<dynamic>.from(data['data']['contacts']);
-              } else if (data['data'] is Map &&
-                  data['data']['customers'] != null) {
-                usersList = List<dynamic>.from(data['data']['customers']);
-              } else if (data['data'] is List) {
-                usersList = List<dynamic>.from(data['data']);
-              } else {
-                usersList = [];
-              }
+    try {
+      final response = await UdharRepo.getUsers();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          if (data['data'] != null) {
+            if (data['data'] is Map && data['data']['data'] != null) {
+              usersList = List<dynamic>.from(data['data']['data']);
+            } else if (data['data'] is Map &&
+                data['data']['contacts'] != null) {
+              usersList = List<dynamic>.from(data['data']['contacts']);
+            } else if (data['data'] is Map &&
+                data['data']['customers'] != null) {
+              usersList = List<dynamic>.from(data['data']['customers']);
+            } else if (data['data'] is List) {
+              usersList = List<dynamic>.from(data['data']);
             } else {
               usersList = [];
             }
           } else {
-            final msg = data['message']?.toString().trim();
-            if (msg != null && msg.isNotEmpty) {
-              Helpers.showSnackBar(msg: msg);
-            }
+            usersList = [];
           }
         } else {
-          Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
+          final msg = data['message']?.toString().trim();
+          if (msg != null && msg.isNotEmpty) {
+            Helpers.showSnackBar(msg: msg);
+          }
         }
-      } catch (_) {
+      } else {
         Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
       }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
     }
 
     if (searchCtrl.text.isNotEmpty) {
@@ -337,33 +313,46 @@ class UdharController extends GetxController {
     String type = 'Customer',
   }) async {
     final String name = nameCtrl.text.trim();
+    if (name.isEmpty) {
+      Helpers.showSnackBar(msg: 'Please enter customer name');
+      return null;
+    }
+    if (name.length < 2) {
+      Helpers.showSnackBar(msg: 'Customer name is too short (min 2 characters)');
+      return null;
+    }
+
     String phone = phoneCtrl.text.trim().replaceAll(
       RegExp(r'[^0-9]'),
       '',
     );
+    if (phone.isEmpty) {
+      Helpers.showSnackBar(msg: 'Please enter phone number');
+      return null;
+    }
     if (phone.length == 12 && phone.startsWith('91')) {
       phone = phone.substring(2);
     } else if (phone.length == 11 && phone.startsWith('0')) {
       phone = phone.substring(1);
     }
 
+    if (phone.length < 10 || phone.length > 15) {
+      Helpers.showSnackBar(msg: 'Please enter a valid 10-digit mobile number');
+      return null;
+    }
+
     final String email = emailCtrl.text.trim();
+    if (email.isNotEmpty && !GetUtils.isEmail(email)) {
+      Helpers.showSnackBar(msg: 'Please enter a valid email address');
+      return null;
+    }
+
     final String creditLimit =
         limitCtrl.text.trim().isEmpty ? "5000" : limitCtrl.text.trim();
     final String openingBalance =
         openingBalanceCtrl.text.trim().isEmpty
             ? "0"
             : openingBalanceCtrl.text.trim();
-
-    if (name.isEmpty || phone.isEmpty) {
-      Helpers.showSnackBar(msg: 'Please fill in Name and Phone Number');
-      return null;
-    }
-
-    if (phone.length < 10 || phone.length > 15) {
-      Helpers.showSnackBar(msg: 'Please enter a valid phone number');
-      return null;
-    }
 
     final double? parsedLimit = double.tryParse(creditLimit);
     final double? parsedOpeningBalance = double.tryParse(openingBalance);
@@ -404,44 +393,81 @@ class UdharController extends GetxController {
         note: note,
         type: type,
       );
+      final Map<String, dynamic>? data = _decodeJsonMap(response.body);
+      final bool isSuccess = _isApiSuccess(response.statusCode, data);
+      if (isSuccess) {
+        _showEntitlementWarningIfAny(data);
+        Helpers.showSnackBar(
+          msg: data?['message'] ?? 'Customer added successfully',
+          title: 'Success',
+        );
 
-        final Map<String, dynamic>? data = _decodeJsonMap(response.body);
-        final bool isSuccess = _isApiSuccess(response.statusCode, data);
-        if (isSuccess) {
-          _showEntitlementWarningIfAny(data);
-          Helpers.showSnackBar(
-            msg: data?['message'] ?? 'Customer added successfully',
-          );
-          if (data != null && data['data'] is Map) {
-            resultCustomer = Map<String, dynamic>.from(data['data']);
-            // Optimistic update
-            usersList.insert(0, resultCustomer);
-            if (searchCtrl.text.isEmpty) {
-              filteredUsers = List.from(usersList);
+        Map<String, dynamic>? created;
+        if (data != null) {
+          if (data['data'] is Map) {
+            final dMap = Map<String, dynamic>.from(data['data']);
+            if (dMap['customer'] is Map) {
+              created = Map<String, dynamic>.from(dMap['customer']);
+            } else if (dMap['data'] is Map) {
+              created = Map<String, dynamic>.from(dMap['data']);
             } else {
-              searchUsers(searchCtrl.text);
+              created = dMap;
             }
-            update();
+          } else if (data['customer'] is Map) {
+            created = Map<String, dynamic>.from(data['customer']);
           }
-          _resetCustomerForm();
-          fetchUsers(force: true);
-          _closeAddCustomerScreen(resultCustomer);
-        } else {
-          final String apiMessage = _extractApiMessage(data, response.body);
-          Helpers.showSnackBar(
-            msg:
-                apiMessage.isNotEmpty
-                    ? apiMessage
-                    : 'Unable to add customer. Please verify details and try again.',
-          );
         }
-      } catch (e) {
-        debugPrint("addCustomer error: $e");
-        Helpers.showSnackBar(msg: 'Unable to add customer. Please try again.');
-      }
 
-    isAddingCustomer = false;
-    update();
+        resultCustomer = created ?? {
+          'id': data?['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          'name': name,
+          'phone': phone,
+          'email': email,
+          'credit_limit': creditLimit,
+          'opening_balance': openingBalance,
+          'address': address,
+          'note': note,
+          'type': type,
+        };
+
+        // Optimistic update of local customer lists
+        usersList.removeWhere(
+          (u) =>
+              (u['id']?.toString() == resultCustomer?['id']?.toString()) ||
+              (u['phone']?.toString() == phone),
+        );
+        usersList.insert(0, resultCustomer);
+        if (searchCtrl.text.isEmpty) {
+          filteredUsers = List.from(usersList);
+        } else {
+          searchUsers(searchCtrl.text);
+        }
+        update();
+
+        _resetCustomerForm();
+        fetchUsers(force: true);
+        _closeAddCustomerScreen(resultCustomer);
+      } else {
+        final String apiMessage = _extractApiMessage(data, response.body);
+        Helpers.showSnackBar(
+          msg:
+              apiMessage.isNotEmpty
+                  ? apiMessage
+                  : 'Unable to add customer. Please verify details and try again.',
+          title: 'Error',
+        );
+      }
+    } catch (e) {
+      debugPrint("addCustomer error: $e");
+      Helpers.showSnackBar(
+        msg: 'Unable to add customer. Please check network and try again.',
+        title: 'Error',
+      );
+    } finally {
+      isAddingCustomer = false;
+      update();
+    }
+
     return resultCustomer;
   }
 
@@ -613,70 +639,65 @@ class UdharController extends GetxController {
       isLedgerLoading = true;
       update();
     }
-    await checkConnection();
 
-    if (isOffline) {
-      Helpers.showSnackBar(msg: 'No internet. Unable to fetch latest ledger.');
-    } else {
-      try {
-        final response = await UdharRepo.getCustomerLedger(
-          customerId: customerId,
-        );
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          if (data['status'] == 'success') {
-            final payload = data['message'] ?? data['data'] ?? {};
-            if (payload['ledgers'] != null) {
-              if (payload['ledgers'] is Map &&
-                  payload['ledgers']['data'] != null) {
-                ledgerTransactions = List<dynamic>.from(
-                  payload['ledgers']['data'],
-                );
-              } else if (payload['ledgers'] is List) {
-                ledgerTransactions = List<dynamic>.from(payload['ledgers']);
-              }
-            } else if (payload['transactions'] != null) {
-              ledgerTransactions = List<dynamic>.from(payload['transactions']);
-            } else {
-              ledgerTransactions = [];
+    try {
+      final response = await UdharRepo.getCustomerLedger(
+        customerId: customerId,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final payload = data['message'] ?? data['data'] ?? {};
+          if (payload['ledgers'] != null) {
+            if (payload['ledgers'] is Map &&
+                payload['ledgers']['data'] != null) {
+              ledgerTransactions = List<dynamic>.from(
+                payload['ledgers']['data'],
+              );
+            } else if (payload['ledgers'] is List) {
+              ledgerTransactions = List<dynamic>.from(payload['ledgers']);
             }
-
-            if (payload['customer'] != null && payload['customer'] is Map) {
-              currentOutstandingBalance =
-                  double.tryParse(
-                    payload['customer']['outstanding_balance']?.toString() ??
-                        '0',
-                  ) ??
-                  0.0;
-              currentCreditLimit =
-                  double.tryParse(
-                    payload['customer']['credit_limit']?.toString() ?? '5000',
-                  ) ??
-                  5000.0;
-            } else {
-              currentOutstandingBalance =
-                  double.tryParse(
-                    payload['outstanding_balance']?.toString() ?? '0',
-                  ) ??
-                  0.0;
-              currentCreditLimit =
-                  double.tryParse(
-                    payload['credit_limit']?.toString() ?? '5000',
-                  ) ??
-                  5000.0;
-            }
+          } else if (payload['transactions'] != null) {
+            ledgerTransactions = List<dynamic>.from(payload['transactions']);
           } else {
-            final msg = data['message']?.toString().trim();
-            if (msg != null && msg.isNotEmpty) {
-              Helpers.showSnackBar(msg: msg);
-            }
+            ledgerTransactions = [];
+          }
+
+          if (payload['customer'] != null && payload['customer'] is Map) {
+            currentOutstandingBalance =
+                double.tryParse(
+                  payload['customer']['outstanding_balance']?.toString() ??
+                      '0',
+                ) ??
+                0.0;
+            currentCreditLimit =
+                double.tryParse(
+                  payload['customer']['credit_limit']?.toString() ?? '5000',
+                ) ??
+                5000.0;
+          } else {
+            currentOutstandingBalance =
+                double.tryParse(
+                  payload['outstanding_balance']?.toString() ?? '0',
+                ) ??
+                0.0;
+            currentCreditLimit =
+                double.tryParse(
+                  payload['credit_limit']?.toString() ?? '5000',
+                ) ??
+                5000.0;
           }
         } else {
-          Helpers.showSnackBar(msg: 'Unable to fetch latest ledger.');
+          final msg = data['message']?.toString().trim();
+          if (msg != null && msg.isNotEmpty) {
+            Helpers.showSnackBar(msg: msg);
+          }
         }
-      } catch (_) {
+      } else {
         Helpers.showSnackBar(msg: 'Unable to fetch latest ledger.');
       }
+    } catch (_) {
+      Helpers.showSnackBar(msg: 'Unable to fetch latest ledger.');
     }
 
     _applyLedgerDateFilter();
@@ -687,8 +708,8 @@ class UdharController extends GetxController {
   Map<String, dynamic>? _decodeJsonMap(String input) {
     try {
       final dynamic parsed = jsonDecode(input);
-      if (parsed is Map<String, dynamic>) {
-        return parsed;
+      if (parsed is Map) {
+        return Map<String, dynamic>.from(parsed);
       }
     } catch (_) {}
     return null;
@@ -734,59 +755,59 @@ class UdharController extends GetxController {
 
     try {
       final response = await UdharRepo.addUdhar(
-          customerId: selectedCustomerId,
-          amount: amountStr,
-          type: typeStr == 'given' ? 'credit' : 'debit',
-          remarks: remarksStr,
-          paymentMethod: paymentMethodStr,
-          createdAt: selectedDate?.toIso8601String(),
-        );
+        customerId: selectedCustomerId,
+        amount: amountStr,
+        type: typeStr == 'given' ? 'credit' : 'debit',
+        remarks: remarksStr,
+        paymentMethod: paymentMethodStr,
+        createdAt: selectedDate?.toIso8601String(),
+      );
 
-        final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-        if (response.statusCode == 200 && data['status'] == 'success') {
-          // Optimistic update
-          final newLedger = {
-            'amount': double.tryParse(amountStr) ?? 0.0,
-            'type': typeStr == 'given' ? 'credit' : 'debit',
-            'notes': remarksStr,
-            'payment_method': paymentMethodStr,
-            'created_at': DateTime.now().toIso8601String(),
-          };
-          
-          if (selectedCustomerId == (selectedUser?['id']?.toString())) {
-             ledgerTransactions.insert(0, newLedger);
-             final amount = double.tryParse(amountStr) ?? 0.0;
-             if (typeStr == 'given') {
-               currentOutstandingBalance += amount;
-             } else {
-               currentOutstandingBalance -= amount;
-             }
-             _applyLedgerDateFilter();
-             update();
-          }
-
-          Helpers.showSnackBar(
-            msg: data['message'] ?? 'Udhar transaction added successfully',
-          );
-          _resetForm();
-          if (Get.context != null) Navigator.of(Get.context!).pop();
-          await fetchUsers(force: true);
-          if (selectedCustomerId.isNotEmpty) {
-            await fetchCustomerLedger(selectedCustomerId, force: true);
-          }
-        } else {
-          Helpers.showSnackBar(
-            msg:
-                data['message']?.toString() ??
-                'Unable to add transaction. Please try again.',
-          );
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        // Optimistic update
+        final newLedger = {
+          'amount': double.tryParse(amountStr) ?? 0.0,
+          'type': typeStr == 'given' ? 'credit' : 'debit',
+          'notes': remarksStr,
+          'payment_method': paymentMethodStr,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+        
+        if (selectedCustomerId == (selectedUser?['id']?.toString())) {
+           ledgerTransactions.insert(0, newLedger);
+           final amount = double.tryParse(amountStr) ?? 0.0;
+           if (typeStr == 'given') {
+             currentOutstandingBalance += amount;
+           } else {
+             currentOutstandingBalance -= amount;
+           }
+           _applyLedgerDateFilter();
+           update();
         }
-      } catch (_) {
+
         Helpers.showSnackBar(
-          msg: 'Unable to add transaction. Please try again.',
+          msg: data['message'] ?? 'Udhar transaction added successfully',
+        );
+        _resetForm();
+        if (Get.context != null) Navigator.of(Get.context!).pop();
+        await fetchUsers(force: true);
+        if (selectedCustomerId.isNotEmpty) {
+          await fetchCustomerLedger(selectedCustomerId, force: true);
+        }
+      } else {
+        Helpers.showSnackBar(
+          msg:
+              data['message']?.toString() ??
+              'Unable to add transaction. Please try again.',
         );
       }
+    } catch (_) {
+      Helpers.showSnackBar(
+        msg: 'Unable to add transaction. Please try again.',
+      );
+    }
 
     isSubmitting = false;
     update();
@@ -896,7 +917,6 @@ class UdharController extends GetxController {
   Future<void> generateDynamicQr(String customerId, String amount) async {
     isQrLoading = true;
     update();
-    await checkConnection();
 
     try {
       final response = await UdharRepo.generateQr(
@@ -954,38 +974,35 @@ class UdharController extends GetxController {
         return;
       }
 
-      await checkConnection();
-      if (!isOffline) {
-        try {
-          final response = await UdharRepo.getCustomerLedger(
-            customerId: customerId,
-          );
-          final data = jsonDecode(response.body);
-          if (response.statusCode == 200 && data['status'] == 'success') {
-            double currentBal =
-                double.tryParse(
-                  data['data']['outstanding_balance']?.toString() ?? '0',
-                ) ??
-                0.0;
-            if (currentBal < currentOutstandingBalance) {
-              isPaymentReceived = true;
-              currentOutstandingBalance = currentBal;
-              timer.cancel();
-              isListeningPayment = false;
-              update();
-              Helpers.showSnackBar(
-                msg:
-                    "Payment Received (Udhar Aaya)! Ledger updated successfully.",
-                title: 'Success',
-                bgColor: AppColors.greenColor,
-              );
-              if (Get.isDialogOpen == true) {
-                Get.back();
-              }
+      try {
+        final response = await UdharRepo.getCustomerLedger(
+          customerId: customerId,
+        );
+        final data = jsonDecode(response.body);
+        if (response.statusCode == 200 && data['status'] == 'success') {
+          double currentBal =
+              double.tryParse(
+                data['data']['outstanding_balance']?.toString() ?? '0',
+              ) ??
+              0.0;
+          if (currentBal < currentOutstandingBalance) {
+            isPaymentReceived = true;
+            currentOutstandingBalance = currentBal;
+            timer.cancel();
+            isListeningPayment = false;
+            update();
+            Helpers.showSnackBar(
+              msg:
+                  "Payment Received (Udhar Aaya)! Ledger updated successfully.",
+              title: 'Success',
+              bgColor: AppColors.greenColor,
+            );
+            if (Get.isDialogOpen == true) {
+              Get.back();
             }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     });
   }
 
@@ -1036,17 +1053,6 @@ class UdharController extends GetxController {
     reportsDateRange = range ?? reportsDateRange;
     isReportsLoading = true;
     update();
-
-    await checkConnection();
-
-    if (isOffline) {
-      Helpers.showSnackBar(
-        msg: 'No internet. Realtime reports sync is unavailable.',
-      );
-      isReportsLoading = false;
-      update();
-      return;
-    }
 
     try {
       final response = await UdharRepo.getReports(
@@ -1316,12 +1322,10 @@ class UdharController extends GetxController {
     if (isSyncing) return;
     isSyncing = true;
     update();
-    await fetchUsers();
+    await fetchUsers(force: true);
     isSyncing = false;
     update();
-    if (!isOffline) {
-      Helpers.showSnackBar(msg: 'Realtime sync completed.');
-    }
+    Helpers.showSnackBar(msg: 'Realtime sync completed.');
   }
 
   double _asDouble(dynamic value) {
@@ -1342,7 +1346,7 @@ class UdharController extends GetxController {
   }
 
   // ── Phonebook Contact Import ────────────────────────────────────────────────
-  Future<void> pickContactFromPhonebook() async {
+  Future<Contact?> pickContactFromPhonebook() async {
     try {
       if (await FlutterContacts.requestPermission()) {
         final Contact? contact = await FlutterContacts.openExternalPick();
@@ -1358,8 +1362,15 @@ class UdharController extends GetxController {
             }
             phoneCtrl.text = rawPhone;
           }
+          if (contact.emails.isNotEmpty && emailCtrl.text.trim().isEmpty) {
+            emailCtrl.text = contact.emails.first.address.trim();
+          }
           update();
-          Helpers.showSnackBar(msg: "Contact imported: ${contact.displayName}");
+          Helpers.showSnackBar(
+            msg: "Contact imported: ${contact.displayName}",
+            title: "Contact Selected",
+          );
+          return contact;
         }
       } else {
         Helpers.showSnackBar(msg: "Permission denied to access contacts.");
@@ -1367,6 +1378,7 @@ class UdharController extends GetxController {
     } catch (e) {
       Helpers.showSnackBar(msg: "Failed to pick contact: $e");
     }
+    return null;
   }
 
   // ── Local Ledger Backup & Restore ──────────────────────────────────────────

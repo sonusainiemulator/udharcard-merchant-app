@@ -97,7 +97,12 @@ class AppConstants {
   static const String subscriptionOfflineRequestUrl = "/merchant/subscription/offline-request";
   static const String myUpgradeStatusUrl = "/merchant/subscription/my-upgrade-status";
   static const String subscriptionCancelRequestUrl = "/merchant/subscription/cancel-request";
+
+  //----GOOGLE AUTH
+  static const String googleServerClientId =
+      "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com";
 }
+
 
 //----------IMAGE DIRECTORY---------//
 String rootImageDir = "assets/images";

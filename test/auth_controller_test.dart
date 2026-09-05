@@ -22,7 +22,19 @@ void main() {
       expect(authController.firebasePhoneVal, '');
       expect(authController.firebaseOtpVal, '');
       expect(authController.firebaseVerificationId, isNull);
+      expect(authController.isGoogleLoading, isFalse);
     });
+
+    test('clearFirebaseOtpController and clearSignInController reset isGoogleLoading', () {
+      authController.isGoogleLoading = true;
+      authController.clearFirebaseOtpController();
+      expect(authController.isGoogleLoading, isFalse);
+
+      authController.isGoogleLoading = true;
+      authController.clearSignInController();
+      expect(authController.isGoogleLoading, isFalse);
+    });
+
 
     test('Updating firebasePhoneVal updates state correctly', () {
       authController.firebasePhoneVal = '+919876543210';
@@ -70,6 +82,17 @@ void main() {
       expect(payload['type'], 'merchant');
       expect(payload['password'], 'secret123');
       expect(payload['password_confirmation'], 'secret123');
+    });
+
+    test('firebaseOtpController text change updates firebaseOtpVal automatically', () {
+      authController.firebaseOtpController.text = '654321';
+      expect(authController.firebaseOtpVal, '654321');
+    });
+
+    test('clearFirebaseOtpController preserves flow flags when resetFlow is false', () {
+      authController.firebaseVerificationId = 'vid_123';
+      authController.clearFirebaseOtpController(resetFlow: false);
+      expect(authController.firebaseVerificationId, isNull);
     });
   });
 }

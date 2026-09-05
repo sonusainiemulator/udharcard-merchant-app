@@ -166,17 +166,31 @@ class ProfileController extends GetxController {
                 'profile_picture',
                 pickedImage!.path,
               ),
-      data: {
-        "first_name": fNameEditingController.text,
-        "last_name": lNameEditingController.text,
-        "username": userNameEditingController.text,
-        "city": cityEditingController.text,
-        "state": stateEditingController.text,
-        "language": selectedLanguageId,
-        "phone": phoneNumberEditingController.text,
-        "address": addrEditingController.text,
-        "phone_code": phoneCode,
-      },
+      data: () {
+        final cleanPhoneCode = phoneCode.replaceAll('+', '').trim();
+        final fullName =
+            "${fNameEditingController.text} ${lNameEditingController.text}"
+                .trim();
+        final sanitizedUsername =
+            userNameEditingController.text.trim().isNotEmpty
+                ? userNameEditingController.text.trim()
+                : (phoneNumberEditingController.text.trim().isNotEmpty
+                    ? phoneNumberEditingController.text.trim()
+                    : fullName);
+
+        return {
+          "name": fullName,
+          "first_name": fNameEditingController.text.trim(),
+          "last_name": lNameEditingController.text.trim(),
+          "username": sanitizedUsername,
+          "city": cityEditingController.text.trim(),
+          "state": stateEditingController.text.trim(),
+          "language": selectedLanguageId,
+          "phone": phoneNumberEditingController.text.trim(),
+          "address": addrEditingController.text.trim(),
+          "phone_code": cleanPhoneCode.isNotEmpty ? cleanPhoneCode : "91",
+        };
+      }(),
     );
     isUpdateProfile = false;
     update();
@@ -184,7 +198,26 @@ class ProfileController extends GetxController {
     if (response.statusCode == 200) {
       ApiStatus.checkStatus(data['status'], data['message']);
       if (data['status'] == 'success') {
-        getProfile();
+        final fullName =
+            "${fNameEditingController.text} ${lNameEditingController.text}"
+                .trim();
+        if (fullName.isNotEmpty) {
+          HiveHelp.write(Keys.userFullName, fullName);
+          userName = fullName;
+        }
+        if (phoneNumberEditingController.text.trim().isNotEmpty) {
+          HiveHelp.write(
+            Keys.userPhone,
+            phoneNumberEditingController.text.trim(),
+          );
+        }
+        if (userNameEditingController.text.trim().isNotEmpty) {
+          HiveHelp.write(
+            Keys.userName,
+            userNameEditingController.text.trim(),
+          );
+        }
+        await getProfile();
         if (context != null) Navigator.of(context).pop();
         update();
       }

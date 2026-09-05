@@ -21,7 +21,6 @@ class Keys {
   static String udharCustomers = "udharCustomers";
   static String udharTransactions = "udharTransactions";
   static String workListItems = "workListItems";
-  static String workListOfflineQueue = "workListOfflineQueue";
   static String workListLastSyncAt = "workListLastSyncAt";
   static String subscriptionPlanSelected = "subscriptionPlanSelected";
   static String subscriptionPlanCode = "subscriptionPlanCode";

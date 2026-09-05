@@ -231,49 +231,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     ),
                   ),
 
-                  // ── Offline Warning Banner ──────────────────────────────
-                  if (controller.isOffline)
-                    Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.only(bottom: 12.h),
-                      padding: EdgeInsets.symmetric(
-                          vertical: 8.h, horizontal: 12.w),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.wifi_off_rounded,
-                              color: Colors.white, size: 16.sp),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'No internet — Realtime directory sync paused',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (controller.isOffline)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 12.h),
-                      child: Text(
-                        'Add Customer and Reminder actions are disabled until internet is back.',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-
                   // ── Hero Dual Summary Banner ────────────────────────────
                   Container(
                     width: double.infinity,
@@ -703,13 +660,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                             SizedBox(height: 4.h),
                                             if (balance > 0 && phone.isNotEmpty)
                                               InkWell(
-                                                onTap: controller.isOffline
-                                                    ? null
-                                                    : () => _sendWhatsAppReminder(
-                                                          phone,
-                                                          name,
-                                                          balance,
-                                                        ),
+                                                onTap: () => _sendWhatsAppReminder(
+                                                      phone,
+                                                      name,
+                                                      balance,
+                                                    ),
                                                 borderRadius:
                                                     BorderRadius.circular(6.r),
                                                 child: Container(
@@ -720,10 +675,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                     color:
                                                         const Color(0xFF25D366)
                                                             .withValues(
-                                                                alpha: controller
-                                                                        .isOffline
-                                                                    ? 0.06
-                                                                    : 0.12),
+                                                                alpha: 0.12),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             6.r),
@@ -731,10 +683,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                       color:
                                                           const Color(0xFF25D366)
                                                               .withValues(
-                                                                  alpha: controller
-                                                                          .isOffline
-                                                                      ? 0.18
-                                                                      : 0.3),
+                                                                  alpha: 0.3),
                                                     ),
                                                   ),
                                                   child: Row(
@@ -751,12 +700,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                         "Remind",
                                                         style: TextStyle(
                                                           color: const Color(
-                                                              0xFF25D366)
-                                                              .withValues(
-                                                                  alpha: controller
-                                                                          .isOffline
-                                                                      ? 0.45
-                                                                      : 1),
+                                                              0xFF25D366),
                                                           fontSize: 10.sp,
                                                           fontWeight:
                                                               FontWeight.w800,

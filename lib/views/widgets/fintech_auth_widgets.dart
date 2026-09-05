@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/app_constants.dart';
+import 'brand_icons.dart';
 
 class FintechAuthPage extends StatelessWidget {
   const FintechAuthPage({
@@ -412,6 +413,114 @@ class FintechErrorMessage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class FintechAuthDivider extends StatelessWidget {
+  const FintechAuthDivider({super.key, this.text = 'OR'});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dividerColor =
+        isDark ? const Color(0xFF344054) : const Color(0xFFEAECF0);
+    final textColor =
+        isDark ? const Color(0xFF98A2B3) : const Color(0xFF667085);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 16.h),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14.w),
+            child: Text(
+              text,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: dividerColor, thickness: 1)),
+        ],
+      ),
+    );
+  }
+}
+
+class FintechGoogleButton extends StatelessWidget {
+  const FintechGoogleButton({
+    super.key,
+    this.label = 'Continue with Google',
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1D2939) : Colors.white;
+    final borderColor =
+        isDark ? const Color(0xFF344054) : const Color(0xFFD0D5DD);
+    final textColor = isDark ? Colors.white : const Color(0xFF344054);
+
+    return SizedBox(
+      width: double.infinity,
+      height: 52.h,
+      child: OutlinedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: bgColor,
+          foregroundColor: textColor,
+          side: BorderSide(color: borderColor, width: 1.2),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          elevation: 0,
+        ),
+        child: isLoading
+            ? SizedBox(
+                height: 20.r,
+                width: 20.r,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.mainColor,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GoogleBrandIcon(size: 18.r),
+                  SizedBox(width: 10.w),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.sp,
+                        letterSpacing: .2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+
   }
 }
 

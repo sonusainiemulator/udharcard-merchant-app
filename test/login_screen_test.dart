@@ -60,6 +60,19 @@ void main() {
       );
     });
 
+    testWidgets('Renders Google Sign-In button and OR divider', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Sign in with Google'), findsOneWidget);
+      expect(find.text('OR'), findsOneWidget);
+    });
+
+
     testWidgets('Renders mobile number field and privacy copy', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;

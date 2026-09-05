@@ -46,9 +46,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _syncNames(String val, ProfileController profileController) {
-    final parts = val.trim().split(' ');
-    profileController.fNameEditingController.text = parts.isNotEmpty ? parts.first : '';
-    profileController.lNameEditingController.text = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    final trimmed = val.trim();
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.isEmpty || (parts.length == 1 && parts.first.isEmpty)) {
+      profileController.fNameEditingController.text = '';
+      profileController.lNameEditingController.text = '';
+    } else if (parts.length == 1) {
+      profileController.fNameEditingController.text = parts.first;
+      profileController.lNameEditingController.text = parts.first;
+    } else {
+      profileController.fNameEditingController.text = parts.first;
+      profileController.lNameEditingController.text = parts.sublist(1).join(' ');
+    }
   }
 
   @override
@@ -57,6 +66,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     Get.find<ProfileController>().isLanguageSelected = false;
     return GetBuilder<ProfileController>(
       builder: (profileController) {
+        if (_fullNameCtrl.text.trim().isEmpty) {
+          final currentName =
+              "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}"
+                  .trim();
+          if (currentName.isNotEmpty) {
+            _fullNameCtrl.text = currentName;
+          }
+        }
         return GetBuilder<AppController>(
           builder: (appController) {
             var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
@@ -440,17 +457,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                       onTap: () async {
                                         try {
                                           Helpers.hideKeyboard();
+                                          _syncNames(
+                                            _fullNameCtrl.text,
+                                            profileController,
+                                          );
                                           // Set India phone code fixed
                                           profileController.phoneCode = '+91';
                                           profileController.countryCode = 'IN';
-                                          profileController.countryName = 'India';
-                                          if (profileController.isLanguageSelected == true) {
-                                            await appController.getLanguageListBuyId(
-                                              id: profileController.selectedLanguageId,
+                                          profileController.countryName =
+                                              'India';
+                                          if (profileController
+                                                  .isLanguageSelected ==
+                                              true) {
+                                            await appController
+                                                .getLanguageListBuyId(
+                                              id: profileController
+                                                  .selectedLanguageId,
                                             );
-                                            await profileController.validateEditProfile(context);
+                                            await profileController
+                                                .validateEditProfile(context);
                                           } else {
-                                            await profileController.validateEditProfile(context);
+                                            await profileController
+                                                .validateEditProfile(context);
                                           }
                                         } catch (e) {
                                           Helpers.showSnackBar(msg: e.toString());

@@ -87,8 +87,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           ),
                           _buildNavItem(
                             index: 1,
-                            label: 'Dashboard',
-                            iconData: Icons.dashboard_rounded,
+                            label: 'Customers',
+                            iconData: Icons.people_alt_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),

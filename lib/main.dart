@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:paysecure/firebase_options.dart';
 import 'package:paysecure/utils/services/custom_error.dart';
 import 'controllers/app_controller.dart';
@@ -117,8 +118,19 @@ _initializeApp() async {
   } catch (e) {
     throw Exception('Error loading .env file: $e');
   }
+  try {
+    final serverClientId = (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '').trim().isNotEmpty
+        ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']!.trim()
+        : AppConstants.googleServerClientId;
+    await GoogleSignIn.instance.initialize(
+      serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
+    );
+  } catch (e) {
+    debugPrint("GoogleSignIn init attempt error: $e");
+  }
   await Future.wait([
     LocalNotificationService().initNotification(),
     Future.delayed(const Duration(milliseconds: 400)),
   ]);
 }
+

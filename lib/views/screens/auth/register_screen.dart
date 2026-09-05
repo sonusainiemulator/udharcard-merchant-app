@@ -155,9 +155,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           await controller.sendFirebaseOtp(phone, isLogin: false);
                         },
                       ),
+                      const FintechAuthDivider(),
+                      FintechGoogleButton(
+                        label: 'Register with Google',
+                        isLoading: controller.isGoogleLoading,
+                        onPressed: () async {
+                          Helpers.hideKeyboard();
+                          await controller.signInWithGoogle();
+                        },
+                      ),
                     ],
                   ),
             ),
+
             SizedBox(height: 14.h),
             Text(
               'By continuing, you confirm that you are authorised to register this business.',
