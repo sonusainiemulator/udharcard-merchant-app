@@ -5,6 +5,27 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.58] - 2026-09-07
+
+### 📚 Official Fumadocs Documentation Portal
+- **Modern Next.js 16 Documentation Portal**: Initialized and deployed full documentation using [Fumadocs](https://www.fumadocs.dev/) (`fumadocs-core`, `fumadocs-ui`, `fumadocs-mdx`).
+- **Live Deployment**: Deployed to Vercel at `https://docs-udharcard.vercel.app` and aliased to `https://docs.udharcard.com`.
+- **Modules Covered**:
+  - **Merchant Mobile App**: 01-OTP Login, 02-Add Customer, 03-Udhar Ledger, 04-Billing & Reminders, 05-Reports.
+  - **Customer User App**: 01-Login Overview, 02-View Khata, 03-Online Repayment.
+  - **Admin Management Portal**: 01-Merchants Onboarding/KYC, 02-Transactions Audit, 03-Subscription Plans & Settings.
+  - **UdharCard MCP Server**: Step-by-step setup in Google Antigravity IDE and Claude Desktop, 5 tools reference.
+- **Search Engine & AI Crawler Optimization**:
+  - Valid `public/robots.txt` granting crawling access to Googlebot, GPTBot, Claude-Web, PerplexityBot, and CCBot.
+  - Comprehensive `public/sitemap.xml` indexing all 19 documentation pages.
+  - Standardized `llms.txt` and `llms-full.txt` for AI crawler consumption.
+  - High-performance `/api/search` search API.
+- **GitHub Repository**: Published source code to `https://github.com/sonusainiemulator/docs-udharcard`.
+
+### 🔍 Google Crawl & Indexing Diagnosis (`udharcard.com`)
+- Diagnosed root cause of `udharcard.com` Google indexing issues: `https://www.udharcard.com/robots.txt` and `sitemap.xml` return HTTP 404 HTML error pages on Vercel's `khatabook-com-clone` project.
+- Verified DNS configuration requirement for `docs.udharcard.com` (`A` record `76.76.21.21`).
+
 ## [1.0.57] - 2026-09-06
 
 ### 🔑 OTP Login & Authentication Hardening
