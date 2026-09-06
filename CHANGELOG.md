@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - High-performance `/api/search` search API.
 - **GitHub Repository**: Published source code to `https://github.com/sonusainiemulator/docs-udharcard`.
 
+### 🎨 Siegfried-Inspired MCP Guide Portal Redesign
+- Redesigned `https://pay.udharcard.shop/merchant/mcp-guide` and `/mcp` matching the exact visual aesthetics, dark/light theme toggle, subtle enterprise grid background, and layout of `docs.siegfriedoutreach.com`.
+- Added sticky sidebar navigation with live topic search filtering and scroll-spy.
+- Embedded interactive Mac-style code snippet blocks with 1-click clipboard copy buttons.
+- Integrated interactive floating **AI Docs Assistant (`Ask AI`)** widget with quick FAQ chips and instant deep-linking knowledge base.
+
 ### 🔍 Google Crawl & Indexing Diagnosis (`udharcard.com`)
 - Diagnosed root cause of `udharcard.com` Google indexing issues: `https://www.udharcard.com/robots.txt` and `sitemap.xml` return HTTP 404 HTML error pages on Vercel's `khatabook-com-clone` project.
 - Verified DNS configuration requirement for `docs.udharcard.com` (`A` record `76.76.21.21`).
