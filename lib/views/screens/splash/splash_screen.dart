@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../config/app_colors.dart';
+import '../../../controllers/auth_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../utils/services/localstorage/keys.dart';
 import '../../../utils/services/subscription_gate_service.dart';
@@ -75,6 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
           FirebaseAuth.instance.currentUser != null;
 
       if (isLoggedIn) {
+        AuthController.ensureSanctumToken();
         final bool isAppLockEnabled =
             (HiveHelp.read(Keys.isAppLockEnabled) ?? false) == true;
         if (isAppLockEnabled) {

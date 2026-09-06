@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../data/source/network/api_client.dart';
 import '../utils/app_constants.dart';
 import 'subscription_controller.dart';
 import '../routes/routes_name.dart';
@@ -38,6 +39,7 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    ApiClient.onUnauthorized = AuthController.ensureSanctumToken;
     firebasePhoneController.addListener(() {
       firebasePhoneVal = firebasePhoneController.text.trim();
       loginErrorMessage = null;
@@ -634,8 +636,112 @@ class AuthController extends GetxController {
     }
   }
 
+  static Future<bool> ensureSanctumToken() async {
+    try {
+      String? rawPhone = HiveHelp.read(Keys.userPhone)?.toString();
+      if (rawPhone == null || rawPhone.trim().isEmpty) {
+        rawPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+      }
+      if (rawPhone == null || rawPhone.trim().isEmpty) {
+        rawPhone = HiveHelp.read(Keys.userName)?.toString();
+      }
+      if (rawPhone == null || rawPhone.trim().isEmpty) return false;
+
+      String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+      if (cleanPhone.length > 10) {
+        if (cleanPhone.length == 12 && cleanPhone.startsWith('91')) {
+          cleanPhone = cleanPhone.substring(2);
+        } else if (cleanPhone.length == 11 && cleanPhone.startsWith('0')) {
+          cleanPhone = cleanPhone.substring(1);
+        } else {
+          cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
+        }
+      }
+      if (cleanPhone.isEmpty) return false;
+
+      final response = await AuthRepo.otpLogin(data: {
+        'phone': cleanPhone,
+        'username': cleanPhone,
+        'type': 'merchant',
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['token'] != null) {
+          final String token = data['token'].toString();
+          HiveHelp.write(Keys.token, token);
+
+          final user = data['user'];
+          if (user is Map) {
+            if (user['id'] != null) {
+              HiveHelp.write(Keys.userId, user['id'].toString());
+            }
+            final phone = user['phone']?.toString() ?? cleanPhone;
+            HiveHelp.write(Keys.userPhone, phone);
+            HiveHelp.write(Keys.userName, phone);
+            if (user['name'] != null || user['firstname'] != null) {
+              final name = user['name'] ?? '${user['firstname']} ${user['lastname'] ?? ''}';
+              HiveHelp.write(Keys.userFullName, name.toString().trim());
+            }
+            if (user['shop_name'] != null) {
+              HiveHelp.write('shop_name', user['shop_name'].toString());
+            }
+          }
+          HiveHelp.write(Keys.isNewUser, false);
+          HiveHelp.write(Keys.isRemember, true);
+          HiveHelp.write('onboarding_completed', true);
+          debugPrint("ensureSanctumToken: successfully refreshed token for $cleanPhone");
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint("ensureSanctumToken error: $e");
+    }
+    return false;
+  }
+
   Future<void> _authenticateWithBackendAfterOtp(String cleanPhone) async {
     try {
+      // 1. First and primary: call dedicated passwordless/OTP merchant login endpoint
+      try {
+        final otpResponse = await AuthRepo.otpLogin(data: {
+          "phone": cleanPhone,
+          "username": cleanPhone,
+          "type": "merchant",
+        });
+        if (otpResponse.statusCode == 200) {
+          final data = jsonDecode(otpResponse.body);
+          if (data['status'] == 'success') {
+            if (data['token'] != null) {
+              HiveHelp.write(Keys.token, data['token'].toString());
+            }
+            final user = data['user'];
+            if (user is Map) {
+              if (user['id'] != null) {
+                HiveHelp.write(Keys.userId, user['id'].toString());
+              }
+              final phone = user['phone']?.toString() ?? cleanPhone;
+              HiveHelp.write(Keys.userPhone, phone);
+              HiveHelp.write(Keys.userName, phone);
+              if (user['name'] != null || user['firstname'] != null) {
+                final name = user['name'] ?? '${user['firstname']} ${user['lastname'] ?? ''}';
+                HiveHelp.write(Keys.userFullName, name.toString().trim());
+              }
+              if (user['shop_name'] != null) {
+                HiveHelp.write('shop_name', user['shop_name'].toString());
+              }
+            }
+            HiveHelp.write(Keys.isNewUser, false);
+            HiveHelp.write(Keys.isRemember, true);
+            HiveHelp.write('onboarding_completed', true);
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint("Dedicated otp-login attempt failed: $e");
+      }
+
+      // 2. Fallback: Existing password login attempts
       final passwordsToTry = [
         "merchant_default_password",
         "123456",
@@ -691,7 +797,7 @@ class AuthController extends GetxController {
 
       if (loginSucceeded) return;
 
-      // If backend login fails because merchant doesn't exist yet, auto-register as fallback
+      // 3. Fallback: Auto-register
       final regResponse = await AuthRepo.register(data: {
         "name": "Merchant $cleanPhone",
         "firstname": "Merchant",

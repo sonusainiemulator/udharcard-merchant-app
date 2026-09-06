@@ -10,6 +10,7 @@ import '../errors/api_error.dart';
 class ApiClient {
   static final String _BASE_URL = AppConstants.baseUrl;
   static const int _TIMEOUT_DURATION = 30; // 30 seconds timeout for real-time calls
+  static Future<bool> Function()? onUnauthorized;
 
   static Map<String, String> _getHeaders({
     bool isFormUrlEncoded = true,
@@ -67,7 +68,35 @@ class ApiClient {
         const Duration(seconds: _TIMEOUT_DURATION),
       );
       response = await http.Response.fromStream(streamedResponse);
-      return await ApiResponse.processResponse(response);
+
+      // Automatic Sanctum token re-auth & retry on 401
+      if (response.statusCode == 401 &&
+          onUnauthorized != null &&
+          !ENDPOINT_URL.contains('/login') &&
+          !ENDPOINT_URL.contains('/register') &&
+          !ENDPOINT_URL.contains('/otp-login')) {
+        try {
+          final bool refreshed = await onUnauthorized!();
+          if (refreshed) {
+            final retryHeaders = _getHeaders(isFormUrlEncoded: isFormUrlEncoded);
+            final retryRequest = http.Request(method, uri);
+            retryRequest.headers.addAll(retryHeaders);
+            if (body != null) {
+              if (retryHeaders['Content-Type']?.contains('application/x-www-form-urlencoded') ?? false) {
+                retryRequest.bodyFields = body.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+              } else {
+                retryRequest.body = json.encode(body);
+              }
+            }
+            final retryStreamed = await retryRequest.send().timeout(
+              const Duration(seconds: _TIMEOUT_DURATION),
+            );
+            response = await http.Response.fromStream(retryStreamed);
+          }
+        } catch (_) {}
+      }
+
+      return await ApiResponse.processResponse(response!);
     } catch (e) {
       return ApiResponse.handleException(
         e,

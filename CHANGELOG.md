@@ -5,6 +5,26 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.57] - 2026-09-06
+
+### 🔑 OTP Login & Authentication Hardening
+- **Dedicated `/merchant/otp-login` Backend Endpoint**: Added a new passwordless Sanctum login endpoint on the backend that finds-or-creates a merchant by 10-digit phone. Removes all need for password guessing loops after Firebase OTP.
+- **`AuthController._authenticateWithBackendAfterOtp`**: Now calls `/merchant/otp-login` first. Falls back to password login → auto-register only if needed.
+- **`AuthController.ensureSanctumToken()`**: New static method that silently refreshes the Sanctum Bearer token from the backend on every app launch (splash screen) and on 401 responses.
+- **`ApiClient.onUnauthorized` retry**: Added automatic 401 → `ensureSanctumToken` → retry logic in `ApiClient` so expired tokens are transparently refreshed without user-visible errors.
+- **Splash screen proactive token refresh**: On each app resume, `ensureSanctumToken()` is called silently in background when user is already logged in.
+
+### 🐛 Add Customer / fetchUsers Bug Fixes
+- **`fetchUsers` silent background mode**: Background and auto-init calls to `fetchUsers()` no longer show the `"Unable to fetch latest customers."` snackbar. Error is printed to debug console only. Snackbar only shown when `isManual: true` (pull-to-refresh).
+- **`addCustomer` phone normalization**: Phone is now strictly normalized to exactly 10 digits (strips country code `91`, leading `0`, or truncates from right). Validation rejects anything that isn't exactly 10 digits.
+- **Duplicate customer message**: Clear, friendly message shown when backend reports a phone already in the party list.
+
+### 🔧 Backend Fixes (`pay.udharcard.shop`)
+- Added `POST /api/merchant/otp-login` route in `routes/api.php`.
+- Added `otpLogin()` method in `AuthController.php` with finds-or-creates merchant, sets all verification flags, issues Sanctum token.
+- Fixed `addCustomer()` in `UdharController.php`: phone stored as cleaned 10-digit `$last10`, validator returns 422 with descriptive message.
+
+
 ## [1.0.56] - 2026-09-06
 
 ### 🇮🇳 Add Customer Screen UI/UX Overhaul & Indian Flag Correction

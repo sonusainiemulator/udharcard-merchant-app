@@ -165,7 +165,7 @@ class UdharController extends GetxController {
   // User / contact loading
   // ─────────────────────────────────────────────────────────────
 
-  Future<void> fetchUsers({bool force = false}) async {
+  Future<void> fetchUsers({bool force = false, bool isManual = false}) async {
     if (isUsersLoading && !force) return;
 
     isUsersLoading = true;
@@ -195,15 +195,23 @@ class UdharController extends GetxController {
           }
         } else {
           final msg = data['message']?.toString().trim();
-          if (msg != null && msg.isNotEmpty) {
+          if (msg != null && msg.isNotEmpty && isManual) {
             Helpers.showSnackBar(msg: msg);
           }
         }
       } else {
-        Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
+        if (isManual) {
+          Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
+        } else {
+          debugPrint("UdharController.fetchUsers non-200 status: ${response.statusCode}");
+        }
       }
-    } catch (_) {
-      Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
+    } catch (e) {
+      if (isManual) {
+        Helpers.showSnackBar(msg: 'Unable to fetch latest customers.');
+      } else {
+        debugPrint("UdharController.fetchUsers exception: $e");
+      }
     }
 
     if (searchCtrl.text.isNotEmpty) {
@@ -330,13 +338,17 @@ class UdharController extends GetxController {
       Helpers.showSnackBar(msg: 'Please enter phone number');
       return null;
     }
-    if (phone.length == 12 && phone.startsWith('91')) {
-      phone = phone.substring(2);
-    } else if (phone.length == 11 && phone.startsWith('0')) {
-      phone = phone.substring(1);
+    if (phone.length > 10) {
+      if (phone.length == 12 && phone.startsWith('91')) {
+        phone = phone.substring(2);
+      } else if (phone.length == 11 && phone.startsWith('0')) {
+        phone = phone.substring(1);
+      } else {
+        phone = phone.substring(phone.length - 10);
+      }
     }
 
-    if (phone.length < 10 || phone.length > 15) {
+    if (phone.length != 10) {
       Helpers.showSnackBar(msg: 'Please enter a valid 10-digit mobile number');
       return null;
     }
@@ -449,12 +461,20 @@ class UdharController extends GetxController {
         _closeAddCustomerScreen(resultCustomer);
       } else {
         final String apiMessage = _extractApiMessage(data, response.body);
+        final String displayMessage;
+        final String lowerMsg = apiMessage.toLowerCase();
+        if (lowerMsg.contains('already used') ||
+            lowerMsg.contains('already in your') ||
+            lowerMsg.contains('already exists')) {
+          displayMessage = 'A customer with this phone number is already in your party list.';
+        } else if (apiMessage.isNotEmpty) {
+          displayMessage = apiMessage;
+        } else {
+          displayMessage = 'Unable to add customer. Please verify details and try again.';
+        }
         Helpers.showSnackBar(
-          msg:
-              apiMessage.isNotEmpty
-                  ? apiMessage
-                  : 'Unable to add customer. Please verify details and try again.',
-          title: 'Error',
+          msg: displayMessage,
+          title: 'Notice',
         );
       }
     } catch (e) {

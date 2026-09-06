@@ -17,6 +17,10 @@ class AuthRepo {
           {required Map<String, dynamic> data}) async =>
       await ApiClient.post(ENDPOINT_URL: AppConstants.loginUrl, fields: data);
 
+  static Future<http.Response> otpLogin(
+          {required Map<String, dynamic> data}) async =>
+      await ApiClient.post(ENDPOINT_URL: AppConstants.otpLoginUrl, fields: data);
+
   static Future<http.Response> forgotPass(
           {required Map<String, dynamic> data}) async =>
       await ApiClient.post(

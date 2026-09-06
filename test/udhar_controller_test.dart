@@ -6,7 +6,7 @@ class TestUdharController extends UdharController {
   int fetchUsersCalls = 0;
 
   @override
-  Future<void> fetchUsers({bool force = false}) async {
+  Future<void> fetchUsers({bool force = false, bool isManual = false}) async {
     fetchUsersCalls++;
   }
 }
