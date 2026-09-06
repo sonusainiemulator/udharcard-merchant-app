@@ -1,13 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import '../../../../utils/services/helpers.dart';
-import '../../../../utils/services/localstorage/hive.dart';
-import '../../../../utils/services/localstorage/keys.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../../views/screens/auth/login_screen.dart';
 
 class ApiResponse {
   /// Process the HTTP response and handle different status codes efficiently.
@@ -32,12 +27,9 @@ class ApiResponse {
     }
 
     if (STATUS_CODE == 401) {
-      if (FirebaseAuth.instance.currentUser == null &&
-          (HiveHelp.read(Keys.token) == null ||
-              HiveHelp.read(Keys.token).toString().isEmpty)) {
-        Get.offAll(() => const LoginScreen());
+      if (kDebugMode) {
+        print('⚠️ 401 Unauthorized: $URL');
       }
-      if (kDebugMode) print('⚠️ 401 Unauthorized: $URL');
       return response;
     }
 

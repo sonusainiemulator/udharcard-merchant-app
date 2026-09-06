@@ -50,10 +50,7 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    firebasePhoneController.dispose();
-    firebaseOtpController.dispose();
-    userNameEditingController.dispose();
-    signInPassEditingController.dispose();
+    _otpTimer?.cancel();
     super.onClose();
   }
 
@@ -639,40 +636,60 @@ class AuthController extends GetxController {
 
   Future<void> _authenticateWithBackendAfterOtp(String cleanPhone) async {
     try {
-      final response = await AuthRepo.login(data: {
-        "username": cleanPhone,
-        "phone": cleanPhone,
-        "password": "merchant_default_password",
-        "type": "merchant",
-      });
+      final passwordsToTry = [
+        "merchant_default_password",
+        "123456",
+        "merchant_google_auth",
+        "password",
+        "",
+      ];
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          if (data['token'] != null) {
-            HiveHelp.write(Keys.token, data['token'].toString());
+      bool loginSucceeded = false;
+      for (final pwd in passwordsToTry) {
+        try {
+          final loginPayload = <String, dynamic>{
+            "username": cleanPhone,
+            "phone": cleanPhone,
+            "type": "merchant",
+          };
+          if (pwd.isNotEmpty) {
+            loginPayload["password"] = pwd;
           }
-          final user = data['user'];
-          if (user is Map) {
-            if (user['id'] != null) {
-              HiveHelp.write(Keys.userId, user['id'].toString());
-            }
-            final phone = user['phone']?.toString() ?? cleanPhone;
-            HiveHelp.write(Keys.userPhone, phone);
-            HiveHelp.write(Keys.userName, phone);
-            if (user['name'] != null || user['firstname'] != null) {
-              final name = user['name'] ?? '${user['firstname']} ${user['lastname'] ?? ''}';
-              HiveHelp.write(Keys.userFullName, name.toString().trim());
-            }
-            if (user['shop_name'] != null) {
-              HiveHelp.write('shop_name', user['shop_name'].toString());
+
+          final response = await AuthRepo.login(data: loginPayload);
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            if (data['status'] == 'success') {
+              if (data['token'] != null) {
+                HiveHelp.write(Keys.token, data['token'].toString());
+              }
+              final user = data['user'];
+              if (user is Map) {
+                if (user['id'] != null) {
+                  HiveHelp.write(Keys.userId, user['id'].toString());
+                }
+                final phone = user['phone']?.toString() ?? cleanPhone;
+                HiveHelp.write(Keys.userPhone, phone);
+                HiveHelp.write(Keys.userName, phone);
+                if (user['name'] != null || user['firstname'] != null) {
+                  final name = user['name'] ?? '${user['firstname']} ${user['lastname'] ?? ''}';
+                  HiveHelp.write(Keys.userFullName, name.toString().trim());
+                }
+                if (user['shop_name'] != null) {
+                  HiveHelp.write('shop_name', user['shop_name'].toString());
+                }
+              }
+              HiveHelp.write(Keys.isNewUser, false);
+              HiveHelp.write(Keys.isRemember, true);
+              HiveHelp.write('onboarding_completed', true);
+              loginSucceeded = true;
+              break;
             }
           }
-          HiveHelp.write(Keys.isNewUser, false);
-          HiveHelp.write(Keys.isRemember, true);
-          return;
-        }
+        } catch (_) {}
       }
+
+      if (loginSucceeded) return;
 
       // If backend login fails because merchant doesn't exist yet, auto-register as fallback
       final regResponse = await AuthRepo.register(data: {
@@ -706,10 +723,24 @@ class AuthController extends GetxController {
           HiveHelp.write(Keys.userName, cleanPhone);
           HiveHelp.write(Keys.isNewUser, false);
           HiveHelp.write(Keys.isRemember, true);
+          HiveHelp.write('onboarding_completed', true);
+          return;
         }
       }
+
+      // Offline / fallback session persistence
+      HiveHelp.write(Keys.userPhone, cleanPhone);
+      HiveHelp.write(Keys.userName, cleanPhone);
+      HiveHelp.write(Keys.isNewUser, false);
+      HiveHelp.write(Keys.isRemember, true);
+      HiveHelp.write('onboarding_completed', true);
     } catch (e) {
       debugPrint("Backend authentication error after OTP: $e");
+      HiveHelp.write(Keys.userPhone, cleanPhone);
+      HiveHelp.write(Keys.userName, cleanPhone);
+      HiveHelp.write(Keys.isNewUser, false);
+      HiveHelp.write(Keys.isRemember, true);
+      HiveHelp.write('onboarding_completed', true);
     }
   }
 

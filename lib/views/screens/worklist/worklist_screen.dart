@@ -57,7 +57,7 @@ class _WorkListScreenState extends State<WorkListScreen> {
           ),
           body: RefreshIndicator(
             color: AppColors.mainColor,
-            onRefresh: controller.fetchWorkItems,
+            onRefresh: () => controller.fetchWorkItems(isManualSync: true),
             child: ListView(
               padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
               children: [

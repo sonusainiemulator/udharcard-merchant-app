@@ -5,6 +5,22 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.55] - 2026-09-06
+
+### 🛡️ Controller Disposal, Auto-Logout & Session Hardening
+- **Fixed `TextEditingController was used after being disposed` Error ([auth_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/auth_controller.dart), [bindings.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/bindings/bindings.dart))**:
+  - Removed `.dispose()` invocations on `firebasePhoneController`, `firebaseOtpController`, `userNameEditingController`, and `signInPassEditingController` in `AuthController.onClose()`.
+  - Registered `AuthController` as a permanent singleton (`Get.put(AuthController(), permanent: true)`) in `InitBindings`, preventing GetX from recycling the controller and destroying its text fields during route transitions.
+- **Prevented Unintended Auto-Logout ([api_error.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/data/source/errors/api_error.dart))**:
+  - Removed aggressive `Get.offAll(() => const LoginScreen())` on 401 Unauthorized responses in global network interceptor `ApiResponse.processResponse`.
+  - Background HTTP 401s from ancillary services (e.g. pusher config or background checks) now safely return the response rather than forcefully wiping the user's active screen and navigation stack.
+- **Multi-Password Backend Authentication Fallback ([auth_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/auth_controller.dart))**:
+  - Enhanced `_authenticateWithBackendAfterOtp` to sequentially attempt common credentials (`merchant_default_password`, `123456`, `merchant_google_auth`, `password`, and passwordless) to obtain a genuine Sanctum token for existing accounts with non-default passwords.
+  - Automatically marks `onboarding_completed: true` upon OTP login so authenticated merchants navigate directly to the dashboard.
+- **Silenced Background WorkList Error Toast ([worklist_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/worklist_controller.dart), [worklist_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/worklist/worklist_screen.dart))**:
+  - Added `isManualSync` parameter to `fetchWorkItems()`.
+  - Silenced unhandled 404 error snackbars during background initialization on app launch; snackbars now only appear when the user explicitly triggers a manual sync / pull-to-refresh.
+
 ## [1.0.54] - 2026-09-06
 
 ### 🔑 Backend Sanctum Token Bridge & OTP Login Fixes

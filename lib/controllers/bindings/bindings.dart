@@ -10,10 +10,10 @@ class InitBindings implements Bindings {
   void dependencies() {
     Get.put(AppController());
     Get.put(AppLockController(), permanent: true);
+    Get.put(AuthController(), permanent: true);
     Get.put(ProfileController());
     Get.put(PushNotificationController());
 
-    Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
     Get.lazyPut<ProfileController>(() => ProfileController(), fenix: true);
     Get.lazyPut<BottomNavController>(() => BottomNavController(), fenix: true);
     Get.lazyPut<SupportTicketController>(

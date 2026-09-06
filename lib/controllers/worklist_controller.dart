@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:paysecure/data/models/worklist_model.dart';
@@ -80,7 +80,7 @@ class WorkListController extends GetxController {
     update();
   }
 
-  Future<void> fetchWorkItems() async {
+  Future<void> fetchWorkItems({bool isManualSync = false}) async {
     isSyncing = true;
     update();
     try {
@@ -111,15 +111,19 @@ class WorkListController extends GetxController {
         );
       } else {
         final msg = data?['message']?.toString().trim();
-        Helpers.showSnackBar(
-          msg:
-              (msg != null && msg.isNotEmpty)
-                  ? msg
-                  : 'Unable to fetch realtime work list.',
-        );
+        final errorText = (msg != null && msg.isNotEmpty)
+            ? msg
+            : 'Unable to fetch realtime work list.';
+        debugPrint("WorkListController fetchWorkItems notice (${response.statusCode}): $errorText");
+        if (isManualSync) {
+          Helpers.showSnackBar(msg: errorText);
+        }
       }
-    } catch (_) {
-      Helpers.showSnackBar(msg: 'Unable to fetch realtime work list.');
+    } catch (e) {
+      debugPrint("WorkListController fetchWorkItems exception: $e");
+      if (isManualSync) {
+        Helpers.showSnackBar(msg: 'Unable to fetch realtime work list.');
+      }
     } finally {
       isSyncing = false;
       update();
