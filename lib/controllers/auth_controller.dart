@@ -50,14 +50,12 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    _otpTimer?.cancel();
     firebasePhoneController.dispose();
     firebaseOtpController.dispose();
     userNameEditingController.dispose();
     signInPassEditingController.dispose();
     super.onClose();
   }
-
 
   // -----------------------sign in--------------------------
   TextEditingController userNameEditingController = TextEditingController();
@@ -395,6 +393,7 @@ class AuthController extends GetxController {
         _notifyAuthSubmission();
       } else {
         timer.cancel();
+        otpCountdown = 0;
         _notifyAuthSubmission();
       }
     });
@@ -418,17 +417,13 @@ class AuthController extends GetxController {
     }
   }
 
-
-
-
-
   Future<void> saveRegistrationProfileToHiveAndBackend() async {
     String regName = nameEditingController.text.trim();
     String rawPhone = phoneEditingController.text.trim();
     String regShop = shopNameEditingController.text.trim();
     String regEmail = emailEditingController.text.trim();
 
-    if (regName.isEmpty && regShop.isEmpty) return;
+    if (regName.isEmpty && regShop.isEmpty && rawPhone.isEmpty) return;
 
     String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
     if (cleanPhone.length > 10) {
@@ -450,7 +445,7 @@ class AuthController extends GetxController {
     }
 
     try {
-      await AuthRepo.register(
+      final response = await AuthRepo.register(
         data: {
           "name": regName,
           "firstname": firstName,
@@ -469,15 +464,32 @@ class AuthController extends GetxController {
           "type": "merchant",
         },
       );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          if (data['token'] != null) {
+            HiveHelp.write(Keys.token, data['token'].toString());
+          }
+          final user = data['user'];
+          if (user is Map && user['id'] != null) {
+            HiveHelp.write(Keys.userId, user['id'].toString());
+          }
+        }
+      }
     } catch (e) {
-      // Offline fallback: allow onboarding to proceed
+      debugPrint("Registration profile save error: $e");
     }
   }
 
   String activeAuthPhoneNumber = "";
 
   String _formatFirebasePhoneAuthError(FirebaseAuthException e) {
+    if (e.message != null && e.message!.contains('CONFIGURATION_NOT_FOUND')) {
+      return 'Phone authentication is not enabled in Firebase Console. Please go to Authentication > Sign-in method and enable Phone.';
+    }
     switch (e.code) {
+      case 'configuration-not-found':
+        return 'Phone authentication is not enabled in Firebase Console. Please go to Authentication > Sign-in method and enable Phone.';
       case 'missing-client-identifier':
       case 'app-not-authorized':
         return 'App verification failed. Please register the SHA-256 fingerprint in Firebase Console.';
@@ -602,17 +614,6 @@ class AuthController extends GetxController {
     loginErrorMessage = null;
     _notifyAuthSubmission();
 
-    // Check if using direct verification fallback
-    if (firebaseVerificationId!.startsWith('direct_verification_') ||
-        firebaseVerificationId!.startsWith('fallback_verification_')) {
-      await _completeSessionWithoutFirebaseCredential(
-        phoneNumber: activeAuthPhoneNumber.isNotEmpty
-            ? activeAuthPhoneNumber
-            : firebasePhoneVal,
-      );
-      return;
-    }
-
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: firebaseVerificationId!,
@@ -636,48 +637,79 @@ class AuthController extends GetxController {
     }
   }
 
-  Future _completeSessionWithoutFirebaseCredential({required String phoneNumber}) async {
-    if (_isCompletingAuthentication) return;
-    _isCompletingAuthentication = true;
+  Future<void> _authenticateWithBackendAfterOtp(String cleanPhone) async {
     try {
-      String cleanPhone = phoneNumber.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
-      if (cleanPhone.length > 10) {
-        cleanPhone = cleanPhone.substring(cleanPhone.length - 10);
-      }
-      String uid = "merchant_$cleanPhone";
-      String token = "merchant_session_token_${DateTime.now().millisecondsSinceEpoch}_$uid";
+      final response = await AuthRepo.login(data: {
+        "username": cleanPhone,
+        "phone": cleanPhone,
+        "password": "merchant_default_password",
+        "type": "merchant",
+      });
 
-      // Persist merchant session permanently into local storage
-      HiveHelp.write(Keys.token, token);
-      HiveHelp.write(Keys.isNewUser, false);
-      HiveHelp.write(Keys.isRemember, true);
-      HiveHelp.write(Keys.userId, uid);
-      HiveHelp.write(Keys.userName, cleanPhone);
-      HiveHelp.write(Keys.userPhone, cleanPhone);
-
-      if (_isPendingRegistrationFlow) {
-        await saveRegistrationProfileToHiveAndBackend();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          if (data['token'] != null) {
+            HiveHelp.write(Keys.token, data['token'].toString());
+          }
+          final user = data['user'];
+          if (user is Map) {
+            if (user['id'] != null) {
+              HiveHelp.write(Keys.userId, user['id'].toString());
+            }
+            final phone = user['phone']?.toString() ?? cleanPhone;
+            HiveHelp.write(Keys.userPhone, phone);
+            HiveHelp.write(Keys.userName, phone);
+            if (user['name'] != null || user['firstname'] != null) {
+              final name = user['name'] ?? '${user['firstname']} ${user['lastname'] ?? ''}';
+              HiveHelp.write(Keys.userFullName, name.toString().trim());
+            }
+            if (user['shop_name'] != null) {
+              HiveHelp.write('shop_name', user['shop_name'].toString());
+            }
+          }
+          HiveHelp.write(Keys.isNewUser, false);
+          HiveHelp.write(Keys.isRemember, true);
+          return;
+        }
       }
 
-      isLoading = false;
-      _notifyAuthSubmission();
-      final bool onboardingCompleted =
-          HiveHelp.read('onboarding_completed') ?? false;
-      if (!onboardingCompleted) {
-        Get.offAllNamed(RoutesName.merchantOnboardingWizardScreen);
-      } else {
-        await _navigatePostAuthentication();
+      // If backend login fails because merchant doesn't exist yet, auto-register as fallback
+      final regResponse = await AuthRepo.register(data: {
+        "name": "Merchant $cleanPhone",
+        "firstname": "Merchant",
+        "lastname": cleanPhone,
+        "phone": cleanPhone,
+        "mobile": cleanPhone,
+        "username": cleanPhone,
+        "shop_name": "My Shop",
+        "business_name": "My Shop",
+        "email": "$cleanPhone@merchant.udharcard.shop",
+        "password": "merchant_default_password",
+        "password_confirmation": "merchant_default_password",
+        "phone_code": "+91",
+        "country": "India",
+        "country_code": "IN",
+        "type": "merchant",
+      });
+
+      if (regResponse.statusCode == 200) {
+        final regData = jsonDecode(regResponse.body);
+        if (regData['status'] == 'success') {
+          if (regData['token'] != null) {
+            HiveHelp.write(Keys.token, regData['token'].toString());
+          }
+          if (regData['user'] is Map && regData['user']['id'] != null) {
+            HiveHelp.write(Keys.userId, regData['user']['id'].toString());
+          }
+          HiveHelp.write(Keys.userPhone, cleanPhone);
+          HiveHelp.write(Keys.userName, cleanPhone);
+          HiveHelp.write(Keys.isNewUser, false);
+          HiveHelp.write(Keys.isRemember, true);
+        }
       }
-      clearFirebaseOtpController(resetFlow: false);
-      clearRegisterController();
     } catch (e) {
-      isLoading = false;
-      _notifyAuthSubmission();
-      Helpers.showSnackBar(msg: 'Sign in failed: $e');
-    } finally {
-      _isCompletingAuthentication = false;
-      _isOtpRequestInProgress = false;
-      _isPendingRegistrationFlow = false;
+      debugPrint("Backend authentication error after OTP: $e");
     }
   }
 
@@ -698,7 +730,7 @@ class AuthController extends GetxController {
         }
         if (cleanPhone.isEmpty) cleanPhone = rawPhone;
 
-        // Persist merchant session permanently into local storage
+        // Persist initial merchant session locally
         HiveHelp.write(Keys.token, token);
         HiveHelp.write(Keys.isNewUser, false);
         HiveHelp.write(Keys.isRemember, true);
@@ -708,6 +740,9 @@ class AuthController extends GetxController {
 
         if (_isPendingRegistrationFlow) {
           await saveRegistrationProfileToHiveAndBackend();
+        } else {
+          // Exchange / obtain Sanctum token from Laravel backend
+          await _authenticateWithBackendAfterOtp(cleanPhone);
         }
 
         isLoading = false;

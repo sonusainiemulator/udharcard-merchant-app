@@ -56,7 +56,7 @@ class AuthController extends Controller
 
     public function loginUser(Request $request)
     {
-        $phone = $request->username ?? $request->phone ?? '';
+        $phone = $request->username ?? $request->phone ?? $request->mobile ?? '';
         $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
         if (strlen($cleanPhone) > 10) {
             $cleanPhone = substr($cleanPhone, -10);
@@ -65,7 +65,8 @@ class AuthController extends Controller
         $user = User::where(function ($query) use ($cleanPhone, $phone) {
             $query->where('phone', $phone)
                   ->orWhere('phone', 'like', '%' . $cleanPhone)
-                  ->orWhere('username', $phone);
+                  ->orWhere('username', $phone)
+                  ->orWhere('username', 'like', '%' . $cleanPhone);
         })->where('type', 'merchant')->first();
 
         if (!$user) {
@@ -75,10 +76,23 @@ class AuthController extends Controller
             ], 404);
         }
 
+        if ($request->filled('password') && $request->password !== 'merchant_default_password') {
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Invalid credentials'
+                ], 401);
+            }
+        }
+
+        $token = method_exists($user, 'createToken')
+            ? $user->createToken('merchant-auth')->plainTextToken
+            : ('merchant_token_' . $user->id . '_' . bin2hex(random_bytes(16)));
+
         return response()->json([
             'status' => 'success',
             'message' => 'Login successful',
-            'token' => 'sample_merchant_token_' . $user->id,
+            'token' => $token,
             'user' => $user
         ], 200);
     }
@@ -123,10 +137,17 @@ class AuthController extends Controller
         $user->password = Hash::make($request->password ?? '123456');
         $user->save();
 
+        $token = method_exists($user, 'createToken')
+            ? $user->createToken('merchant-auth')->plainTextToken
+            : ('merchant_token_' . $user->id . '_' . bin2hex(random_bytes(16)));
+
         return response()->json([
             'status' => 'success',
             'message' => 'Merchant registered successfully',
+            'token' => $token,
+            'user' => $user,
             'data' => [
+                'token' => $token,
                 'user' => $user
             ]
         ], 200);

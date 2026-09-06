@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/auth_controller.dart';
+import '../../../data/repositories/auth_repo.dart';
 import '../../../routes/routes_name.dart';
 import '../../../utils/services/helpers.dart';
 import '../../widgets/fintech_auth_widgets.dart';
@@ -87,6 +88,27 @@ class LoginScreen extends StatelessWidget {
                         );
                         return;
                       }
+
+                      controller.isLoading = true;
+                      controller.loginErrorMessage = null;
+                      controller.update([AuthController.authSubmissionUpdateId]);
+
+                      try {
+                        final checkRes = await AuthRepo.checkMerchantExist(
+                          data: {"phone": phone},
+                        );
+                        if (checkRes.statusCode == 404) {
+                          controller.isLoading = false;
+                          controller.loginErrorMessage =
+                              'Merchant account does not exist. Please register first.';
+                          controller.update([AuthController.authSubmissionUpdateId]);
+                          return;
+                        }
+                      } catch (_) {
+                        // Allow offline/timeout fallback to continue to OTP
+                      }
+
+                      controller.isLoading = false;
                       await controller.sendFirebaseOtp(phone, isLogin: true);
                     },
                   ),

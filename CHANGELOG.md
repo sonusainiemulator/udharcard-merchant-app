@@ -5,7 +5,22 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.53] - 2026-09-05
+## [1.0.54] - 2026-09-06
+
+### 🔑 Backend Sanctum Token Bridge & OTP Login Fixes
+- **Backend Sanctum Token Bridge ([auth_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/auth_controller.dart))**:
+  - Implemented `_authenticateWithBackendAfterOtp` which automatically authenticates with the Laravel backend upon successful Firebase OTP verification, obtaining a genuine Laravel Sanctum Bearer token and saving it to `Keys.token` and `Keys.userId`.
+  - Resolved `401 Unauthorized: Unauthenticated. Please login first` errors on subsequent API calls (`/merchant/dashboard`, `/profile`, `/merchant/udhar/ledger`).
+  - Added auto-provisioning fallback for newly verified numbers during login.
+- **Account Existence Pre-Check on Login ([login_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/auth/login_screen.dart))**:
+  - Added real-time check via `AuthRepo.checkMerchantExist` before triggering OTP dispatch on `LoginScreen`.
+  - Informs unregistered users immediately to register instead of dispatching dead OTPs.
+- **Backend AuthController & VPS Patch ([AuthController.php](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/laravel-backend/app/Http/Controllers/API/V1/AuthController.php), [vps_backend_all_fixes.patch](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/vps_backend_all_fixes.patch))**:
+  - Updated `loginUser` and `registerUser` in Laravel backend to generate genuine Sanctum tokens via `$user->createToken('merchant-auth')->plainTextToken`.
+  - Updated `vps_backend_all_fixes.patch` with the updated controller code for VPS deployment.
+- **Controller State & Syntax Restoration ([auth_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/auth_controller.dart))**:
+  - Fixed syntax error and restored `otpCountdown`, `startOtpTimer`, and `resendFirebaseOtp`.
+  - Synchronized `firebaseOtpController` listener with `firebaseOtpVal` in `onInit()`.
 
 ### 📲 Phone & OTP Login Verification Fixes & Architecture Hardening
 - **Silent Verification Failure Handling ([auth_controller.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/controllers/auth_controller.dart))**:

@@ -51,11 +51,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD_CrlNjXE1YhLBvOe66p2FfT35Mobz3P8',
-    appId: '1:91651925903:android:58222a508d1eba2fdb8dfa',
-    messagingSenderId: '91651925903',
-    projectId: 'udharcard-app',
-    storageBucket: 'udharcard-app.firebasestorage.app',
+    apiKey: 'AIzaSyDWUxYzbkvDpbiYzrgZprhyq7DC9I3tmdA',
+    appId: '1:118952639868:android:4d4eb3940b684e7ad0b8f9',
+    messagingSenderId: '118952639868',
+    projectId: 'udharcard-merchant',
+    storageBucket: 'udharcard-merchant.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAXCHfPyAOgrfj3qtxvXq3BEG9j3_Q6CZs',
