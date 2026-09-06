@@ -5,6 +5,26 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.56] - 2026-09-06
+
+### 🇮🇳 Add Customer Screen UI/UX Overhaul & Indian Flag Correction
+- **Indian Tricolor Flag Component ([add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart))**:
+  - Replaced the hardcoded Bangladesh flag (green rectangle with red circle) next to `+91` with an authentic Indian Tricolor flag widget (Saffron `#FF9933`, White `#FFFFFF` with Ashoka Chakra navy dot `#000080`, and Green `#138808`).
+  - Styled with subtle shadow, border, and clean divider next to `+91`.
+- **Top Profile Header & Realtime Avatar ([add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart))**:
+  - Replaced the awkwardly placed center avatar with an elevated top profile card that dynamically displays customer initials in real time as the merchant types the name.
+  - Added a prominent 1-tap "Contacts" button enabling rapid contact import directly from the phonebook.
+- **Modern Segmented Party Category Chips ([add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart))**:
+  - Replaced outdated radio buttons with an intuitive 2x2 grid of modern category cards (Customer, Dealer, Wholesaler, Supplier).
+  - Designed with category-specific icons, haptic feedback on tap, active brand color highlighting, and checkmark badges.
+- **Accordion Additional Details Section ([add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart))**:
+  - Encapsulated secondary/optional inputs (Opening Balance, Credit Limit, Email, Address, Notes) inside a clean collapsible accordion card to keep the primary form minimal and fast.
+  - Added `₹` currency prefixes and helpful captions for credit limits.
+- **Fintech Input Styling & Overflow Prevention ([add_customer_screen.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/lib/views/screens/udhar/add_customer_screen.dart))**:
+  - Added dedicated prefix icons, 12.r rounded corners, smooth elevation on the bottom CTA button, and overflow-proof `Text.rich` field labels.
+- **Widget Test Suite ([add_customer_screen_test.dart](file:///c:/Users/erson/Downloads/sk/01_PaySecure-Mobile_App/03_Merchant_Mobile_App/Source%20Code/project/test/add_customer_screen_test.dart))**:
+  - Added comprehensive widget tests covering flag prefix, category selection, accordion expand/collapse, and real-time avatar initials rendering.
+
 ## [1.0.55] - 2026-09-06
 
 ### 🛡️ Controller Disposal, Auto-Logout & Session Hardening
