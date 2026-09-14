@@ -52,19 +52,19 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDWUxYzbkvDpbiYzrgZprhyq7DC9I3tmdA',
-    appId: '1:118952639868:android:4d4eb3940b684e7ad0b8f9',
+    appId: '1:118952639868:android:2fe4d30c0e0b3300d0b8f9',
     messagingSenderId: '118952639868',
     projectId: 'udharcard-merchant',
     storageBucket: 'udharcard-merchant.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAXCHfPyAOgrfj3qtxvXq3BEG9j3_Q6CZs',
-    appId: '1:91651925903:ios:5fc09fa6a232c5b4db8dfa',
-    messagingSenderId: '91651925903',
-    projectId: 'udharcard-app',
-    storageBucket: 'udharcard-app.firebasestorage.app',
-    androidClientId: '91651925903-3pa6q3jfukmbkmbfsspp0i5pmlforver.apps.googleusercontent.com',
-    iosClientId: '91651925903-nsofkgf2u6cjnvsr5rpd4c6hipc2ds76.apps.googleusercontent.com',
+    apiKey: 'AIzaSyDKGjAFkoInD8PE9IN6F5b4aELyl9Sti_g',
+    appId: '1:118952639868:ios:a34a9c711f1eecb3d0b8f9',
+    messagingSenderId: '118952639868',
+    projectId: 'udharcard-merchant',
+    storageBucket: 'udharcard-merchant.firebasestorage.app',
+    androidClientId: '118952639868-0np49tmqd3gk8q5hburfi98g7ob4ja5r.apps.googleusercontent.com',
+    iosClientId: '118952639868-62psc04ou2p8tjkq44gcr5eh7ppe3j0a.apps.googleusercontent.com',
     iosBundleId: 'com.udharcard.merchant',
   );
   static const FirebaseOptions macos = FirebaseOptions(

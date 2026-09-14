@@ -6,6 +6,7 @@ import 'package:paysecure/utils/services/localstorage/hive.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/auth_controller.dart';
@@ -71,9 +72,16 @@ class _SplashScreenState extends State<SplashScreen>
 
     Future.delayed(const Duration(seconds: 3), () {
       final token = HiveHelp.read(Keys.token);
+      bool hasFirebaseUser = false;
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          hasFirebaseUser = FirebaseAuth.instance.currentUser != null;
+        }
+      } catch (e) {
+        debugPrint("Firebase check safe catch: $e");
+      }
       final isLoggedIn =
-          (token != null && token.toString().isNotEmpty) ||
-          FirebaseAuth.instance.currentUser != null;
+          (token != null && token.toString().isNotEmpty) || hasFirebaseUser;
 
       if (isLoggedIn) {
         AuthController.ensureSanctumToken();

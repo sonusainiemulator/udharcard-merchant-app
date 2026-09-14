@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.58] - 2026-09-07
 
+### 🍏 iOS Stability & Firebase Configuration Hardening
+- **Firebase Project Alignment**: Re-configured FlutterFire for project `udharcard-merchant` (`118952639868`) using `udharcard475@gmail.com`.
+- **Downloaded `GoogleService-Info.plist`**: Automatically pulled official configuration for `com.udharcard.merchant` via Firebase CLI and linked it to Xcode `project.pbxproj` resource build phase.
+- **`Info.plist` Privacy & Permission Declarations**: Added missing `NSContactsUsageDescription` (for contacts import), `NSFaceIDUsageDescription` (for biometric app lock), and `NSPhotoLibraryAddUsageDescription` (for receipts/invoices export) to prevent instant iOS `SIGABRT` crashes.
+- **Deep Link Schemes**: Registered `LSApplicationQueriesSchemes` for WhatsApp, Phone, SMS, and UPI payment apps.
+- **Google Sign-In Scheme**: Configured `CFBundleURLTypes` with reversed OAuth client ID for iOS sign-in compatibility.
+- **Deployment Target Updated**: Upgraded `IPHONEOS_DEPLOYMENT_TARGET` to `14.0` across Debug, Profile, and Release configurations to match Podfile specifications.
+- **Safe Firebase Initialization**: Guarded `FirebaseAuth.instance.currentUser` in `SplashScreen` and provided iOS `clientId` in `GoogleSignIn.instance.initialize()` to prevent startup crashes.
+
 ### 📚 Official Fumadocs Documentation Portal
 - **Modern Next.js 16 Documentation Portal**: Initialized and deployed full documentation using [Fumadocs](https://www.fumadocs.dev/) (`fumadocs-core`, `fumadocs-ui`, `fumadocs-mdx`).
 - **Live Deployment**: Deployed to Vercel at `https://docs-udharcard.vercel.app` and aliased to `https://docs.udharcard.com`.

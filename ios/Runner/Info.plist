@@ -30,10 +30,39 @@
     <string>We need access to the camera to take photos for your profile.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>We need access to your photo library to select and upload photos.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>We need permission to save receipts, invoices, and reports to your photo gallery.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>We need access to your microphone for voice entry transactions.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>We need access to speech recognition for voice commands and entry.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>We need access to contacts to help you easily select and add customers to your ledger.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>We need Face ID to securely unlock the app and authenticate transactions.</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>whatsapp</string>
+      <string>tel</string>
+      <string>sms</string>
+      <string>https</string>
+      <string>http</string>
+      <string>upi</string>
+      <string>paytmmp</string>
+      <string>phonepe</string>
+      <string>gpay</string>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.118952639868-62psc04ou2p8tjkq44gcr5eh7ppe3j0a</string>
+        </array>
+      </dict>
+    </array>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>UILaunchStoryboardName</key>

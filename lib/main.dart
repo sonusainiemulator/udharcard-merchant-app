@@ -35,7 +35,7 @@ void main() async {
     }
   }
   await initHive();
-  _initializeApp();
+  await _initializeApp();
   Get.put(AppController(), permanent: true);
   runApp(const MyApp());
 }
@@ -122,8 +122,12 @@ _initializeApp() async {
     final serverClientId = (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '').trim().isNotEmpty
         ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']!.trim()
         : AppConstants.googleServerClientId;
+    final iosClientId = defaultTargetPlatform == TargetPlatform.iOS
+        ? DefaultFirebaseOptions.ios.iosClientId
+        : null;
     await GoogleSignIn.instance.initialize(
       serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
+      clientId: iosClientId,
     );
   } catch (e) {
     debugPrint("GoogleSignIn init attempt error: $e");
