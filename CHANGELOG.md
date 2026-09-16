@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deep Link Schemes**: Registered `LSApplicationQueriesSchemes` for WhatsApp, Phone, SMS, and UPI payment apps.
 - **Google Sign-In Scheme**: Configured `CFBundleURLTypes` with reversed OAuth client ID for iOS sign-in compatibility.
 - **Deployment Target Updated**: Upgraded `IPHONEOS_DEPLOYMENT_TARGET` to `14.0` across Debug, Profile, and Release configurations to match Podfile specifications.
+- **TestFlight Deployment (v1.0.58+59)**: Configured Team ID (`DPVZF7DM83`), resolved CocoaPods `razorpay-core-pod` and `PusherTweetNacl` dependencies, built release IPA, validated, and successfully pushed to TestFlight.
 - **Safe Firebase Initialization**: Guarded `FirebaseAuth.instance.currentUser` in `SplashScreen` and provided iOS `clientId` in `GoogleSignIn.instance.initialize()` to prevent startup crashes.
 
 ### 📚 Official Fumadocs Documentation Portal
