@@ -22,13 +22,6 @@ use App\Http\Controllers\Api\V1\SupportTicketController;
 use App\Http\Controllers\Api\V1\TwoFASecurityController;
 use App\Http\Controllers\Api\V1\PayoutController;
 use App\Http\Controllers\Api\V1\VerificationController;
-use App\Http\Controllers\Api\V1\SubscriptionController;
-use App\Http\Controllers\Api\V1\SubscriptionPaymentController;
-use App\Http\Controllers\Api\Admin\AdminSubscriptionController;
-use App\Http\Controllers\API\CustomerController;
-use App\Http\Controllers\API\PaymentGatewayController;
-use App\Http\Controllers\API\UdharLedgerController;
-use App\Http\Controllers\API\WorkListController as ApiWorkListController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,9 +40,6 @@ Route::post('payout/{code}', [PayoutLogController::class, 'payoutIpn'])->name('p
 
 Route::post('initiate/payment', [ApiController::class, 'store'])->name('payment.initiate');
 Route::post('verify/payment', [ApiController::class, 'verifyPayment'])->name('payment.verify');
-Route::get('/subscription/plans', [SubscriptionController::class, 'plans']);
-Route::post('/webhook/subscription/razorpay', [SubscriptionPaymentController::class, 'razorpayWebhook']);
-Route::post('/merchant/udhar/webhook/razorpay', [PaymentGatewayController::class, 'handleWebhook']);
 
 
 //Restful Api
@@ -57,10 +47,12 @@ Route::controller(AuthController::class)->group(function () {
     Route::get('/register/form', 'registerUserForm');
     Route::post('/register', 'registerUser');
     Route::post('/login', 'loginUser');
-    Route::post('/merchant/check-exist', 'checkMerchantExist');
     Route::post('/recovery-pass/get-email', 'getEmailForRecoverPass');
     Route::post('/recovery-pass/get-code', 'getCodeForRecoverPass');
     Route::post('/update-pass', 'updatePass');
+    Route::post('/merchant/check-exist', 'checkMerchantExist');
+    Route::post('/merchant/otp-login', 'otpLogin');
+    Route::post('/otp-login', 'otpLogin');
 });
 
 Route::get('/basic', [HomeController::class, 'basic']);
@@ -85,11 +77,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/api/key/mode-change', 'apiKeyModeChange');
             Route::any('/setting', 'setting');
             Route::any('/profile', 'profile');
+            Route::any('/merchant/profile', 'profile');
             Route::post('/change-password', 'changePassword');
             Route::get('/pusher/config', 'pusherConfig');
             Route::get('/language', 'language');
             Route::post('/delete-account', 'deleteAccount');
         });
+        Route::get('/referral', [App\Http\Controllers\User\ReferralController::class, 'apiIndex']);
         Route::get('notification-settings', [HomeController::class, 'notificationSettings']);
         Route::post('notification-permission', [HomeController::class, 'notificationPermissionStore']);
 
@@ -135,43 +129,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         });
 
         Route::post('transfer/check-recipient', [SendMoneyController::class,'checkRecipientApi']);
-
-        Route::controller(SubscriptionController::class)->prefix('merchant/subscription')->group(function () {
-            Route::get('/current', 'current');
-            Route::get('/history', 'paymentHistory');
-            Route::post('/checkout', 'createCheckout');
-            Route::post('/verify', 'verifyCheckout');
-            Route::post('/trial/start', 'startTrial');
-            Route::post('/cancel-auto-renew', 'cancelAutoRenew');
-        });
-
-        Route::controller(AdminSubscriptionController::class)->prefix('admin/subscription')->group(function () {
-            Route::get('/plans', 'plans');
-            Route::post('/plans', 'storePlan');
-            Route::put('/plans/{id}', 'updatePlan');
-            Route::post('/plans/{id}/toggle-status', 'togglePlanStatus');
-            Route::get('/subscribers', 'subscribers');
-            Route::post('/subscriptions/{id}/approve-offline', 'approveOfflinePayment');
-            Route::post('/subscriptions/{id}/extend-trial', 'extendTrial');
-        });
-
-        Route::controller(ApiWorkListController::class)->prefix('merchant/work-list')->group(function () {
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-            Route::put('/{id}', 'update');
-            Route::delete('/{id}', 'destroy');
-            Route::get('/sync', 'pullSync');
-            Route::post('/sync', 'pushSync');
-        });
-
-        Route::get('/merchant/udhar/contacts', [CustomerController::class, 'index']);
-        Route::post('/merchant/udhar/customers', [CustomerController::class, 'store']);
-        Route::put('/merchant/udhar/customers/{id}/credit-limit', [CustomerController::class, 'update']);
-        Route::delete('/merchant/udhar/customers/{id}', [CustomerController::class, 'destroy']);
-        Route::get('/merchant/udhar/customers/{customerId}/ledger', [UdharLedgerController::class, 'show']);
-        Route::post('/merchant/udhar/ledger', [UdharLedgerController::class, 'store']);
-        Route::post('/merchant/udhar/qr/generate', [PaymentGatewayController::class, 'generateQr']);
-        Route::get('/merchant/udhar/reports', [UdharLedgerController::class, 'reports']);
 
     });
 
@@ -307,8 +264,45 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/sms-verify', 'smsVerify');
         Route::get('/resend-code', 'resendCode');
     });
-    
-    // Udhar Card Merchant Reminder
-    Route::post('/merchant/udhar/customers/{id}/remind', [PaymentGatewayController::class, 'sendAppReminder']);
-    
+
+
+
+
 });
+
+// ================== UDHARCARD SUBSCRIPTION (DYNAMIC PLANS, TRIAL & OFFLINE) API ==================
+use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\AdminSubscriptionController;
+
+// Public plans list
+Route::get('/subscription/plans', [SubscriptionController::class, 'plans']);
+
+// Merchant subscription routes (auth required)
+Route::prefix('merchant/subscription')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/current', [SubscriptionController::class, 'current']);
+    Route::get('/history', [SubscriptionController::class, 'history']);
+    Route::post('/offline-request', [SubscriptionController::class, 'offlineRequest']);
+    Route::get('/my-upgrade-status', [SubscriptionController::class, 'myUpgradeStatus']);
+    Route::post('/trial/start', [SubscriptionController::class, 'startTrial']);
+    Route::post('/checkout', [SubscriptionController::class, 'createCheckout']);
+    Route::post('/verify', [SubscriptionController::class, 'verifyCheckout']);
+    Route::post('/cancel-auto-renew', [SubscriptionController::class, 'cancelAutoRenew']);
+});
+
+// Admin endpoints for managing plans, pricing, features, trials, and approvals
+Route::prefix('admin/subscription')->middleware('admin-subscription')->group(function () {
+    Route::get('/requests', [AdminSubscriptionController::class, 'requests']);
+    Route::get('/stats', [AdminSubscriptionController::class, 'stats']);
+    Route::post('/approve/{id}', [AdminSubscriptionController::class, 'approve']);
+    Route::post('/reject/{id}', [AdminSubscriptionController::class, 'reject']);
+    Route::get('/plans', [AdminSubscriptionController::class, 'plans']);
+    Route::post('/plans', [AdminSubscriptionController::class, 'storePlan']);
+    Route::put('/plans/{id}', [AdminSubscriptionController::class, 'updatePlan']);
+    Route::post('/plans/{id}/toggle-status', [AdminSubscriptionController::class, 'togglePlanStatus']);
+    Route::get('/subscribers', [AdminSubscriptionController::class, 'subscribers']);
+    Route::post('/subscriptions/{id}/extend-trial', [AdminSubscriptionController::class, 'extendTrial']);
+});
+
+// ================== UDHARCARD AI ASSISTANT API ==================
+Route::post('/ai-assistant/query', [\App\Http\Controllers\AiAssistantController::class, 'query']);
+Route::get('/ai-assistant/quick-stats', [\App\Http\Controllers\AiAssistantController::class, 'quickStats']);

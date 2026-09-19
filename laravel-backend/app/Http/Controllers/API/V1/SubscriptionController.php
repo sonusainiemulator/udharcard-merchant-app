@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MerchantSubscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Models\SubscriptionRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,109 +15,146 @@ use Illuminate\Support\Facades\Validator;
 class SubscriptionController extends Controller
 {
     /**
-     * Public endpoint to fetch active plans.
+     * List active subscription plans (public, no auth).
      */
     public function plans()
     {
-        $plans = SubscriptionPlan::where('is_active', true)
-            ->orderBy('sort_order')
-            ->get();
+        try {
+            $plans = SubscriptionPlan::where('is_active', true)
+                ->orderBy('sort_order', 'asc')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'code' => $p->code,
+                        'name' => $p->name,
+                        'tag' => $p->tag,
+                        'tag_color' => $p->tag_color,
+                        'badge' => $p->badge,
+                        'description' => $p->description,
+                        'subtitle' => $p->subtitle,
+                        'monthly_price' => (float) $p->monthly_price,
+                        'yearly_price' => (float) $p->yearly_price,
+                        'currency' => $p->currency ?? 'INR',
+                        'trial_days' => (int) ($p->trial_days ?? 0),
+                        'customer_limit' => $p->customer_limit,
+                        'features' => $p->features ?? [],
+                        'feature_flags' => $p->feature_flags ?? [
+                            'has_voice_entry' => false,
+                            'has_soundbox' => false,
+                            'has_desktop_access' => true,
+                            'pdf_bill_access' => true,
+                        ],
+                        'sample_prompts' => $p->sample_prompts ?? [],
+                        'cta_text' => $p->cta_text ?? 'Subscribe Now',
+                        'is_active' => (bool) $p->is_active,
+                    ];
+                });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'plans' => $plans,
-            ],
-        ], 200);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Plans retrieved successfully',
+                'data' => ['plans' => $plans],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
-     * Fetch current merchant subscription with resolved entitlements.
+     * Return the merchant's current active subscription (+ fallback plan meta & resolved feature flags).
      */
     public function current(Request $request)
     {
-        $merchantId = $this->resolveMerchantId($request);
-        if (!$merchantId) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Merchant identity is required.',
-            ], 422);
-        }
+        try {
+            $merchantId = $this->resolveMerchantId($request);
+            if (!$merchantId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Merchant identity is required.',
+                ], 422);
+            }
 
-        $subscription = MerchantSubscription::with('plan')
-            ->where('merchant_id', $merchantId)
-            ->orderByDesc('id')
-            ->first();
+            $subscription = MerchantSubscription::with('plan')
+                ->where('merchant_id', $merchantId)
+                ->orderByDesc('id')
+                ->first();
 
-        $basicPlan = SubscriptionPlan::where('code', 'basic')->first();
-        $defaultFeatureFlags = [
-            'has_voice_entry' => false,
-            'has_soundbox' => false,
-            'has_desktop_access' => true,
-            'pdf_bill_access' => true,
-            'customer_limit' => null,
-        ];
+            $basicPlan = SubscriptionPlan::where('code', 'basic')->first();
+            $defaultFeatureFlags = [
+                'has_voice_entry' => false,
+                'has_soundbox' => false,
+                'has_desktop_access' => true,
+                'pdf_bill_access' => true,
+                'customer_limit' => null,
+            ];
 
-        // Check if existing subscription has expired
-        if ($subscription) {
-            if ($subscription->status === 'trial' && $subscription->trial_ends_at && now()->gt($subscription->trial_ends_at)) {
-                $subscription->status = 'expired';
-                $subscription->save();
+            // Check if existing trial has expired
+            if ($subscription) {
+                if ($subscription->status === 'trial' && $subscription->trial_ends_at && now()->gt($subscription->trial_ends_at)) {
+                    $subscription->status = 'expired';
+                    $subscription->save();
 
-                $user = User::find($merchantId);
-                if ($user) {
-                    $user->current_plan_code = 'basic';
-                    $user->subscription_status = 'expired';
-                    $user->save();
+                    $user = User::find($merchantId);
+                    if ($user) {
+                        $user->current_plan_code = 'basic';
+                        $user->subscription_status = 'expired';
+                        $user->save();
+                    }
                 }
             }
-        }
 
-        $isActivePaid = $subscription && $subscription->status === 'active' && (!$subscription->renews_at || now()->lte($subscription->renews_at));
-        $isActiveTrial = $subscription && $subscription->status === 'trial' && $subscription->trial_ends_at && now()->lte($subscription->trial_ends_at);
+            $isActivePaid = $subscription && $subscription->status === 'active' && (!$subscription->renews_at || now()->lte($subscription->renews_at));
+            $isActiveTrial = $subscription && $subscription->status === 'trial' && $subscription->trial_ends_at && now()->lte($subscription->trial_ends_at);
 
-        if ($isActivePaid || $isActiveTrial) {
-            $plan = $subscription->plan;
-            $featureFlags = $plan ? ($plan->feature_flags ?? $defaultFeatureFlags) : $defaultFeatureFlags;
-            $remainingDays = $subscription->remainingTrialDays();
+            if ($isActivePaid || $isActiveTrial) {
+                $plan = $subscription->plan;
+                $featureFlags = $plan ? ($plan->feature_flags ?? $defaultFeatureFlags) : $defaultFeatureFlags;
+                $remainingDays = $subscription->remainingTrialDays();
 
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'subscription' => $subscription,
+                        'plan' => $plan,
+                        'plan_code' => $plan?->code ?? 'basic',
+                        'plan_name' => $plan?->name ?? 'Basic Plan',
+                        'is_active' => true,
+                        'is_trial' => $isActiveTrial,
+                        'trial_days_remaining' => $remainingDays,
+                        'feature_flags' => $featureFlags,
+                        'can_use_voice' => !empty($featureFlags['has_voice_entry']),
+                        'can_use_soundbox' => !empty($featureFlags['has_soundbox']),
+                        'renews_at' => $subscription->renews_at?->toIso8601String(),
+                        'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
+                    ],
+                ], 200);
+            }
+
+            // Fallback to Free Basic Plan (Zero Disruption Guarantee)
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'subscription' => $subscription,
-                    'plan' => $plan,
-                    'plan_code' => $plan?->code ?? 'basic',
-                    'plan_name' => $plan?->name ?? 'Basic Plan',
+                    'plan' => $basicPlan,
+                    'plan_code' => 'basic',
+                    'plan_name' => 'Basic Plan',
                     'is_active' => true,
-                    'is_trial' => $isActiveTrial,
-                    'trial_days_remaining' => $remainingDays,
-                    'feature_flags' => $featureFlags,
-                    'can_use_voice' => !empty($featureFlags['has_voice_entry']),
-                    'can_use_soundbox' => !empty($featureFlags['has_soundbox']),
-                    'renews_at' => $subscription->renews_at?->toIso8601String(),
-                    'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
+                    'is_trial' => false,
+                    'trial_days_remaining' => 0,
+                    'feature_flags' => $defaultFeatureFlags,
+                    'can_use_voice' => false,
+                    'can_use_soundbox' => false,
+                    'renews_at' => null,
+                    'trial_ends_at' => null,
                 ],
             ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'failed', 'message' => $e->getMessage()], 500);
         }
-
-        // Fallback to Free Basic Plan (Zero Disruption Guarantee)
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'subscription' => $subscription,
-                'plan' => $basicPlan,
-                'plan_code' => 'basic',
-                'plan_name' => 'Basic Plan',
-                'is_active' => true,
-                'is_trial' => false,
-                'trial_days_remaining' => 0,
-                'feature_flags' => $defaultFeatureFlags,
-                'can_use_voice' => false,
-                'can_use_soundbox' => false,
-                'renews_at' => null,
-                'trial_ends_at' => null,
-            ],
-        ], 200);
     }
 
     /**
@@ -163,7 +201,7 @@ class SubscriptionController extends Controller
             ], 400);
         }
 
-        // Check if merchant has already used a trial
+        // Check if merchant has already claimed a trial
         $existingTrial = MerchantSubscription::where('merchant_id', $merchantId)
             ->where(function ($query) {
                 $query->where('status', 'trial')
@@ -180,7 +218,7 @@ class SubscriptionController extends Controller
 
         // Check if merchant already has an active paid subscription
         $activeSubscription = MerchantSubscription::where('merchant_id', $merchantId)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'trial'])
             ->where(function ($query) {
                 $query->whereNull('renews_at')
                     ->orWhere('renews_at', '>', now());
@@ -197,7 +235,6 @@ class SubscriptionController extends Controller
         $trialEndsAt = now()->addDays($plan->trial_days);
 
         $subscription = DB::transaction(function () use ($merchantId, $plan, $trialEndsAt) {
-            // Cancel any old pending checkouts
             MerchantSubscription::where('merchant_id', $merchantId)
                 ->whereIn('status', ['pending'])
                 ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
@@ -250,6 +287,130 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * History of the merchant's subscriptions + offline requests.
+     */
+    public function history(Request $request)
+    {
+        try {
+            $merchantId = $this->resolveMerchantId($request);
+            $subs = MerchantSubscription::with('plan')
+                ->where('merchant_id', $merchantId)
+                ->orderByDesc('id')
+                ->get();
+            $requests = SubscriptionRequest::with('plan')
+                ->where('merchant_id', $merchantId)
+                ->orderByDesc('id')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'subscriptions' => $subs,
+                    'requests' => $requests,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Merchant submits an OFFLINE upgrade request (no payment). Pending until admin approves.
+     */
+    public function offlineRequest(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'plan_code' => 'required|string|exists:subscription_plans,code',
+            'billing_cycle' => 'required|in:monthly,yearly',
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => collect($validator->errors()->all())->first(),
+            ], 422);
+        }
+
+        try {
+            $merchantId = $this->resolveMerchantId($request);
+            $plan = SubscriptionPlan::where('code', $request->plan_code)->firstOrFail();
+            $cycle = $request->billing_cycle;
+            $price = $cycle === 'yearly' ? $plan->yearly_price : $plan->monthly_price;
+
+            $pending = SubscriptionRequest::where('merchant_id', $merchantId)
+                ->where('status', 'pending')
+                ->orderByDesc('id')
+                ->first();
+            if ($pending) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'You already have a pending upgrade request. Please wait for it to be resolved.',
+                ], 400);
+            }
+
+            DB::beginTransaction();
+            $req = SubscriptionRequest::create([
+                'merchant_id' => $merchantId,
+                'subscription_plan_id' => $plan->id,
+                'requested_plan_code' => $plan->code,
+                'billing_cycle' => $cycle,
+                'status' => 'pending',
+                'note' => $request->note,
+            ]);
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Upgrade request received. It will be activated once approved by admin (offline payment).',
+                'data' => [
+                    'request' => [
+                        'id' => $req->id,
+                        'plan' => $plan->code,
+                        'plan_name' => $plan->name,
+                        'billing_cycle' => $cycle,
+                        'amount' => (float) $price,
+                        'status' => 'pending',
+                    ],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Merchant's own pending request + active subscription summary.
+     */
+    public function myUpgradeStatus(Request $request)
+    {
+        try {
+            $merchantId = $this->resolveMerchantId($request);
+            $active = MerchantSubscription::with('plan')
+                ->where('merchant_id', $merchantId)
+                ->whereIn('status', ['active', 'trial'])
+                ->orderByDesc('id')
+                ->first();
+            $latestRequest = SubscriptionRequest::with('plan')
+                ->where('merchant_id', $merchantId)
+                ->orderByDesc('id')
+                ->first();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'active_subscription' => $active,
+                    'latest_request' => $latestRequest,
+                    'has_pending_request' => $latestRequest && $latestRequest->status === 'pending',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Create pending checkout state before Razorpay checkout.
      */
     public function createCheckout(Request $request)
@@ -292,7 +453,6 @@ class SubscriptionController extends Controller
             : $plan->monthly_price;
 
         $orderId = 'sub_order_' . $merchantId . '_' . now()->timestamp . '_' . random_int(1000, 9999);
-
         $subscription = null;
 
         DB::transaction(function () use ($merchantId, $plan, $request, $amount, $orderId, &$subscription) {
@@ -317,7 +477,7 @@ class SubscriptionController extends Controller
                 'subscription_plan_id' => $plan->id,
                 'billing_cycle' => $request->billing_cycle,
                 'amount' => $amount,
-                'currency' => $plan->currency,
+                'currency' => $plan->currency ?? 'INR',
                 'gateway' => 'razorpay',
                 'external_order_id' => $orderId,
                 'status' => 'initiated',
@@ -338,7 +498,7 @@ class SubscriptionController extends Controller
                 'plan_code' => $plan->code,
                 'billing_cycle' => $request->billing_cycle,
                 'amount' => $amount,
-                'currency' => $plan->currency,
+                'currency' => $plan->currency ?? 'INR',
             ],
         ], 200);
     }
@@ -413,7 +573,7 @@ class SubscriptionController extends Controller
 
             MerchantSubscription::where('merchant_id', $merchantId)
                 ->where('id', '!=', $subscription->id)
-                ->where('status', 'active')
+                ->whereIn('status', ['active', 'trial'])
                 ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
 
             $startedAt = now();
@@ -457,7 +617,7 @@ class SubscriptionController extends Controller
         }
 
         $subscription = MerchantSubscription::where('merchant_id', $merchantId)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'trial'])
             ->orderByDesc('id')
             ->first();
 
@@ -477,35 +637,10 @@ class SubscriptionController extends Controller
         ], 200);
     }
 
-    /**
-     * Merchant payment history endpoint.
-     */
-    public function paymentHistory(Request $request)
-    {
-        $merchantId = $this->resolveMerchantId($request);
-        if (!$merchantId) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Merchant identity is required.',
-            ], 422);
-        }
-
-        $payments = SubscriptionPayment::where('merchant_id', $merchantId)
-            ->orderByDesc('id')
-            ->paginate(20);
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'payments' => $payments,
-            ],
-        ], 200);
-    }
-
     private function resolveMerchantId(Request $request): ?int
     {
-        if ($request->user()) {
-            return (int) $request->user()->id;
+        if (auth()->check()) {
+            return (int) auth()->id();
         }
 
         if ($request->filled('merchant_id')) {
@@ -531,7 +666,7 @@ class SubscriptionController extends Controller
                     ->orWhere('username', (string) $merchantPhone)
                     ->orWhere('phone', 'like', '%' . $cleanPhone)
                     ->orWhere('username', 'like', '%' . $cleanPhone);
-            })->where('type', 'merchant')->first();
+            })->first();
 
             if ($merchant) {
                 return (int) $merchant->id;

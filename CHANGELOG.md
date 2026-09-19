@@ -5,6 +5,28 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.67] - 2026-09-20
+
+### 🐛 Fixed Admin Subscriber Route & Missing Database Table (`/admin/subscriber`)
+
+#### Root Cause
+- Accessing `https://pay.udharcard.shop/admin/subscriber` resulted in a fatal SQL crash (`SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pay_udharcard_shop.subscribes' doesn't exist`).
+- The newsletter `subscribes` table migration was missing from the database, causing any access to `SubscriberController@index` and `FrontendController@subscribe` to throw a 500 internal server error.
+- In `SubscriberController@sendEmail`, the message body input was mapped to `$request->message`, but the Summernote form field in `send_email.blade.php` is named `description`, leading to blank email bodies when broadcasting to subscribers.
+
+#### Fixes & Enhancements Deployed
+- **Database Migration**: Created and executed `2026_09_20_000001_create_subscribes_table.php` on production server, creating the `subscribes` table (`id`, `email UNIQUE`, `timestamps`).
+- **Eloquent Models Updated**: Added `protected $table = 'subscribes';` and `protected $guarded = ['id'];` to both `Subscriber.php` and `Subscribe.php` models.
+- **Controller Enhancement**:
+  - `SubscriberController@index`: Added live search by email (`when($search, ...)`), latest-first sorting (`latest()`), and safe pagination fallback.
+  - `SubscriberController@sendEmail`: Fixed request field extraction to `$request->description ?? $request->message` and added exception wrapping around queued mail delivery.
+- **Admin UI Polish (`resources/views/admin/subscriber/list.blade.php`)**:
+  - Refined page header with subscriber count pill and quick-switch button to **"Merchant Plan Subscribers"** (`/admin/subscriptions`).
+  - Added instant search input with clear-filter button.
+  - Formatted subscriber list with letter initials avatar, join timestamp, and clean deletion modal.
+- **Route Alias**: Added `/admin/subscribers` alias route in `routes/admin.php` that gracefully redirects plural requests to `/admin/subscriptions`.
+- **Caches Cleared**: Ran `php artisan optimize:clear` on production to ensure fresh routes, views, and config.
+
 ## [1.0.66] - 2026-09-20
 
 ### 🛡️ Admin Subscription Management Panel — Full Deployment
