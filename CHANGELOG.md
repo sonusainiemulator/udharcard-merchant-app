@@ -5,6 +5,28 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.61] - 2026-09-19
+
+### 🎨 Professional Typography Standard, Reports Dashboard Redesign & Error Fix
+- **Reports Dashboard Data Parsing & Error Fix**:
+  - Resolved the giant red JSON map toast error when loading Reports Dashboard (`fetchReports()`).
+  - Fixed payload extraction to robustly parse metrics from `data['message']`, `data['data']`, or root `data` object returned by the backend.
+  - Successfully display live report aggregates: **Total Credit Given**, **Collections**, and **Outstanding Balance** (falling back cleanly to `net_outstanding` if needed).
+  - Ensured `Helpers.showSnackBar` never stringifies raw JSON maps or debug dumps into toasts.
+- **App-wide Typography Elevation (`GoogleFonts.inter`)**:
+  - Replaced the quirky, organic font `Afacad` with **Inter** (`google_fonts: ^8.2.1`), the premier typeface for modern fintech and enterprise mobile applications.
+  - Applied `GoogleFonts.interTextTheme` to both `lightTheme` and `darkTheme` with root `fontFamily` definition.
+  - Standardized font weights, proportional heights, and crisp letter-spacing across all text styles.
+- **Customer List Hero Dual Summary Banner Redesign**:
+  - Replaced the outdated solid electric blue banner (`#0857E6` with clashing red/green text) in `customer_list_screen.dart` with the modern executive card layout matching `HomeScreen`.
+  - Pure white background in light mode / dark slate (`#17212B`) in dark mode, subtle `#E2E8F0` border, soft box shadow.
+  - **Aapko Milega**: Rose badge with up arrow, muted slate label, deep crimson bold value (`₹X`), and pending debtor counter badge.
+  - **Aapko Dena**: Emerald badge with down arrow, muted slate label, deep emerald bold value (`₹Y`), and advance credit label.
+- **Reports Dashboard UI Modernization**:
+  - Replaced childish pastel block fills with sleek executive cards with fine borders, soft shadows, and clean circular icon badges.
+  - Updated currency formatting from `Rs. ` to official `₹` symbol across all metrics and lists.
+  - Polished the `Exports` section tiles and `Outstanding Customers` / `Recent Ledger Activity` sections.
+
 ## [1.0.60] - 2026-09-19
 
 ### 🚀 Home Screen Ledger Data, Widget Redesign & Profile Toast Fix

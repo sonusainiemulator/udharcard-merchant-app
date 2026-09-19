@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_colors.dart';
 import '../config/dimensions.dart';
 import '../config/styles.dart' show Styles;
@@ -68,6 +69,7 @@ class AppThemes {
   //---------------------------------//
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
+    fontFamily: GoogleFonts.inter().fontFamily,
     scaffoldBackgroundColor: AppColors.scaffoldColor,
     drawerTheme: const DrawerThemeData(backgroundColor: AppColors.whiteColor),
     appBarTheme: AppBarTheme(
@@ -83,14 +85,16 @@ class AppThemes {
     ),
     iconTheme: IconThemeData(color: AppColors.blackColor),
     colorScheme: ColorScheme.fromSeed(seedColor: AppColors.whiteColor),
-    textTheme: TextTheme(
-      displayMedium: Styles.baseStyle.copyWith(fontSize: 18.sp),
-      titleSmall: Styles.smallTitle.copyWith(fontSize: 20.sp),
-      titleMedium: Styles.mediumTitle.copyWith(fontSize: 22.sp),
-      titleLarge: Styles.largeTitle.copyWith(fontSize: 24.sp),
-      bodyLarge: Styles.bodyLarge.copyWith(fontSize: 18.sp),
-      bodyMedium: Styles.bodyMedium.copyWith(fontSize: 16.sp),
-      bodySmall: Styles.bodySmall.copyWith(fontSize: 14.sp),
+    textTheme: GoogleFonts.interTextTheme(
+      TextTheme(
+        displayMedium: Styles.baseStyle.copyWith(fontSize: 18.sp),
+        titleSmall: Styles.smallTitle.copyWith(fontSize: 20.sp),
+        titleMedium: Styles.mediumTitle.copyWith(fontSize: 22.sp),
+        titleLarge: Styles.largeTitle.copyWith(fontSize: 24.sp),
+        bodyLarge: Styles.bodyLarge.copyWith(fontSize: 18.sp),
+        bodyMedium: Styles.bodyMedium.copyWith(fontSize: 16.sp),
+        bodySmall: Styles.bodySmall.copyWith(fontSize: 14.sp),
+      ),
     ),
     textSelectionTheme: TextSelectionThemeData(
       selectionColor: AppColors.mainColor.withValues(alpha: .4),
@@ -129,6 +133,7 @@ class AppThemes {
 
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
+    fontFamily: GoogleFonts.inter().fontFamily,
     scaffoldBackgroundColor: AppColors.darkBgColor,
     drawerTheme: const DrawerThemeData(backgroundColor: AppColors.darkBgColor),
     appBarTheme: const AppBarTheme(
@@ -138,34 +143,36 @@ class AppThemes {
     ),
     iconTheme: const IconThemeData(color: AppColors.whiteColor),
     colorScheme: const ColorScheme.dark(primary: AppColors.darkCardColor),
-    textTheme: TextTheme(
-      displayMedium: Styles.baseStyle.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 18.sp,
-      ),
-      titleSmall: Styles.smallTitle.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 24.sp,
-      ),
-      titleMedium: Styles.mediumTitle.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 26.sp,
-      ),
-      titleLarge: Styles.largeTitle.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 30.sp,
-      ),
-      bodyLarge: Styles.bodyLarge.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 22.sp,
-      ),
-      bodyMedium: Styles.bodyMedium.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 18.sp,
-      ),
-      bodySmall: Styles.bodySmall.copyWith(
-        color: AppColors.whiteColor,
-        fontSize: 16.sp,
+    textTheme: GoogleFonts.interTextTheme(
+      TextTheme(
+        displayMedium: Styles.baseStyle.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 18.sp,
+        ),
+        titleSmall: Styles.smallTitle.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 24.sp,
+        ),
+        titleMedium: Styles.mediumTitle.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 26.sp,
+        ),
+        titleLarge: Styles.largeTitle.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 30.sp,
+        ),
+        bodyLarge: Styles.bodyLarge.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 22.sp,
+        ),
+        bodyMedium: Styles.bodyMedium.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 18.sp,
+        ),
+        bodySmall: Styles.bodySmall.copyWith(
+          color: AppColors.whiteColor,
+          fontSize: 16.sp,
+        ),
       ),
     ),
     textSelectionTheme: TextSelectionThemeData(

@@ -249,94 +249,194 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(18.r),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0F62E2)
-                          : const Color(0xFF0857E6), // solid brand blue
+                      color: isDark ? const Color(0xFF17212B) : Colors.white,
                       borderRadius: BorderRadius.circular(20.r),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        width: 1,
+                        color: isDark
+                            ? const Color(0xFF25303D)
+                            : const Color(0xFFE2E8F0),
+                        width: 1.2,
                       ),
+                      boxShadow: isDark
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A)
+                                    .withValues(alpha: 0.05),
+                                blurRadius: 18,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                     ),
                     child: Row(
                       children: [
+                        // Left: Aapko Milega
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.arrow_upward_rounded,
-                                      color: Color(0xFFF87171), size: 14),
-                                  SizedBox(width: 4.w),
+                                  Container(
+                                    padding: EdgeInsets.all(4.r),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF450A0A)
+                                          : const Color(0xFFFEF2F2),
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_upward_rounded,
+                                      color: Color(0xFFDC2626),
+                                      size: 13,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
                                   Text(
                                     "Aapko Milega",
                                     style: TextStyle(
-                                      color: const Color(0xFF94A3B8),
+                                      color: isDark
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF64748B),
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 4.h),
+                              SizedBox(height: 8.h),
                               Text(
                                 "₹${totalOutstanding.toStringAsFixed(0)}",
                                 style: TextStyle(
-                                  color: const Color(0xFFF87171),
-                                  fontSize: 24.sp,
-                                  fontWeight: FontWeight.w900,
+                                  color: isDark
+                                      ? const Color(0xFFF87171)
+                                      : const Color(0xFFDC2626),
+                                  fontSize: 22.sp,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
-                              Text(
-                                "$debtorCount Debtors Pending",
-                                style: TextStyle(
-                                  color: const Color(0xFF64748B),
-                                  fontSize: 10.sp,
+                              SizedBox(height: 4.h),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF2D1515)
+                                      : const Color(0xFFFFF1F2),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF7F1D1D)
+                                        : const Color(0xFFFECDD3),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  "$debtorCount Debtors Pending",
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? const Color(0xFFFCA5A5)
+                                        : const Color(0xFFE11D48),
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
+
                         Container(
-                          height: 44.h,
+                          height: 54.h,
                           width: 1,
-                          color: Colors.white.withValues(alpha: 0.15),
-                          margin: EdgeInsets.symmetric(horizontal: 12.w),
+                          color: isDark
+                              ? const Color(0xFF25303D)
+                              : const Color(0xFFE2E8F0),
+                          margin: EdgeInsets.symmetric(horizontal: 14.w),
                         ),
+
+                        // Right: Aapko Dena
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.arrow_downward_rounded,
-                                      color: Color(0xFF34D399), size: 14),
-                                  SizedBox(width: 4.w),
+                                  Container(
+                                    padding: EdgeInsets.all(4.r),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF064E3B)
+                                          : const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_downward_rounded,
+                                      color: Color(0xFF059669),
+                                      size: 13,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
                                   Text(
                                     "Aapko Dena",
                                     style: TextStyle(
-                                      color: const Color(0xFF94A3B8),
+                                      color: isDark
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF64748B),
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 4.h),
+                              SizedBox(height: 8.h),
                               Text(
                                 "₹${totalAdvance.toStringAsFixed(0)}",
                                 style: TextStyle(
-                                  color: const Color(0xFF34D399),
-                                  fontSize: 24.sp,
-                                  fontWeight: FontWeight.w900,
+                                  color: isDark
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFF059669),
+                                  fontSize: 22.sp,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
-                              Text(
-                                "Advance Credit",
-                                style: TextStyle(
-                                  color: const Color(0xFF64748B),
-                                  fontSize: 10.sp,
+                              SizedBox(height: 4.h),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF062A1F)
+                                      : const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF065F46)
+                                        : const Color(0xFFA7F3D0),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  "Advance Credit",
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? const Color(0xFF6EE7B7)
+                                        : const Color(0xFF059669),
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],

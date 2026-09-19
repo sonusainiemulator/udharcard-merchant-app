@@ -32,15 +32,18 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
       builder: (controller) {
         final NumberFormat currency = NumberFormat.currency(
           locale: 'en_IN',
-          symbol: 'Rs. ',
+          symbol: '₹',
           decimalDigits: 2,
         );
         final double totalCredit = _toDouble(controller.reportsSummary['total_credit_given']);
         final double totalDebit = _toDouble(controller.reportsSummary['total_debit_received']);
-        final double outstanding = controller.reportOutstandingCustomers.fold<double>(
+        double outstanding = controller.reportOutstandingCustomers.fold<double>(
           0.0,
           (sum, item) => sum + _toDouble((item as Map)['outstanding_balance']),
         );
+        if (outstanding == 0.0 && controller.reportsSummary['net_outstanding'] != null) {
+          outstanding = _toDouble(controller.reportsSummary['net_outstanding']);
+        }
 
         return Scaffold(
           backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
@@ -84,18 +87,34 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                       if (controller.reportsDateRange != null)
                         Container(
                           margin: EdgeInsets.only(bottom: 12.h),
-                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF172033) : const Color(0xFFE0F2FE),
+                            color: isDark ? const Color(0xFF172033) : const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            'Range: ${DateFormat('dd MMM yyyy').format(controller.reportsDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(controller.reportsDateRange!.end)}',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFBFDBFE),
+                              width: 1,
                             ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14.sp,
+                                color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Text(
+                                  '${DateFormat('dd MMM yyyy').format(controller.reportsDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(controller.reportsDateRange!.end)}',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : const Color(0xFF1E3A8A),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       Row(
@@ -104,27 +123,30 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                             child: _SummaryCard(
                               title: 'Total Credit Given',
                               value: currency.format(totalCredit),
-                              accent: AppColors.redColor,
-                              background: const Color(0xFFFEE2E2),
+                              accent: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              icon: Icons.arrow_upward_rounded,
+                              iconBg: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
                             ),
                           ),
-                          HSpace(10.w),
+                          HSpace(12.w),
                           Expanded(
                             child: _SummaryCard(
                               title: 'Collections',
                               value: currency.format(totalDebit),
-                              accent: AppColors.greenColor,
-                              background: const Color(0xFFDCFCE7),
+                              accent: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                              icon: Icons.arrow_downward_rounded,
+                              iconBg: isDark ? const Color(0xFF064E3B) : const Color(0xFFECFDF5),
                             ),
                           ),
                         ],
                       ),
-                      VSpace(10.h),
+                      VSpace(12.h),
                       _SummaryCard(
                         title: 'Outstanding Balance',
                         value: currency.format(outstanding),
-                        accent: AppColors.mainColor,
-                        background: isDark ? const Color(0xFF172033) : const Color(0xFFDBEAFE),
+                        accent: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F5BD8),
+                        icon: Icons.account_balance_wallet_rounded,
+                        iconBg: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
                         fullWidth: true,
                       ),
                       VSpace(18.h),
@@ -270,36 +292,83 @@ class _SummaryCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.accent,
-    required this.background,
+    required this.icon,
+    this.iconBg,
     this.fullWidth = false,
   });
 
   final String title;
   final String value;
   final Color accent;
-  final Color background;
+  final IconData icon;
+  final Color? iconBg;
   final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: fullWidth ? double.infinity : null,
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(16.r),
+        color: isDark ? const Color(0xFF17212B) : Colors.white,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(
+          color: isDark ? const Color(0xFF25303D) : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.black87),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.r),
+                decoration: BoxDecoration(
+                  color: iconBg ?? accent.withValues(alpha: isDark ? 0.18 : 0.10),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(icon, color: accent, size: 14.sp),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          VSpace(8.h),
+          SizedBox(height: 10.h),
           Text(
             value,
-            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w800, color: accent),
+            style: TextStyle(
+              fontSize: fullWidth ? 22.sp : 18.sp,
+              fontWeight: FontWeight.w800,
+              color: isDark ? (fullWidth ? Colors.white : accent) : accent,
+              letterSpacing: -0.4,
+            ),
           ),
         ],
       ),
@@ -318,11 +387,29 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(18.r),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
+        color: isDark ? const Color(0xFF17212B) : Colors.white,
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF25303D) : const Color(0xFFE2E8F0),
+          width: 1.2,
+        ),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,17 +419,33 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
                 ),
               ),
               if (trailing != null)
-                Text(
-                  trailing!,
-                  style: TextStyle(fontSize: 11.sp, color: AppColors.black60),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF25303D) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    trailing!,
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                  ),
                 ),
             ],
           ),
-          VSpace(12.h),
+          VSpace(14.h),
           child,
         ],
       ),
@@ -369,38 +472,59 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14.r),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10.r),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 4.h),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(10.r),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: isDark ? 0.18 : 0.10),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: loading
+                  ? SizedBox(
+                      width: 20.w,
+                      height: 20.w,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                    )
+                  : Icon(icon, color: color, size: 20.sp),
             ),
-            child: loading
-                ? SizedBox(
-                    width: 18.w,
-                    height: 18.w,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: color),
-                  )
-                : Icon(icon, color: color),
-          ),
-          HSpace(12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w700)),
-                VSpace(4.h),
-                Text(subtitle, style: TextStyle(fontSize: 11.sp, color: AppColors.black60)),
-              ],
+            HSpace(12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  VSpace(3.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: AppColors.black60),
-        ],
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+              size: 20.sp,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1125,33 +1125,52 @@ class UdharController extends GetxController {
                 : DateFormat('yyyy-MM-dd').format(reportsDateRange!.end),
       );
       final Map<String, dynamic> data = _decodeJsonMap(response.body) ?? {};
-      final Map<String, dynamic> payload =
-          (data['data'] is Map<String, dynamic>)
-              ? Map<String, dynamic>.from(data['data'])
-              : (data['data'] is Map)
-              ? Map<String, dynamic>.from(data['data'])
-              : {};
+      Map<String, dynamic> payload = {};
+      if (data['data'] is Map) {
+        payload = Map<String, dynamic>.from(data['data']);
+      } else if (data['message'] is Map) {
+        payload = Map<String, dynamic>.from(data['message']);
+      } else if (data.containsKey('total_credit_given') ||
+          data.containsKey('outstanding_customers') ||
+          data.containsKey('net_outstanding')) {
+        payload = Map<String, dynamic>.from(data);
+      }
 
-      if (response.statusCode == 200 &&
-          data['status'] == 'success' &&
-          payload.isNotEmpty) {
+      final bool isSuccess = _isApiSuccess(response.statusCode, data) ||
+          (response.statusCode >= 200 &&
+              response.statusCode < 300 &&
+              payload.isNotEmpty);
+
+      if (isSuccess && payload.isNotEmpty) {
         reportsSummary = {
           'start_date': payload['start_date'],
           'end_date': payload['end_date'],
           'total_credit_given': _asDouble(payload['total_credit_given']),
           'total_debit_received': _asDouble(payload['total_debit_received']),
+          'net_outstanding': _asDouble(payload['net_outstanding'] ??
+              (_asDouble(payload['total_credit_given']) -
+                  _asDouble(payload['total_debit_received']))),
+          'total_transactions': payload['total_transactions'] ??
+              (payload['transactions'] as List?)?.length ??
+              (payload['recent_transactions'] as List?)?.length ??
+              0,
+          'pdf_export_url': payload['pdf_export_url'],
+          'csv_export_url': payload['csv_export_url'],
         };
-        reportTransactions = List<dynamic>.from(payload['transactions'] ?? []);
+        reportTransactions = List<dynamic>.from(
+          payload['transactions'] ?? payload['recent_transactions'] ?? [],
+        );
         reportOutstandingCustomers = List<dynamic>.from(
           payload['outstanding_customers'] ?? [],
         );
       } else {
         if (!silent) {
-          Helpers.showSnackBar(
-            msg:
-                data['message']?.toString() ??
-                'Unable to fetch realtime reports.',
-          );
+          final dynamic rawMsg =
+              data['message'] ?? data['error'] ?? data['errors'];
+          final String errMsg = (rawMsg is String && rawMsg.trim().isNotEmpty)
+              ? rawMsg.trim()
+              : 'Unable to fetch realtime reports.';
+          Helpers.showSnackBar(msg: errMsg);
         }
       }
     } catch (_) {
