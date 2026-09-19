@@ -36,8 +36,13 @@ class TestUdharController extends UdharController {
   }
 
   @override
-  Future<void> submitUdhar() async {
+  Future<bool> submitUdhar({
+    bool popOnSuccess = true,
+    String? billImagePath,
+    String? idempotencyKey,
+  }) async {
     submitCalled = true;
+    return true;
   }
 }
 
@@ -54,6 +59,9 @@ void main() {
     () async {
       final controller = VoiceEntryController();
       final udharController = TestUdharController();
+      udharController.usersList = [
+        {'id': '101', 'name': 'Ramesh', 'phone': '9876543210'},
+      ];
       Get.put<VoiceEntryController>(controller);
       Get.put<UdharController>(udharController);
 

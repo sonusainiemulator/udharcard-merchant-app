@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../utils/app_constants.dart';
 import '../source/network/api_client.dart';
@@ -11,10 +12,15 @@ class UdharRepo {
     required String remarks,
     String paymentMethod = "cash",
     String? createdAt,
+    String? idempotencyKey,
+    String? billImagePath,
   }) async {
     // Standardize type to "credit" or "debit"
     final normalizedType =
         (type == "given" || type == "credit") ? "credit" : "debit";
+
+    final txKey = idempotencyKey ??
+        "tx_${DateTime.now().millisecondsSinceEpoch}_${customerId}_${amount.replaceAll('.', '_')}";
 
     final Map<String, dynamic> fields = {
       "customer_id": customerId,
@@ -23,10 +29,37 @@ class UdharRepo {
       "payment_method": paymentMethod.isEmpty ? "cash" : paymentMethod,
       "notes": remarks,
       "remarks": remarks,
+      "idempotency_key": txKey,
+      "client_tx_id": txKey,
+      "transaction_uuid": txKey,
     };
     if (createdAt != null && createdAt.isNotEmpty) {
       fields["created_at"] = createdAt;
       fields["transaction_date"] = createdAt;
+    }
+
+    // If bill image is attached and exists, upload via multipart
+    if (billImagePath != null && billImagePath.isNotEmpty) {
+      final file = File(billImagePath);
+      if (file.existsSync()) {
+        try {
+          final stringFields = fields.map(
+            (key, value) => MapEntry(key, value?.toString() ?? ''),
+          );
+          final multipartFile =
+              await http.MultipartFile.fromPath('bill_image', billImagePath);
+          final response = await ApiClient.postMultipart(
+            ENDPOINT_URL: AppConstants.addUdharUrl,
+            fields: stringFields,
+            files: multipartFile,
+          );
+          if (response.statusCode != 404 && response.statusCode != 405) {
+            return response;
+          }
+        } catch (_) {
+          // Fallback to normal request if multipart fails
+        }
+      }
     }
 
     // Direct call to standard endpoint: POST /api/merchant/udhar/ledger

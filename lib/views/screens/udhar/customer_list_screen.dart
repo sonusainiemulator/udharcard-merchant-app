@@ -45,10 +45,28 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     final cleanPhone = phone.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
     final formattedPhone =
         cleanPhone.startsWith('+') ? cleanPhone : '+91$cleanPhone';
-    final msg = Uri.encodeComponent(
-      "Namaste $name ji,\nYour total pending Udhar balance on Udhar Card is ₹${amount.toStringAsFixed(0)}.\nPlease clear your dues at the earliest via UPI or Cash.\nThank you! 🙏",
-    );
-    final url = "https://wa.me/$formattedPhone?text=$msg";
+    final String shopName =
+        (HiveHelp.read('shop_name') ?? 'Udhar Card Merchant').toString().trim();
+    final String merchantUpi = (HiveHelp.read(Keys.merchantUpiId) ??
+            HiveHelp.read('merchant_upi_id') ??
+            'paysecure@upi')
+        .toString()
+        .trim();
+    final String encodedShop =
+        Uri.encodeComponent(shopName.isEmpty ? 'Merchant' : shopName);
+    final String upiUrl =
+        "upi://pay?pa=$merchantUpi&pn=$encodedShop&am=${amount.abs()}&cu=INR";
+
+    final String messageText =
+        "Namaste $name ji 🙏\n\n"
+        "Aapka kul udhar hisab *$shopName* par *₹${amount.abs().toStringAsFixed(0)}* baki hai.\n\n"
+        "📲 *Abhi 1-Click me UPI se payment karne ke liye yahan tap karein:*\n"
+        "$upiUrl\n\n"
+        "(GPay / PhonePe / Paytm kisi bhi app se payment kar sakte hain)\n\n"
+        "Kisi bhi jankari ke liye dukan par sampark karein. Dhanyawad! ✨";
+
+    final url =
+        "https://wa.me/$formattedPhone?text=${Uri.encodeComponent(messageText)}";
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

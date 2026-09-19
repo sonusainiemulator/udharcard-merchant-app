@@ -1,6 +1,8 @@
 
 import 'package:paysecure/controllers/app_lock_controller.dart';
 import 'package:paysecure/controllers/pin_reset_controller.dart';
+import 'package:paysecure/utils/services/offline_sync_service.dart';
+import 'package:paysecure/utils/services/voice_soundbox_service.dart';
 
 import '../merchant_setting_controller.dart';
 import 'controller_index.dart';
@@ -11,6 +13,8 @@ class InitBindings implements Bindings {
     Get.put(AppController());
     Get.put(AppLockController(), permanent: true);
     Get.put(AuthController(), permanent: true);
+    Get.put(OfflineSyncService(), permanent: true);
+    Get.put(VoiceSoundboxService(), permanent: true);
     Get.put(ProfileController());
     Get.put(PushNotificationController());
 

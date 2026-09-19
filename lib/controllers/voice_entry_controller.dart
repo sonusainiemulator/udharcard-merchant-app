@@ -553,7 +553,7 @@ class VoiceEntryController extends GetxController {
     );
   }
 
-  /// Fuzzy match against active merchant ledger customers
+  /// Fuzzy and phonetic match against active merchant ledger customers
   Map<String, dynamic>? findMatchingCustomer(String name, [String phone = '']) {
     if (!Get.isRegistered<UdharController>()) return null;
     final users = Get.find<UdharController>().usersList;
@@ -561,7 +561,8 @@ class VoiceEntryController extends GetxController {
     if (phone.isNotEmpty) {
       for (var u in users) {
         if (u is Map) {
-          final uPhone = (u['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+          final uPhone =
+              (u['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
           if (uPhone.endsWith(phone) || phone.endsWith(uPhone)) {
             return Map<String, dynamic>.from(u);
           }
@@ -572,15 +573,83 @@ class VoiceEntryController extends GetxController {
     final q = name.trim().toLowerCase();
     if (q.isEmpty || q == 'customer') return null;
 
+    // 1. Exact or substring match
     for (var u in users) {
       if (u is Map) {
         final cName = (u['name'] ?? '').toString().toLowerCase();
-        if (cName == q || cName.startsWith(q) || q.startsWith(cName) || cName.contains(q)) {
+        if (cName == q ||
+            cName.startsWith(q) ||
+            q.startsWith(cName) ||
+            cName.contains(q)) {
           return Map<String, dynamic>.from(u);
         }
       }
     }
+
+    // 2. Phonetic normalization match (e.g. Vikas <-> Bikash, Guddu <-> Guddoo)
+    final normQ = _phoneticNormalize(q);
+    for (var u in users) {
+      if (u is Map) {
+        final cName = (u['name'] ?? '').toString().toLowerCase();
+        final normC = _phoneticNormalize(cName);
+        if (normC == normQ ||
+            normC.contains(normQ) ||
+            normQ.contains(normC)) {
+          return Map<String, dynamic>.from(u);
+        }
+      }
+    }
+
+    // 3. Levenshtein edit-distance match for slight speech typos
+    if (q.length >= 4) {
+      for (var u in users) {
+        if (u is Map) {
+          final cName = (u['name'] ?? '').toString().toLowerCase();
+          final normC = _phoneticNormalize(cName);
+          final dist = _levenshtein(normQ, normC);
+          final maxAllowedDist = normQ.length >= 6 ? 2 : 1;
+          if (dist <= maxAllowedDist) {
+            return Map<String, dynamic>.from(u);
+          }
+        }
+      }
+    }
+
     return null;
+  }
+
+  String _phoneticNormalize(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll('ee', 'i')
+        .replaceAll('oo', 'u')
+        .replaceAll('aa', 'a')
+        .replaceAll('sh', 's')
+        .replaceAll('ph', 'f')
+        .replaceAll('w', 'v')
+        .replaceAll('b', 'v');
+  }
+
+  int _levenshtein(String s1, String s2) {
+    if (s1 == s2) return 0;
+    if (s1.isEmpty) return s2.length;
+    if (s2.isEmpty) return s1.length;
+
+    List<int> v0 = List<int>.generate(s2.length + 1, (i) => i);
+    List<int> v1 = List<int>.filled(s2.length + 1, 0);
+
+    for (int i = 0; i < s1.length; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < s2.length; j++) {
+        int cost = (s1[i] == s2[j]) ? 0 : 1;
+        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost]
+            .reduce((a, b) => a < b ? a : b);
+      }
+      for (int j = 0; j <= s2.length; j++) {
+        v0[j] = v1[j];
+      }
+    }
+    return v1[s2.length];
   }
 
   /// 1-Tap Direct Save to Ledger via UdharController with full Backend & Udhar User App synchronization
@@ -616,7 +685,11 @@ class VoiceEntryController extends GetxController {
         udharController.remarksCtrl.text = 'Added via VoiceKhata';
       }
 
-      Map<String, dynamic>? targetCustomer = udharController.selectedUser;
+      Map<String, dynamic>? targetCustomer = udharController.selectedUser ??
+          findMatchingCustomer(parsedName, latestParsedResult?.phone ?? '');
+      if (targetCustomer != null) {
+        udharController.selectedUser = targetCustomer;
+      }
 
       // If customer not already in active ledger, try to resolve real phone from speech or phonebook
       if (targetCustomer == null) {
@@ -670,7 +743,10 @@ class VoiceEntryController extends GetxController {
       }
 
       // Submit directly to backend API without popping the current screen context
-      final bool success = await udharController.submitUdhar(popOnSuccess: false);
+      final bool success = await udharController.submitUdhar(
+        popOnSuccess: false,
+        billImagePath: attachedBillImage?.path,
+      );
 
       if (success) {
         saveTransaction();

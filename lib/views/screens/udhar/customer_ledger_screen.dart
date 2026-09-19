@@ -843,13 +843,30 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
       }
     }
 
+    final String shopName =
+        (HiveHelp.read('shop_name') ?? 'Udhar Card Merchant').toString().trim();
+    final String merchantUpi = (HiveHelp.read(Keys.merchantUpiId) ??
+            HiveHelp.read('merchant_upi_id') ??
+            'paysecure@upi')
+        .toString()
+        .trim();
+    final String encodedShop =
+        Uri.encodeComponent(shopName.isEmpty ? 'Merchant' : shopName);
+    final String upiUrl =
+        "upi://pay?pa=$merchantUpi&pn=$encodedShop&am=${outstandingBalance.abs()}&cu=INR";
+
     String message = "";
     if (outstandingBalance <= 0) {
       message =
-          "Dear ${widget.customerName}, your current account balance with us is settled (₹0.00). Thank you for doing business with us!";
+          "Dear ${widget.customerName} ji, your account balance with *$shopName* is fully settled (₹0.00). Thank you! 🙏";
     } else {
       message =
-          "Dear ${widget.customerName}, this is a friendly reminder that you have an outstanding payment of ₹${outstandingBalance.toStringAsFixed(2)} due with our shop. Please pay as soon as possible. Thank you!";
+          "Namaste ${widget.customerName} ji 🙏\n\n"
+          "Aapka kul pending udhar hisab *$shopName* par *₹${outstandingBalance.toStringAsFixed(2)}* hai.\n\n"
+          "📲 *1-Click UPI Payment Link:*\n"
+          "$upiUrl\n\n"
+          "Kripya jaldi se clear karein. Dhanyawad!\n\n"
+          "*Recent Transactions:*\n";
     }
 
     message += historyMsg;

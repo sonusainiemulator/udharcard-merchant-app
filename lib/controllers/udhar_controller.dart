@@ -16,7 +16,9 @@ import '../routes/routes_name.dart';
 import '../utils/services/helpers.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/localstorage/keys.dart';
+import '../utils/services/offline_sync_service.dart';
 import '../utils/services/subscription_gate_service.dart';
+import '../utils/services/voice_soundbox_service.dart';
 import '../config/app_colors.dart';
 
 class UdharController extends GetxController {
@@ -158,7 +160,27 @@ class UdharController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadCachedUsers();
     fetchUsers();
+  }
+
+  void _loadCachedUsers() {
+    try {
+      final cached = HiveHelp.read('cached_users_list');
+      if (cached != null && cached is List && cached.isNotEmpty && usersList.isEmpty) {
+        usersList = cached.map((item) {
+          if (item is Map) {
+            return Map<String, dynamic>.from(item);
+          } else if (item is String) {
+            return Map<String, dynamic>.from(jsonDecode(item));
+          }
+          return <String, dynamic>{};
+        }).where((m) => m.isNotEmpty).toList();
+        filteredUsers = List.from(usersList);
+      }
+    } catch (e) {
+      debugPrint("Error loading cached users: $e");
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -214,6 +236,8 @@ class UdharController extends GetxController {
             }
             return item;
           }).toList();
+          filteredUsers = List.from(usersList);
+          HiveHelp.write('cached_users_list', usersList);
         } else {
           final msg = data['message']?.toString().trim();
           if (msg != null && msg.isNotEmpty && isManual) {
@@ -791,7 +815,11 @@ class UdharController extends GetxController {
     update();
   }
 
-  Future<bool> submitUdhar({bool popOnSuccess = true}) async {
+  Future<bool> submitUdhar({
+    bool popOnSuccess = true,
+    String? billImagePath,
+    String? idempotencyKey,
+  }) async {
     if (selectedUser == null) {
       Helpers.showSnackBar(msg: 'Please select a customer');
       return false;
@@ -810,10 +838,15 @@ class UdharController extends GetxController {
     update();
 
     final String selectedCustomerId = selectedUser!['id']?.toString() ?? '';
+    final String selectedCustomerName =
+        (selectedUser!['name'] ?? selectedUser!['customer_name'] ?? 'Customer')
+            .toString();
     final amountStr = amountCtrl.text.trim();
     final remarksStr = remarksCtrl.text.trim();
     final typeStr = transactionType;
     final paymentMethodStr = paymentMethod;
+    final txIdempotencyKey = idempotencyKey ??
+        "tx_${DateTime.now().millisecondsSinceEpoch}_${selectedCustomerId}_${amountStr.replaceAll('.', '_')}";
 
     try {
       final response = await UdharRepo.addUdhar(
@@ -823,6 +856,8 @@ class UdharController extends GetxController {
         remarks: remarksStr,
         paymentMethod: paymentMethodStr,
         createdAt: selectedDate?.toIso8601String(),
+        idempotencyKey: txIdempotencyKey,
+        billImagePath: billImagePath,
       );
 
       final Map<String, dynamic>? data = _decodeJsonMap(response.body);
@@ -858,13 +893,37 @@ class UdharController extends GetxController {
         if (popOnSuccess && Get.context != null && Navigator.canPop(Get.context!)) {
           Navigator.of(Get.context!).pop();
         }
-        await fetchUsers(force: true);
-        await fetchReports(silent: true);
-        if (selectedCustomerId.isNotEmpty) {
-          await fetchCustomerLedger(selectedCustomerId, force: true);
-        }
+
+        // Parallelize background refresh to prevent UI freezing
+        unawaited(Future.wait([
+          fetchUsers(force: true),
+          fetchReports(silent: true),
+          if (selectedCustomerId.isNotEmpty)
+            fetchCustomerLedger(selectedCustomerId, force: true),
+        ]));
+
         return true;
       } else {
+        // If response indicates server/network failure, queue offline
+        if (response.statusCode >= 500 && Get.isRegistered<OfflineSyncService>()) {
+          await OfflineSyncService.to.queueTransaction(
+            customerId: selectedCustomerId,
+            customerName: selectedCustomerName,
+            amount: amountStr,
+            type: typeStr == 'given' ? 'credit' : 'debit',
+            remarks: remarksStr,
+            paymentMethod: paymentMethodStr,
+            billImagePath: billImagePath,
+            idempotencyKey: txIdempotencyKey,
+            createdAt: selectedDate?.toIso8601String(),
+          );
+          _resetForm();
+          if (popOnSuccess && Get.context != null && Navigator.canPop(Get.context!)) {
+            Navigator.of(Get.context!).pop();
+          }
+          return true;
+        }
+
         final String apiMessage = _extractApiMessage(data, response.body);
         Helpers.showSnackBar(
           msg: apiMessage.isNotEmpty
@@ -876,6 +935,44 @@ class UdharController extends GetxController {
       }
     } catch (e) {
       debugPrint("submitUdhar error: $e");
+      // Network drop or socket exception: queue offline
+      if (Get.isRegistered<OfflineSyncService>()) {
+        await OfflineSyncService.to.queueTransaction(
+          customerId: selectedCustomerId,
+          customerName: selectedCustomerName,
+          amount: amountStr,
+          type: typeStr == 'given' ? 'credit' : 'debit',
+          remarks: remarksStr,
+          paymentMethod: paymentMethodStr,
+          billImagePath: billImagePath,
+          idempotencyKey: txIdempotencyKey,
+          createdAt: selectedDate?.toIso8601String(),
+        );
+
+        // Optimistic local update
+        final newLedger = {
+          'amount': double.tryParse(amountStr) ?? 0.0,
+          'type': typeStr == 'given' ? 'credit' : 'debit',
+          'notes': remarksStr,
+          'payment_method': paymentMethodStr,
+          'created_at': DateTime.now().toIso8601String(),
+          'sync_status': 'pending',
+        };
+        ledgerTransactions.insert(0, newLedger);
+        final amount = double.tryParse(amountStr) ?? 0.0;
+        if (typeStr == 'given') {
+          currentOutstandingBalance += amount;
+        } else {
+          currentOutstandingBalance -= amount;
+        }
+        _applyLedgerDateFilter();
+        _resetForm();
+        if (popOnSuccess && Get.context != null && Navigator.canPop(Get.context!)) {
+          Navigator.of(Get.context!).pop();
+        }
+        return true;
+      }
+
       Helpers.showSnackBar(
         msg: 'Unable to add transaction. Please try again.',
         title: 'Error',
@@ -1060,11 +1157,16 @@ class UdharController extends GetxController {
               ) ??
               0.0;
           if (currentBal < currentOutstandingBalance) {
+            final double receivedAmt =
+                (currentOutstandingBalance - currentBal).abs();
             isPaymentReceived = true;
             currentOutstandingBalance = currentBal;
             timer.cancel();
             isListeningPayment = false;
             update();
+            if (Get.isRegistered<VoiceSoundboxService>()) {
+              VoiceSoundboxService.to.announcePayment(amount: receivedAmt);
+            }
             Helpers.showSnackBar(
               msg:
                   "Payment Received (Udhar Aaya)! Ledger updated successfully.",
@@ -1080,7 +1182,7 @@ class UdharController extends GetxController {
     });
   }
 
-  // ── WhatsApp Payment Reminder ────────────────────────────────────────────────
+  // ── WhatsApp Payment Reminder with 1-Tap UPI Intent ────────────────────────
   Future<void> sendWhatsAppReminder(Map<String, dynamic> customer) async {
     final String phone = (customer['mobile'] ?? customer['phone'] ?? '')
         .toString()
@@ -1089,13 +1191,25 @@ class UdharController extends GetxController {
     final double balance =
         (customer['balance'] ?? currentOutstandingBalance).toDouble();
 
-    final String merchantUpi =
-        HiveHelp.read(Keys.merchantUpiId) ?? 'paysecure@upi';
+    final String shopName =
+        (HiveHelp.read('shop_name') ?? 'Udhar Card Merchant').toString().trim();
+    final String merchantUpi = (HiveHelp.read(Keys.merchantUpiId) ??
+            HiveHelp.read('merchant_upi_id') ??
+            'paysecure@upi')
+        .toString()
+        .trim();
+    final String encodedShop =
+        Uri.encodeComponent(shopName.isEmpty ? 'Merchant' : shopName);
     final String upiUrl =
-        "upi://pay?pa=$merchantUpi&pn=Merchant&am=${balance.abs()}&cu=INR";
+        "upi://pay?pa=$merchantUpi&pn=$encodedShop&am=${balance.abs()}&cu=INR";
 
     final String message =
-        "Namaste $name ji,\nUdharCard Merchant par aapka ₹${balance.abs().toStringAsFixed(0)} ka udhar balance pending hai.\nKripya is UPI link se payment karein:\n$upiUrl\n\nDhanyawad!";
+        "Namaste $name ji 🙏\n\n"
+        "Aapka kul udhar hisab *$shopName* par *₹${balance.abs().toStringAsFixed(0)}* baki hai.\n\n"
+        "📲 *Abhi 1-Click me UPI se payment karne ke liye yahan tap karein:*\n"
+        "$upiUrl\n\n"
+        "(GPay / PhonePe / Paytm kisi bhi app se payment kar sakte hain)\n\n"
+        "Kisi bhi jankari ke liye dukan par sampark karein. Dhanyawad! ✨";
 
     if (phone.isEmpty) {
       Helpers.showSnackBar(msg: "Customer phone number unavailable.");

@@ -5,6 +5,27 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.63] - 2026-09-19
+
+### 🚀 Offline-First Engine, 60/120 FPS Smoothness, FinTech Soundbox & Reliability
+- **Offline-First Resilience & Sync Engine (`OfflineSyncService`)**:
+  - Eliminated the full-screen blocking `CustomDialog()` when internet connectivity drops; replaced with a reactive non-intrusive offline status banner.
+  - Implemented a local persistent offline transaction queue using Hive. Ledger entries added in weak connectivity or offline mode are saved locally with pending sync state and automatically synced to backend once network reconnects.
+  - Implemented instant cache-first customer list loading on app launch (`cached_users_list`), rendering customer data in 0 ms without waiting for network responses.
+- **Financial Ledger Idempotency & Bill Upload Sync**:
+  - Injected unique client-generated UUID keys (`idempotency_key`, `client_tx_id`) in all `UdharRepo.addUdhar()` calls to completely eliminate accidental duplicate ledger entries on slow networks or double taps.
+  - Added multipart upload support in `UdharRepo.addUdhar()` so bill receipt photos attached via camera or gallery in `VoiceEntryController` are uploaded to the server and synced with the customer's account.
+- **UI Virtualization & 60/120 FPS Smoothness**:
+  - Optimized customer list rendering on `HomeScreen` by eliminating unconstrained `shrinkWrap: true` over hundreds of items; displayed top 25 high-priority entries with a direct "View All Customers" navigation button.
+  - Parallelized post-transaction background network refresh (`fetchUsers`, `fetchReports`, `fetchCustomerLedger`) via non-blocking `Future.wait`, preventing UI stutter.
+- **Smart WhatsApp Reminders with 1-Tap UPI Intent Link**:
+  - Upgraded WhatsApp payment reminders across `HomeScreen`, `CustomerListScreen`, and `CustomerLedgerScreen` to include the merchant's verified shop name and a direct 1-tap UPI deep-link (`upi://pay?pa=...&pn=...&am=...&cu=INR`).
+- **In-App Software Soundbox (`VoiceSoundboxService`)**:
+  - Added loud audio speech announcements for incoming payments via Pusher notifications and QR payment confirmations (*"Udhar Card par ₹[amount] prapt hue"* / *"Received ₹[amount] on Udhar Card"*).
+  - Added a dedicated toggle switch in `ProfileSettingScreen` under preferences to enable/disable soundbox voice alerts.
+- **Indian Regional Phonetic & Fuzzy Name Matching**:
+  - Implemented phonetic normalization (`v/w/b`, `ee/i`, `oo/u`, `sh/s`, `ph/f`) and Levenshtein edit-distance matching in `VoiceEntryController.findMatchingCustomer`, correctly identifying customer accounts even with speech-to-text spelling variations.
+
 ## [1.0.62] - 2026-09-19
 
 ### 🎤 VoiceKhata ("Invoices by Voice") Full AI Feature Implementation

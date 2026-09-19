@@ -22,6 +22,7 @@ import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
 import '../../../utils/services/language_service.dart';
+import '../../../utils/services/voice_soundbox_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/language_selection_sheet.dart';
@@ -733,6 +734,61 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                             }),
                           );
                         },
+                      ),
+                      VSpace(16.h),
+
+                      // ── Section 3.4: In-App Voice Soundbox Alerts ──────────────────
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppThemes.getFillColor(),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: AppColors.mainColor.withValues(alpha: 0.15),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Obx(() {
+                          final isEnabled = Get.isRegistered<VoiceSoundboxService>()
+                              ? VoiceSoundboxService.to.isSoundboxEnabled.value
+                              : true;
+                          return ListTile(
+                            leading: Container(
+                              height: 36.h,
+                              width: 36.h,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF00A86B).withValues(alpha: 0.1),
+                              ),
+                              child: const Icon(
+                                Icons.volume_up_rounded,
+                                color: Color(0xFF00A86B),
+                              ),
+                            ),
+                            title: Text(
+                              "Voice Soundbox Payment Alerts",
+                              style: t.titleMedium?.copyWith(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              "Speaks payment received aloud in Hindi/English",
+                              style: t.bodySmall?.copyWith(
+                                fontSize: 12.sp,
+                                color: AppThemes.getParagraphColor(),
+                              ),
+                            ),
+                            trailing: Switch.adaptive(
+                              activeTrackColor: const Color(0xFF00A86B),
+                              value: isEnabled,
+                              onChanged: (val) {
+                                if (Get.isRegistered<VoiceSoundboxService>()) {
+                                  VoiceSoundboxService.to.toggleSoundbox(val);
+                                }
+                              },
+                            ),
+                          );
+                        }),
                       ),
                       VSpace(16.h),
 

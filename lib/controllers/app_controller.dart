@@ -13,24 +13,33 @@ import '../data/source/errors/check_api_status.dart';
 import '../utils/services/helpers.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/localstorage/keys.dart';
+import '../utils/services/offline_sync_service.dart';
 import 'profile_controller.dart';
 
 class AppController extends GetxController {
   static AppController get to => Get.find<AppController>();
   //-------------- check internet connectivity--------------
+  final RxBool isOffline = false.obs;
+
   void updateConnectionStatus(ConnectivityResult connectivityResult) {
     if (connectivityResult == ConnectivityResult.none) {
-      Get.dialog(
-        const CustomDialog(),
-        barrierDismissible:
-            false, // Prevent the user from closing the dialog by tapping outside
+      isOffline.value = true;
+      Helpers.showSnackBar(
+        msg:
+            'You are offline. Transactions will be saved locally & synced automatically.',
+        title: 'Offline Mode',
       );
     } else {
-      // Dismiss the dialog if it's currently displayed
+      final wasOffline = isOffline.value;
+      isOffline.value = false;
       if (Get.isDialogOpen == true) {
         Get.back();
       }
+      if (wasOffline && Get.isRegistered<OfflineSyncService>()) {
+        OfflineSyncService.to.syncPendingTransactions();
+      }
     }
+    update();
   }
 
   //-------------------Handle app theme----------------

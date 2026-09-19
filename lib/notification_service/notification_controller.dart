@@ -12,6 +12,7 @@ import '../routes/routes_name.dart';
 import '../utils/services/localstorage/hive.dart';
 import '../utils/services/localstorage/keys.dart';
 import '../controllers/udhar_controller.dart';
+import '../utils/services/voice_soundbox_service.dart';
 import 'notification_service.dart';
 
 class PushNotificationController extends GetxController {
@@ -96,6 +97,22 @@ class PushNotificationController extends GetxController {
         final custId = udharCtrl.selectedUser!['id']?.toString() ?? '';
         if (custId.isNotEmpty) {
           udharCtrl.fetchCustomerLedger(custId, force: true);
+        }
+      }
+    }
+
+    // In-App Soundbox Voice Announcement
+    if (Get.isRegistered<VoiceSoundboxService>()) {
+      final regExp = RegExp(
+        r'(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)',
+        caseSensitive: false,
+      );
+      final match = regExp.firstMatch(text);
+      if (match != null) {
+        final amtStr = match.group(1)?.replaceAll(',', '') ?? '0';
+        final double amt = double.tryParse(amtStr) ?? 0.0;
+        if (amt > 0) {
+          VoiceSoundboxService.to.announcePayment(amount: amt);
         }
       }
     }

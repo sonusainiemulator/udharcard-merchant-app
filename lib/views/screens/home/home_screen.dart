@@ -78,10 +78,28 @@ class _HomeScreenState extends State<HomeScreen> {
     final cleanPhone = phone.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
     final formattedPhone =
         cleanPhone.startsWith('+') ? cleanPhone : '+91$cleanPhone';
-    final msg = Uri.encodeComponent(
-      "Namaste $name ji,\nYour total pending Udhar balance on Udhar Card is ₹${amount.toStringAsFixed(0)}.\nPlease clear your dues at the earliest via UPI or Cash.\nThank you! 🙏",
-    );
-    final url = "https://wa.me/$formattedPhone?text=$msg";
+    final String shopName =
+        (HiveHelp.read('shop_name') ?? 'Udhar Card Merchant').toString().trim();
+    final String merchantUpi = (HiveHelp.read(Keys.merchantUpiId) ??
+            HiveHelp.read('merchant_upi_id') ??
+            'paysecure@upi')
+        .toString()
+        .trim();
+    final String encodedShop =
+        Uri.encodeComponent(shopName.isEmpty ? 'Merchant' : shopName);
+    final String upiUrl =
+        "upi://pay?pa=$merchantUpi&pn=$encodedShop&am=${amount.abs()}&cu=INR";
+
+    final String messageText =
+        "Namaste $name ji 🙏\n\n"
+        "Aapka kul udhar hisab *$shopName* par *₹${amount.abs().toStringAsFixed(0)}* baki hai.\n\n"
+        "📲 *Abhi 1-Click me UPI se payment karne ke liye yahan tap karein:*\n"
+        "$upiUrl\n\n"
+        "(GPay / PhonePe / Paytm kisi bhi app se payment kar sakte hain)\n\n"
+        "Kisi bhi jankari ke liye dukan par sampark karein. Dhanyawad! ✨";
+
+    final url =
+        "https://wa.me/$formattedPhone?text=${Uri.encodeComponent(messageText)}";
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1217,13 +1235,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
 
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                    itemBuilder: (context, index) {
-                      final customer = list[index];
+                  final displayList = (_searchQuery.isEmpty && list.length > 25)
+                      ? list.take(25).toList()
+                      : list;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: displayList.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                        itemBuilder: (context, index) {
+                          final customer = displayList[index];
                       final name = (customer['name'] ??
                               customer['customer_name'] ??
                               'Customer')
@@ -1414,6 +1439,36 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
+                  ),
+                  if (list.length > 25 && _searchQuery.isEmpty) ...[
+                        SizedBox(height: 10.h),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Get.toNamed(RoutesName.customerListScreen);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.mainColor,
+                            side: BorderSide(
+                              color:
+                                  AppColors.mainColor.withValues(alpha: 0.35),
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            minimumSize: Size(double.infinity, 44.h),
+                          ),
+                          icon: Icon(Icons.people_alt_outlined, size: 18.sp),
+                          label: Text(
+                            "View All ${list.length} Customers (Khata Book)  ➔",
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   );
                 },
               ),
