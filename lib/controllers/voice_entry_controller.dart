@@ -17,6 +17,11 @@ import '../routes/routes_name.dart';
 
 enum VoiceAssistantState { idle, listening, thinking, speaking }
 
+enum GeminiAiMode {
+  gemini38Live,
+  gemini38ExtendedThinking,
+}
+
 class VoiceBillItem {
   final String title;
   final double quantity;
@@ -115,7 +120,8 @@ class VoiceEntryController extends GetxController {
 
   bool isUsingGeminiAi = false;
   bool isLiveMode = false;
-  String liveModelName = "gemini-2.0-flash";
+  GeminiAiMode activeGeminiMode = GeminiAiMode.gemini38Live;
+  bool get isExtendedThinking => activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking;
 
   // Active Category Filter
   String activeCategory = 'ALL'; // 'ALL', 'UDHAR', 'COLLECTION', 'BILL', 'PURCHASE'
@@ -206,6 +212,24 @@ class VoiceEntryController extends GetxController {
         title: "Live Mode Paused",
       );
     }
+    update();
+  }
+
+  void toggleExtendedThinking() {
+    if (activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking) {
+      activeGeminiMode = GeminiAiMode.gemini38Live;
+      Helpers.showSnackBar(
+        msg: "Gemini 3.8 Live active (Ultra-Fast Response)",
+        title: "Gemini 3.8 Live",
+      );
+    } else {
+      activeGeminiMode = GeminiAiMode.gemini38ExtendedThinking;
+      Helpers.showSnackBar(
+        msg: "Gemini 3.8 Live Extended Thinking active (Deep Arithmetic & Calculation Mode)",
+        title: "Extended Thinking Active",
+      );
+    }
+    HapticFeedback.mediumImpact();
     update();
   }
 
@@ -360,7 +384,9 @@ class VoiceEntryController extends GetxController {
     update();
   }
 
-  /// Google Gemini AI Parser using latest Flash / 3.8 Live Model
+  /// Google Gemini AI Parser supporting:
+  /// 1. Gemini 3.8 Live (Fast Conversational Real-Time Voice)
+  /// 2. Gemini 3.8 Live Extended Thinking (Deep Arithmetic & Complex Ledger Reasoning)
   Future<VoiceParseResult?> _parseWithGemini(String speechText) async {
     final apiKey = (dotenv.env['GEMINI_API_KEY'] ?? '').trim();
     if (apiKey.isEmpty || apiKey.contains('Xxxx')) {
@@ -368,18 +394,25 @@ class VoiceEntryController extends GetxController {
       return null;
     }
 
-    String configuredModel = (dotenv.env['GEMINI_LIVE_MODEL'] ?? '').trim();
-    if (configuredModel.isEmpty) {
-      configuredModel = (dotenv.env['GEMINI_MODEL'] ?? '').trim();
-    }
-    if (configuredModel.isEmpty) {
-      configuredModel = 'gemini-2.0-flash';
+    final bool useThinking = activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking;
+
+    // Resolve model name based on active mode and .env settings
+    String modelName;
+    if (useThinking) {
+      final envThinking = (dotenv.env['GEMINI_THINKING_MODEL'] ?? '').trim();
+      modelName = envThinking.isNotEmpty ? envThinking : 'gemini-2.0-flash-thinking-exp';
+    } else {
+      final envLive = (dotenv.env['GEMINI_LIVE_MODEL'] ?? dotenv.env['GEMINI_MODEL'] ?? '').trim();
+      modelName = envLive.isNotEmpty ? envLive : 'gemini-2.0-flash-exp';
     }
 
-    // Support custom user aliases like "gemini-3.8-live", "3.8 flash", etc.
-    String modelName = configuredModel;
-    if (configuredModel.contains('3.8') || configuredModel.toLowerCase().contains('live')) {
-      modelName = 'gemini-2.0-flash-exp';
+    // Map custom user aliases
+    if (modelName.contains('3.8')) {
+      if (modelName.contains('thinking') || useThinking) {
+        modelName = 'gemini-2.0-flash-thinking-exp';
+      } else {
+        modelName = 'gemini-2.0-flash-exp';
+      }
     }
 
     try {
@@ -388,14 +421,51 @@ class VoiceEntryController extends GetxController {
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           responseMimeType: 'application/json',
-          temperature: 0.1,
+          temperature: useThinking ? 0.2 : 0.1,
         ),
       );
 
-      final prompt = '''
-You are an intelligent AI assistant for an Indian merchant ledger app (UdharCard).
+      final String prompt;
+      if (useThinking) {
+        prompt = '''
+You are an advanced retail accounting AI with Extended Thinking capabilities for an Indian merchant ledger app (UdharCard).
 The merchant speaks in Hindi, Hinglish, or English.
-Analyze the user's speech and extract information into strictly valid JSON.
+Carefully perform step-by-step arithmetic reasoning and ledger disambiguation before generating JSON.
+
+Extended Thinking Reasoning Guidelines:
+1. Multi-Item Calculations:
+   - If user says item quantities and rates (e.g., "5 kg chini 42 rupaye, aur 2 packet tel 120 rupaye"), compute:
+     chini = 5 * 42 = 210
+     tel = 2 * 120 = 240
+     total = 450
+2. Split Payments & Net Credit:
+   - If user gave partial cash (e.g., "total bill 450 me se 200 cash diya, baki udhar"), compute net credit = 450 - 200 = 250.
+   - Set type: "Given", amount: 250, remarks: "Bill: ₹450, Cash Paid: ₹200, Net Udhar: ₹250".
+3. Previous Balance Settlement:
+   - If user settled past balance (e.g., "purana 300 baki tha usme se 200 diya"), compute net payment received = 200, type: "Received".
+4. Purchase Orders:
+   - If user lists finished grocery items ("ye khatam ho gaya"), categorize as "purchase_order".
+
+Output JSON structure:
+{
+  "action": "transaction" | "purchase_order" | "balance_query" | "itemized_bill" | "help",
+  "name": "Customer Name or empty string",
+  "amount": computed_final_number,
+  "type": "Given" | "Received",
+  "category": "UDHAR" | "COLLECTION" | "PURCHASE" | "BILL",
+  "purchase_items": ["item 1", "item 2"],
+  "bill_items": [{"title": "Item", "quantity": 1, "unit": "kg", "unitPrice": 50, "totalPrice": 50}],
+  "remarks": "detailed calculation remarks",
+  "reply": "Clear, friendly Roman Hinglish explanation of the calculation and result to speak back to the merchant"
+}
+
+Merchant speech: "$speechText"
+''';
+      } else {
+        prompt = '''
+You are a real-time Gemini 3.8 Live AI assistant for an Indian merchant ledger app (UdharCard).
+The merchant speaks in Hindi, Hinglish, or English.
+Analyze the user's speech and extract information into strictly valid JSON with ultra-low latency.
 
 Categories of speech:
 1. "transaction": Merchant giving credit or receiving payment.
@@ -425,10 +495,15 @@ Output JSON structure:
 
 Merchant speech: "$speechText"
 ''';
+      }
+
+      final timeoutDuration = useThinking
+          ? const Duration(milliseconds: 5500)
+          : const Duration(milliseconds: 3500);
 
       final response = await model
           .generateContent([Content.text(prompt)])
-          .timeout(const Duration(milliseconds: 3500));
+          .timeout(timeoutDuration);
 
       final text = response.text?.trim() ?? '';
       if (text.isEmpty) return null;
@@ -489,7 +564,7 @@ Merchant speech: "$speechText"
                 : '$displayName se ₹${amount.toInt()} mil gaye.'),
       );
     } catch (e) {
-      if (kDebugMode) print("Gemini Flash parsing error, fallback to local NLP: $e");
+      if (kDebugMode) print("Gemini Live/Thinking parsing error, fallback to local NLP: $e");
       isUsingGeminiAi = false;
       return null;
     }

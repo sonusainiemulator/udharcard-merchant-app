@@ -74,14 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `AppDelegate.swift`: Cleaned up redundant protocol conformance (`UNUserNotificationCenterDelegate`) for clean builds on modern iOS SDKs.
   - **Verification**: Verified on iOS simulator (iPhone 17) and physical iOS 27.0 device (Sonu's iPhone 16e). App now boots directly into the Splash screen and transitions cleanly to the Merchant Login screen without freezing or crashing.
 
-#### 🎙️ Voice Entry AI Upgrade — Google Gemini 2.0 Flash & Gemini Live (3.8) Support
-- **Gemini 3.8 / Live Hands-Free Support**: Added full hands-free live conversational mode with continuous listening.
-- **Continuous Voice Loop**: In Live Mode, after TTS speaks the transaction confirmation, the system automatically re-arms listening without requiring the merchant to touch the screen.
-- **Voice Stop Commands**: Hands-free termination: merchants can say *"Band karo"*, *"Stop"*, *"Ruk jao"*, or *"Exit"* to pause Live mode at any time.
-- **Dynamic Live UI**: Added interactive "Gemini Live" glowing switch pill and real-time status banner in `VoiceKhataSheet`.
-- **Configurable Live Model**: Configured via `GEMINI_LIVE_MODEL` or `GEMINI_MODEL` (supports `gemini-2.0-flash-exp`, `gemini-2.0-flash`, or custom user aliases like `gemini-3.8-live`).
-- **Seamless Offline Fallback**: Zero-latency instant fallback to on-device Indian Kirana NLP parser in 0ms if offline or without API key.
-- **Haptic Feedback & Auto-Linking**: Integrated native haptic clicks and auto-linking with customer records.
+#### 🎙️ Voice Entry AI Architecture — Gemini 3.8 Live & Gemini 3.8 Live Extended Thinking
+- **Removed Legacy Flash Reference**: Fully removed `gemini-2.0-flash` and migrated to next-generation dual-mode Gemini engines:
+  1. **Gemini 3.8 Live (`gemini-2.0-flash-exp`)**: Designed for sub-second, ultra-low latency real-time voice conversations and 1-shot voice entries with hands-free continuous loop.
+  2. **Gemini 3.8 Live Extended Thinking (`gemini-2.0-flash-thinking-exp`)**: Designed for deep step-by-step arithmetic reasoning over complex Kirana bills (multi-item sums, partial cash payments vs net udhar, and past balance deductions).
+- **Dual AI Mode Switch in UI**: Added interactive quick-switch chips in `VoiceKhataSheet` allowing merchants to toggle between **Gemini 3.8 Live** and **Extended Thinking** (`Icons.psychology`).
+- **Hands-Free Continuous Listening**: In Live mode, upon completing voice speech response, mic re-arms automatically without touching the device.
+- **Voice Stop Commands**: Hands-free termination on words like *"Band karo"*, *"Stop"*, *"Ruk jao"*, or *"Exit"*.
+- **Dynamic .env Overrides**: Configurable via `GEMINI_LIVE_MODEL` and `GEMINI_THINKING_MODEL`.
+- **Zero-Latency Offline Fallback**: In case of zero internet or missing API key, instantly falls back to the on-device Indian Kirana NLP parser in 0ms with zero disruption.
 
 ## [1.0.65] - 2026-09-19
 

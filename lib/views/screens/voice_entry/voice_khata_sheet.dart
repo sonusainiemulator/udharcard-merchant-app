@@ -211,13 +211,61 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                             ),
                             HSpace(5.w),
                             Text(
-                              _controller.isLiveMode ? "LIVE AI" : "Gemini Live",
+                              _controller.isLiveMode ? "LIVE AI" : "Gemini 3.8 Live",
                               style: GoogleFonts.outfit(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w700,
                                 color: _controller.isLiveMode
                                     ? const Color(0xFFEF4444)
                                     : Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Gemini 3.8 Extended Thinking Mode Toggle Switch
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _controller.toggleExtendedThinking();
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: _controller.isExtendedThinking
+                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(
+                            color: _controller.isExtendedThinking
+                                ? const Color(0xFF8B5CF6)
+                                : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            width: _controller.isExtendedThinking ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.psychology,
+                              size: 14.sp,
+                              color: _controller.isExtendedThinking
+                                  ? const Color(0xFF8B5CF6)
+                                  : subtleText,
+                            ),
+                            HSpace(4.w),
+                            Text(
+                              _controller.isExtendedThinking ? "Thinking ON" : "Thinking",
+                              style: GoogleFonts.outfit(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w700,
+                                color: _controller.isExtendedThinking
+                                    ? const Color(0xFF8B5CF6)
+                                    : subtleText,
                               ),
                             ),
                           ],
@@ -375,16 +423,20 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                 Center(
                   child: Text(
                     controller.isListening
-                        ? (controller.isLiveMode ? "● Gemini Live: Listening..." : "Listening...")
+                        ? (controller.isLiveMode ? "● Gemini 3.8 Live: Listening..." : "Listening...")
                         : controller.isThinking
-                            ? "Gemini AI Processing..."
-                            : (controller.isLiveMode ? "Gemini Live Active (Waiting...)" : "Tap Mic to Speak"),
+                            ? (controller.isExtendedThinking
+                                ? "🧠 Gemini 3.8 Thinking & Calculating..."
+                                : "Gemini 3.8 Processing...")
+                            : (controller.isLiveMode ? "Gemini 3.8 Live Active (Waiting...)" : "Tap Mic to Speak"),
                     style: GoogleFonts.outfit(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: controller.isLiveMode
                           ? const Color(0xFFEF4444)
-                          : (controller.isListening ? emerald : textColor),
+                          : controller.isExtendedThinking
+                              ? const Color(0xFF8B5CF6)
+                              : (controller.isListening ? emerald : textColor),
                     ),
                   ),
                 ),
@@ -393,7 +445,9 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                   child: Text(
                     controller.isLiveMode
                         ? "Hands-free Live mode on. Say 'Band karo' to stop."
-                        : "Say the whole bill or transaction.",
+                        : controller.isExtendedThinking
+                            ? "Extended Thinking ON: Speak full bill, rates & split payments."
+                            : "Say the whole bill or transaction.",
                     style: GoogleFonts.inter(
                       fontSize: 12.sp,
                       color: subtleText,
