@@ -20,6 +20,7 @@ import '../utils/services/offline_sync_service.dart';
 import '../utils/services/subscription_gate_service.dart';
 import '../utils/services/voice_soundbox_service.dart';
 import '../config/app_colors.dart';
+import '../views/screens/subscription/widgets/upgrade_feature_sheet.dart';
 
 class UdharController extends GetxController {
   static UdharController get to => Get.find<UdharController>();
@@ -39,9 +40,12 @@ class UdharController extends GetxController {
   }
 
   Future<void> openVoiceEntryWithSoftGate() async {
-    final String nudge = SubscriptionGateService.voiceEntrySoftNudge();
     if (!SubscriptionGateService.isVoiceEntryIncluded()) {
-      Helpers.showSnackBar(msg: nudge, title: 'Plan Notice');
+      UpgradeFeatureSheet.show(
+        title: 'Unlock AI VoiceKhata',
+        subtitle: 'Manage credit 10x faster using simple voice commands — no typing needed.',
+      );
+      return;
     }
     Get.toNamed(RoutesName.voiceEntryScreen);
   }

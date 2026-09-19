@@ -4,128 +4,292 @@ import 'package:get/get.dart';
 import '../../../controllers/subscription_controller.dart';
 import '../../../utils/services/helpers.dart';
 import '../../widgets/custom_appbar.dart';
+import 'widgets/plan_card_widget.dart';
 
-// Shared palette for this screen (file-level so every private class can use it)
-const Color _brand = Color(0xFF0857E6);
-const Color _ink = Color(0xFF1A1D2B);
-const Color _sub = Color(0xFF7A7E8C);
-const Color _bg = Color(0xFFF6F7F9);
-const Color _card = Colors.white;
-const Color _line = Color(0xFFEEF0F4);
-const Color _green = Color(0xFF21A35C);
-const Color _amber = Color(0xFFB45309);
-
-/// Subscription plans screen for merchant.
-/// - Lists available plans, current plan, and offline (admin-approval)
-///   upgrade request flow. Online (Razorpay) payment is marked coming-soon.
-class SubscriptionPlansScreen extends StatelessWidget {
+class SubscriptionPlansScreen extends StatefulWidget {
   const SubscriptionPlansScreen({super.key});
+
+  @override
+  State<SubscriptionPlansScreen> createState() => _SubscriptionPlansScreenState();
+}
+
+class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
+  int _currentPageIndex = 1; // Default highlight Premium Plan in the middle!
+  final PageController _pageController = PageController(
+    initialPage: 1,
+    viewportFraction: 0.88,
+  );
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<SubscriptionController>(
       init: SubscriptionController.to,
       builder: (controller) {
+        final activeCode = controller.activePlanCode.toLowerCase();
+        final isTrial = controller.isTrialActive;
+        final trialDays = controller.trialDaysRemaining;
+
         return Scaffold(
-          backgroundColor: _bg,
+          backgroundColor: const Color(0xFFF8FAFC),
           appBar: CustomAppBar(
             title: 'Choose a Plan',
             actions: [
               if (!controller.isPlanEnrollmentRequired)
                 TextButton(
                   onPressed: controller.skipPlanEnrollment,
-                  child: const Text('Skip for now'),
+                  child: const Text(
+                    'Skip for now',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
                 ),
             ],
           ),
-          body: controller.isLoading
-              ? const Center(child: CircularProgressIndicator(color: _brand))
+          body: controller.isLoading && controller.plans.isEmpty
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF1D4ED8)),
+                )
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   children: [
-                    // ---- Razorpay online payment "coming soon" notice ----
+                    // --- Active Trial / Plan Banner ---
+                    if (isTrial)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFF93C5FD)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.stars_rounded, color: Color(0xFF1D4ED8), size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    '🎉 Premium Free Trial Active!',
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF1E3A8A),
+                                    ),
+                                  ),
+                                  Text(
+                                    '$trialDays ${trialDays == 1 ? "day" : "days"} remaining. Enjoy full AI Voice Khata access.',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: Color(0xFF1E40AF),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (activeCode != 'basic' && controller.currentSubscription != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 26),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Your current plan: ${controller.activePlanCode.toUpperCase()}',
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF166534),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // --- Pending Offline Request Banner ---
+                    if (controller.pendingOfflineRequest != null)
+                      _buildPendingRequestBanner(controller.pendingOfflineRequest!),
+
+                    // --- Billing Cycle Switcher ---
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildCycleButton(
+                              title: 'Monthly',
+                              isSelected: controller.selectedBillingCycle == 'monthly',
+                              onTap: () => controller.setBillingCycle('monthly'),
+                            ),
+                            _buildCycleButton(
+                              title: 'Yearly',
+                              badge: 'SAVE 15%',
+                              isSelected: controller.selectedBillingCycle == 'yearly',
+                              onTap: () => controller.setBillingCycle('yearly'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- Quick Plan Navigation Tabs ---
+                    Row(
+                      children: List.generate(controller.plans.length, (index) {
+                        final p = controller.plans[index] as Map<String, dynamic>;
+                        final pName = p['name']?.toString() ?? 'Plan';
+                        final isSelected = _currentPageIndex == index;
+
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => _currentPageIndex = index);
+                              _pageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected ? Colors.white : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF1D4ED8) : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.04),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Text(
+                                pName.replaceAll(' Plan', ''),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // --- Horizontal Swipeable Plan Cards ---
+                    SizedBox(
+                      height: 590,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: controller.plans.length,
+                        onPageChanged: (idx) {
+                          setState(() => _currentPageIndex = idx);
+                        },
+                        itemBuilder: (context, index) {
+                          final plan = controller.plans[index] as Map<String, dynamic>;
+                          final code = plan['code']?.toString().toLowerCase() ?? '';
+                          final isCurrent = activeCode == code;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: PlanCardWidget(
+                              plan: plan,
+                              isCurrent: isCurrent,
+                              isTrialActive: isCurrent && isTrial,
+                              billingCycle: controller.selectedBillingCycle,
+                              isLoading: controller.isStartingTrial || controller.isCheckoutLoading,
+                              onSelectPlan: () => _handlePlanSelection(controller, plan),
+                              onStartTrial: () => _handleStartTrial(controller, plan),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Page Indicator Dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(controller.plans.length, (idx) {
+                        final isSel = _currentPageIndex == idx;
+                        return Container(
+                          width: isSel ? 20 : 7,
+                          height: 7,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: isSel ? const Color(0xFF1D4ED8) : const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Trust Badge Footer
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAF1FF),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBBD3FF)),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: Row(
                         children: const [
-                          Icon(Icons.lock_clock_outlined,
-                              color: _brand, size: 20),
-                          SizedBox(width: 10),
+                          Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 20),
+                          SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Online card payment is coming soon. For now, request an upgrade and pay offline — admin will activate it.',
+                              'Zero Risk. You can cancel or switch plans anytime. Free Basic Plan remains available forever.',
                               style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: Color(0xFF1451B0),
-                                  height: 1.3),
+                                fontSize: 11.5,
+                                color: Color(0xFF64748B),
+                                height: 1.3,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // ---- Current plan banner ----
-                    if (controller.currentSubscription != null)
-                      _CurrentPlanBanner(
-                          subscription: controller.currentSubscription!),
-
-                    // ---- Pending offline request status ----
-                    if (controller.pendingOfflineRequest != null)
-                      _PendingRequestCard(req: controller.pendingOfflineRequest!),
-
-                    const SizedBox(height: 8),
-
-                    // currency/billing toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Monthly'),
-                          selected:
-                              controller.selectedBillingCycle == 'monthly',
-                          onSelected: (_) =>
-                              controller.setBillingCycle('monthly'),
-                        ),
-                        const SizedBox(width: 10),
-                        ChoiceChip(
-                          label: const Text('Yearly (save)'),
-                          selected:
-                              controller.selectedBillingCycle == 'yearly',
-                          onSelected: (_) =>
-                              controller.setBillingCycle('yearly'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    // ---- Plan cards ----
-                    ...controller.plans
-                        .map((p) => _PlanCard(
-                              plan: p as Map<String, dynamic>,
-                              isCurrent: _isCurrent(controller, p['code']),
-                              isLoading: controller.isRequestingOffline,
-                              billing: controller.selectedBillingCycle,
-                              onRequestOffline: () async {
-                                final name = p['name']?.toString() ?? 'Plan';
-                                await _confirmAndRequest(
-                                    controller, p['code'].toString(), name);
-                              },
-                            ))
-                        .expand((w) => [w, const SizedBox(height: 12)]),
-
-                    const SizedBox(height: 4),
-                    Text(
-                      'Admin will confirm your payment and activate the plan. In case of any query, contact support.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: _sub, fontSize: 11.5),
-                    ),
-                    const SizedBox(height: 8),
                   ],
                 ),
         );
@@ -133,273 +297,242 @@ class SubscriptionPlansScreen extends StatelessWidget {
     );
   }
 
-  bool _isCurrent(dynamic controller, dynamic code) {
-    final active = controller.currentSubscription;
-    final plan = active?['plan'];
-    final planCode = plan is Map ? plan['code']?.toString() : null;
-    if (planCode == null) return false; // free/starter fallback, don't force lock
-    return planCode == code?.toString();
-  }
-
-  Future<void> _confirmAndRequest(
-      SubscriptionController ctrl, String planCode, String planName) async {
-    if (ctrl.pendingOfflineRequest != null) {
-      Helpers.showSnackBar(
-          msg:
-              'You already have a pending upgrade request. Please wait for admin approval.');
-      return;
-    }
-    final ok = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Request Offline Upgrade'),
-        content: Text(
-            'Request \"$planName\" plan (${ctrl.selectedBillingCycle})?\n\n'
-            'Admin will contact you for payment confirmation and activate the plan after approval.'),
-        actions: [
-          TextButton(
-              onPressed: () => Get.back(result: false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: _brand, foregroundColor: Colors.white),
-              onPressed: () => Get.back(result: true),
-              child: const Text('Send Request')),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await ctrl.requestOfflineUpgrade(
-          planCode: planCode, planName: planName);
-    }
-  }
-}
-
-class _CurrentPlanBanner extends StatelessWidget {
-  const _CurrentPlanBanner({required this.subscription});
-  final Map<String, dynamic> subscription;
-
-  @override
-  Widget build(BuildContext context) {
-    final status = subscription['status']?.toString() ?? '';
-    final plan = subscription['plan'] is Map
-        ? Map<String, dynamic>.from(subscription['plan'])
-        : null;
-    final name = plan?['name']?.toString() ?? 'Plan';
-    final limit = plan?['customer_limit']?.toString();
-    final renews = subscription['renews_at']?.toString() ?? '';
-
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE9F6EF),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFBCE4CD)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.verified_user_rounded, color: _green, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Your plan: $name',
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800)),
-                if (limit != null)
-                  Text('Up to $limit customers',
-                      style: const TextStyle(fontSize: 12.5, color: _sub)),
-                if (renews.isNotEmpty && status == 'active')
-                  Text('Renews: ${_shortDate(renews)}',
-                      style: const TextStyle(fontSize: 12, color: _sub)),
-              ],
-            ),
-          ),
-          if (status == 'active')
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _green,
-                borderRadius: BorderRadius.circular(20),
+  Widget _buildCycleButton({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
               ),
-              child: const Text('Active',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700)),
             ),
-        ],
+            if (badge != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF15803D),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  String _shortDate(String iso) {
-    try {
-      final d = DateTime.parse(iso);
-      return '${d.day}-${d.month}-${d.year}';
-    } catch (_) {
-      return iso;
-    }
-  }
-}
+  Widget _buildPendingRequestBanner(Map<String, dynamic> req) {
+    final code = req['requested_plan_code']?.toString() ?? 'Plan';
+    final when = req['created_at']?.toString().split('T').first ?? '';
 
-class _PendingRequestCard extends StatelessWidget {
-  const _PendingRequestCard({required this.req});
-  final Map<String, dynamic> req;
-
-  @override
-  Widget build(BuildContext context) {
-    final plan = req['plan'] is Map
-        ? Map<String, dynamic>.from(req['plan'])
-        : null;
-    final String? fromPlan =
-        plan == null ? null : plan['code']?.toString();
-    final code =
-        ((req['requested_plan_code'] ?? '').toString().isNotEmpty)
-            ? (req['requested_plan_code'] ?? '').toString()
-            : (fromPlan ?? '');
-    final when =
-        req['created_at']?.toString().split('T').first ?? '';
     return Container(
-      margin: const EdgeInsets.only(top: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7E6),
+        color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3D9A4)),
+        border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.hourglass_top_rounded,
-              color: Color(0xFFB45309), size: 22),
+          const Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706), size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Your upgrade request for "$code" is pending approval.\nSubmitted: $when',
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF7c4a03)),
+              'Offline upgrade request for "$code" submitted on $when. Admin will verify and activate your plan.',
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E)),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({
-    required this.plan,
-    required this.isCurrent,
-    required this.isLoading,
-    required this.billing,
-    required this.onRequestOffline,
-  });
+  Future<void> _handleStartTrial(
+    SubscriptionController controller,
+    Map<String, dynamic> plan,
+  ) async {
+    final planCode = plan['code']?.toString() ?? 'premium';
+    final planName = plan['name']?.toString() ?? 'Premium Plan';
+    final trialDays = (plan['trial_days'] as num?)?.toInt() ?? 7;
 
-  final Map<String, dynamic> plan;
-  final bool isCurrent;
-  final bool isLoading;
-  final String billing;
-  final VoidCallback onRequestOffline;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = plan['name']?.toString() ?? 'Plan';
-    final price = billing == 'yearly'
-        ? plan['yearly_price']?.toString()
-        : plan['monthly_price']?.toString();
-    final features = plan['features'];
-    final List<String> feat = features is List
-        ? features.map((e) => e.toString()).toList()
-        : const ['Ledger tools', 'Customer management'];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: isCurrent ? _brand : _line, width: isCurrent ? 1.5 : 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(name,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 8),
-              if (isCurrent)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _brand.withValues(alpha: .1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text('Current',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _brand)),
-                ),
-            ],
+    final confirm = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: const [
+            Icon(Icons.flash_on_rounded, color: Color(0xFF1D4ED8)),
+            SizedBox(width: 8),
+            Text('Start Free Trial', style: TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: Text(
+          'Activate your $trialDays-Day Free Trial of $planName?\n\n'
+          '• Full access to AI Voice Khata\n'
+          '• Voice credit entry & balance queries\n'
+          '• No payment required upfront',
+          style: const TextStyle(height: 1.4, fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
           ),
-          const SizedBox(height: 6),
-          Text('₹$price / $billing',
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: isCurrent ? _green : _ink)),
-          const SizedBox(height: 10),
-          ...feat.map((f) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: _green, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                      child: Text(f,
-                          style: const TextStyle(fontSize: 13, color: _sub))),
-                ]),
-              )),
-          const SizedBox(height: 12),
-          // --- offline upgrade / activate CTA ---
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : onRequestOffline,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isCurrent ? _green : _brand,
-                disabledBackgroundColor: _brand.withValues(alpha: .4),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: Text(
-                isCurrent ? 'Request Change' : 'Request Offline Upgrade',
-                style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w700),
-              ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D4ED8),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
+            onPressed: () => Get.back(result: true),
+            child: const Text('Activate Trial'),
           ),
-          if (!isCurrent)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.info_outline, size: 14, color: _amber),
-                  SizedBox(width: 4),
-                  Text('Online payment coming soon',
-                      style: TextStyle(fontSize: 11.5, color: _amber)),
-                ],
-              ),
-            ),
         ],
       ),
+    );
+
+    if (confirm == true) {
+      await controller.startTrial(planCode: planCode, planName: planName);
+    }
+  }
+
+  Future<void> _handlePlanSelection(
+    SubscriptionController controller,
+    Map<String, dynamic> plan,
+  ) async {
+    final planCode = plan['code']?.toString() ?? 'basic';
+    final planName = plan['name']?.toString() ?? 'Plan';
+    final isFree = (plan['monthly_price'] as num?)?.toDouble() == 0;
+
+    if (isFree) {
+      Helpers.showSnackBar(msg: 'You are currently on the Free Basic Plan.');
+      return;
+    }
+
+    // Modal to choose payment method (Online Razorpay or Offline Admin Request)
+    await Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Subscribe to $planName',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Select how you would like to complete your payment for the ${controller.selectedBillingCycle} cycle.',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 18),
+
+            // Option 1: Online Payment (Razorpay / UPI / Cards)
+            ListTile(
+              onTap: () {
+                Get.back();
+                controller.startPlanPurchase(planCode: planCode, planName: planName);
+              },
+              leading: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.credit_card_rounded, color: Color(0xFF1D4ED8)),
+              ),
+              title: const Text('Pay Online (Instant)', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('UPI, Cards, NetBanking via Razorpay', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Option 2: Offline Request (Bank Transfer / Admin Approval)
+            ListTile(
+              onTap: () async {
+                Get.back();
+                await controller.requestOfflineUpgrade(
+                  planCode: planCode,
+                  planName: planName,
+                );
+              },
+              leading: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.account_balance_rounded, color: Color(0xFFD97706)),
+              ),
+              title: const Text('Offline Bank / UPI Request', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('Pay via direct transfer and admin will approve', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
     );
   }
 }

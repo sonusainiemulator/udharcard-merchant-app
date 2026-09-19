@@ -5,6 +5,43 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.65] - 2026-09-19
+
+### 💳 Full In-App Purchase & Dynamic Subscription System with Admin Controls & Free Trials
+- **Dynamic 3-Plan Architecture (Exact Match to User Mockup)**:
+  - **Basic Plan (Free Forever)**:
+    - Dedicated to everyday merchants wanting simple customer credit management.
+    - Features: Manually add and manage customer credit entries, track outstanding balances, access records from mobile/desktop, simple and easy-to-use credit system.
+    - Core ledger features, customer directory, PDF statements, and WhatsApp reminders are **100% free forever** with **Zero Disruption**.
+  - **Premium Plan (₹29/month | ₹299/year)**:
+    - Prominent `MOST POPULAR` ribbon badge, `VOICE` pill badge, and deep royal blue card styling.
+    - Includes everything in Basic Plan + AI-Powered Voice Assistance (hands-free credit entry, voice transaction recording, balance voice queries).
+    - Features interactive `TRY SAYING:` prompt suggestions (*"How much is pending from Ram?"*, *"Show today's credit entries"*).
+    - Integrated with **1-Tap 7-Day Free Trial** activation.
+  - **Gold Plan (₹129/month | ₹1299/year)**:
+    - Prominent `BEST VALUE` ribbon badge, `SOUND` pill badge, and warm golden amber styling.
+    - Includes everything in Premium Plan + Free UdharCard Soundbox Hardware Device + dedicated hands-free assistant without touching phone or laptop.
+    - Features interactive `TRY SAYING:` voice prompts (*"Add ₹500 credit to Ram"*, *"How much balance is pending from Ram?"*).
+- **Free Trial Plans Feature**:
+  - Added 1-tap Free Trial activation (`/api/merchant/subscription/trial/start`) without requiring upfront credit card or payment info.
+  - Automatically calculates trial expiration and displays remaining days in real-time.
+  - Discreet, non-intrusive trial status banner on `HomeScreen` (*"✨ Premium Trial: X days left • AI Voice Khata unlocked"*).
+  - Graceful fallback to Free Basic Plan upon trial expiration without account lockouts.
+- **Admin Control Panel & Backend APIs (`laravel-backend/`)**:
+  - **Database Migration**: Added `tag`, `tag_color`, `badge`, `subtitle`, `trial_days`, `feature_flags`, `sample_prompts`, and `cta_text` to `subscription_plans` and `trial_ends_at` to `merchant_subscriptions`.
+  - **Dynamic Admin Controller (`AdminSubscriptionController`)**:
+    - `GET /api/admin/subscription/plans`: List all plans with active/trial subscriber counts.
+    - `POST /api/admin/subscription/plans`: Create new dynamic plans.
+    - `PUT /api/admin/subscription/plans/{id}`: Update plan name, monthly/yearly pricing, features list, sample prompts, and trial duration dynamically without app updates.
+    - `POST /api/admin/subscription/plans/{id}/toggle-status`: Enable/disable plans.
+    - `GET /api/admin/subscription/subscribers`: Paginated subscriber directory with search by phone/name and status filtering.
+    - `POST /api/admin/subscription/{id}/approve-offline`: Instantly approve and activate offline UPI/bank transfer payments.
+    - `POST /api/admin/subscription/{id}/extend-trial`: Admin can grant additional trial days to any merchant account.
+- **Flutter Merchant App Gating & Soft Upsell (`UpgradeFeatureSheet`)**:
+  - Soft entitlement checking in `SubscriptionGateService` and `SubscriptionController`.
+  - When a Basic plan merchant taps the floating voice mic button or voice actions, an elegant `UpgradeFeatureSheet` opens offering **1-Tap "Start 7-Day Free Trial"**, **"View All Plans"**, or **"Continue with Free Manual Entry"**.
+  - Dual Payment Channels: Integrated both instant Online Razorpay checkout and Offline Bank/UPI payment request with Admin approval.
+
 ## [1.0.64] - 2026-09-19
 
 ### 📊 Customer Ledger UX/UI Overhaul & Transaction Direction Clarity

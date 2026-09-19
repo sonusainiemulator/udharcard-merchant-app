@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\PayoutController;
 use App\Http\Controllers\Api\V1\VerificationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\SubscriptionPaymentController;
+use App\Http\Controllers\Api\Admin\AdminSubscriptionController;
 use App\Http\Controllers\API\CustomerController;
 use App\Http\Controllers\API\PaymentGatewayController;
 use App\Http\Controllers\API\UdharLedgerController;
@@ -140,7 +141,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/history', 'paymentHistory');
             Route::post('/checkout', 'createCheckout');
             Route::post('/verify', 'verifyCheckout');
+            Route::post('/trial/start', 'startTrial');
             Route::post('/cancel-auto-renew', 'cancelAutoRenew');
+        });
+
+        Route::controller(AdminSubscriptionController::class)->prefix('admin/subscription')->group(function () {
+            Route::get('/plans', 'plans');
+            Route::post('/plans', 'storePlan');
+            Route::put('/plans/{id}', 'updatePlan');
+            Route::post('/plans/{id}/toggle-status', 'togglePlanStatus');
+            Route::get('/subscribers', 'subscribers');
+            Route::post('/subscriptions/{id}/approve-offline', 'approveOfflinePayment');
+            Route::post('/subscriptions/{id}/extend-trial', 'extendTrial');
         });
 
         Route::controller(ApiWorkListController::class)->prefix('merchant/work-list')->group(function () {

@@ -28,5 +28,9 @@ class Keys {
   static String subscriptionEnrollmentRequired = "subscriptionEnrollmentRequired";
   static String subscriptionSoftRolloutEnabled = "subscriptionSoftRolloutEnabled";
   static String subscriptionHardLimitEnabled = "subscriptionHardLimitEnabled";
+  static String subscriptionIsTrial = "subscriptionIsTrial";
+  static String subscriptionTrialEndsAt = "subscriptionTrialEndsAt";
+  static String subscriptionTrialDaysRemaining = "subscriptionTrialDaysRemaining";
+  static String subscriptionFeatureFlags = "subscriptionFeatureFlags";
   static String isAppLockEnabled = "isAppLockEnabled";
 }

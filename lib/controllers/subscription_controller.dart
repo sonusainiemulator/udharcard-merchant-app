@@ -27,16 +27,128 @@ class SubscriptionController extends GetxController {
   bool _isCheckoutLoading = false;
   bool get isCheckoutLoading => _isCheckoutLoading;
 
+  bool _isStartingTrial = false;
+  bool get isStartingTrial => _isStartingTrial;
+
   List<dynamic> plans = [];
   Map<String, dynamic>? currentSubscription;
+  Map<String, dynamic>? currentPlanData;
 
   String selectedBillingCycle = 'monthly';
+
+  // Trial state
+  bool isTrialActive = false;
+  int trialDaysRemaining = 0;
+  String? trialEndsAt;
+  String activePlanCode = 'basic';
+  Map<String, dynamic> activeFeatureFlags = {
+    'has_voice_entry': false,
+    'has_soundbox': false,
+    'has_desktop_access': true,
+    'pdf_bill_access': true,
+  };
 
   // Offline (admin-approval) upgrade request state
   bool _isRequestingOffline = false;
   bool get isRequestingOffline => _isRequestingOffline;
   Map<String, dynamic>? latestUpgradeRequest; // pending/approved/rejected request shown to merchant
   Map<String, dynamic>? pendingOfflineRequest;
+
+  // Fallback plans matching the user's mockup in case of network issue
+  static final List<Map<String, dynamic>> defaultPlans = [
+    {
+      'code': 'basic',
+      'name': 'Basic Plan',
+      'tag': 'FREE',
+      'tag_color': '#1E293B',
+      'badge': 'FREE',
+      'description': 'Perfect for merchants who want a simple way to manage customer credit records.',
+      'subtitle': 'Perfect for merchants who want a simple way to manage customer credit records.',
+      'monthly_price': 0,
+      'yearly_price': 0,
+      'currency': 'INR',
+      'trial_days': 0,
+      'features': [
+        'Manually add and manage customer credit entries',
+        'Track outstanding balances',
+        'Access records from mobile, laptop, or desktop',
+        'Simple and easy-to-use credit management system',
+      ],
+      'feature_flags': {
+        'has_voice_entry': false,
+        'has_soundbox': false,
+        'has_desktop_access': true,
+        'pdf_bill_access': true,
+      },
+      'sample_prompts': null,
+      'cta_text': 'Get Started Free',
+      'is_active': true,
+    },
+    {
+      'code': 'premium',
+      'name': 'Premium Plan',
+      'tag': 'MOST POPULAR',
+      'tag_color': '#EA580C',
+      'badge': 'VOICE',
+      'description': 'Manage your credit business faster with AI-powered voice assistance.',
+      'subtitle': 'Manage your credit business faster with AI-powered voice assistance.',
+      'monthly_price': 29,
+      'yearly_price': 299,
+      'currency': 'INR',
+      'trial_days': 7,
+      'features': [
+        'Everything in the Basic Plan',
+        'Voice-based credit entry',
+        'Add customer transactions by speaking',
+        'Quick credit and payment tracking using voice commands',
+      ],
+      'feature_flags': {
+        'has_voice_entry': true,
+        'has_soundbox': false,
+        'has_desktop_access': true,
+        'pdf_bill_access': true,
+      },
+      'sample_prompts': [
+        'How much is pending from Ram?',
+        "Show today's credit entries",
+      ],
+      'cta_text': 'Subscribe Now',
+      'is_active': true,
+    },
+    {
+      'code': 'gold',
+      'name': 'Gold Plan',
+      'tag': 'BEST VALUE',
+      'tag_color': '#D97706',
+      'badge': 'SOUND',
+      'description': 'The ultimate hands-free credit management solution for merchants.',
+      'subtitle': 'The ultimate hands-free credit management solution for merchants.',
+      'monthly_price': 129,
+      'yearly_price': 1299,
+      'currency': 'INR',
+      'trial_days': 0,
+      'features': [
+        'Everything in the Premium Plan',
+        'Free UdharCard Soundbox Device',
+        'Use the Soundbox as your dedicated voice assistant',
+        'Add and manage credit entries without using a phone or laptop',
+        'Check customer balances through voice commands',
+        'Faster and more convenient shop management',
+      ],
+      'feature_flags': {
+        'has_voice_entry': true,
+        'has_soundbox': true,
+        'has_desktop_access': true,
+        'pdf_bill_access': true,
+      },
+      'sample_prompts': [
+        'Add ₹500 credit to Ram',
+        'How much balance is pending from Ram?',
+      ],
+      'cta_text': 'Subscribe Now',
+      'is_active': true,
+    },
+  ];
 
   @override
   void onInit() {
@@ -45,6 +157,11 @@ class SubscriptionController extends GetxController {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+
+    // Initialize with default plans immediately to eliminate UI flicker
+    plans = List.from(defaultPlans);
+    _loadCachedSubscriptionState();
+
     getPlans();
     getCurrentSubscription();
     fetchMyUpgradeStatus();
@@ -56,54 +173,145 @@ class SubscriptionController extends GetxController {
     super.onClose();
   }
 
+  void _loadCachedSubscriptionState() {
+    isTrialActive = SubscriptionGateService.isTrialActive();
+    trialDaysRemaining = SubscriptionGateService.trialDaysRemaining();
+    activePlanCode = SubscriptionGateService.currentPlanCode();
+    final cachedFlags = HiveHelp.read(Keys.subscriptionFeatureFlags);
+    if (cachedFlags is Map) {
+      activeFeatureFlags = Map<String, dynamic>.from(cachedFlags);
+    }
+  }
+
   Future<void> getPlans() async {
     _isLoading = true;
     update();
 
-    http.Response response = await SubscriptionRepo.getPlans();
-    _isLoading = false;
+    try {
+      http.Response response = await SubscriptionRepo.getPlans();
+      _isLoading = false;
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['status'] == 'success') {
-        plans = (data['data']?['plans'] as List?) ?? [];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final fetched = (data['data']?['plans'] as List?) ?? [];
+          if (fetched.isNotEmpty) {
+            plans = fetched;
+          }
+        } else {
+          ApiStatus.checkStatus(data['status'].toString(), data['message'] ?? 'Unable to fetch plans');
+        }
       } else {
-        ApiStatus.checkStatus(data['status'].toString(), data['message'] ?? 'Unable to fetch plans');
+        if (kDebugMode) {
+          print(response.body);
+        }
       }
-    } else {
-      if (kDebugMode) {
-        print(response.body);
-      }
-      Helpers.showSnackBar(msg: 'Unable to fetch subscription plans');
+    } catch (_) {
+      _isLoading = false;
+    }
+
+    if (plans.isEmpty) {
+      plans = List.from(defaultPlans);
     }
 
     update();
   }
 
   Future<void> getCurrentSubscription() async {
-    http.Response response = await SubscriptionRepo.getCurrentSubscription();
+    try {
+      http.Response response = await SubscriptionRepo.getCurrentSubscription();
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['status'] == 'success') {
-        currentSubscription = data['data']?['subscription'];
-        final status = currentSubscription?['status']?.toString() ?? '';
-        final plan = currentSubscription?['plan'];
-        final planCode = plan is Map ? plan['code']?.toString() : null;
-        final billingCycle = currentSubscription?['billing_cycle']?.toString();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final resData = data['data'];
+          currentSubscription = resData?['subscription'];
+          currentPlanData = resData?['plan'];
 
-        if (status == 'active' || status == 'grace_period') {
-          HiveHelp.write(Keys.subscriptionPlanSelected, true);
-          if (planCode != null && planCode.isNotEmpty) {
-            HiveHelp.write(Keys.subscriptionPlanCode, planCode);
+          isTrialActive = resData?['is_trial'] == true;
+          trialDaysRemaining = (resData?['trial_days_remaining'] as num?)?.toInt() ?? 0;
+          trialEndsAt = resData?['trial_ends_at']?.toString();
+          activePlanCode = resData?['plan_code']?.toString() ?? 'basic';
+
+          if (resData?['feature_flags'] is Map) {
+            activeFeatureFlags = Map<String, dynamic>.from(resData['feature_flags']);
+            HiveHelp.write(Keys.subscriptionFeatureFlags, activeFeatureFlags);
           }
+
+          final billingCycle = currentSubscription?['billing_cycle']?.toString();
+
+          HiveHelp.write(Keys.subscriptionPlanSelected, true);
+          HiveHelp.write(Keys.subscriptionPlanCode, activePlanCode);
+          HiveHelp.write(Keys.subscriptionIsTrial, isTrialActive);
+          if (trialEndsAt != null) {
+            HiveHelp.write(Keys.subscriptionTrialEndsAt, trialEndsAt);
+          }
+          HiveHelp.write(Keys.subscriptionTrialDaysRemaining, trialDaysRemaining);
+
           if (billingCycle != null && billingCycle.isNotEmpty) {
             HiveHelp.write(Keys.subscriptionBillingCycle, billingCycle);
           }
         }
       }
-    }
+    } catch (_) {}
     update();
+  }
+
+  /// Start 7-Day Free Trial for a plan (e.g. Premium Plan).
+  Future<bool> startTrial({
+    required String planCode,
+    required String planName,
+  }) async {
+    if (_isStartingTrial) return false;
+    _isStartingTrial = true;
+    update();
+
+    try {
+      final response = await SubscriptionRepo.startTrial(planCode: planCode);
+      final data = _decode(response.body);
+      _isStartingTrial = false;
+
+      if (response.statusCode == 200 && data?['status'] == 'success') {
+        final d = data?['data'];
+        final trialDays = (d?['trial_days_remaining'] as num?)?.toInt() ?? 7;
+        final endsAt = d?['trial_ends_at']?.toString();
+
+        isTrialActive = true;
+        trialDaysRemaining = trialDays;
+        activePlanCode = planCode;
+
+        HiveHelp.write(Keys.subscriptionPlanSelected, true);
+        HiveHelp.write(Keys.subscriptionPlanCode, planCode);
+        HiveHelp.write(Keys.subscriptionIsTrial, true);
+        if (endsAt != null) {
+          HiveHelp.write(Keys.subscriptionTrialEndsAt, endsAt);
+        }
+        HiveHelp.write(Keys.subscriptionTrialDaysRemaining, trialDays);
+
+        if (d?['feature_flags'] is Map) {
+          activeFeatureFlags = Map<String, dynamic>.from(d['feature_flags']);
+          HiveHelp.write(Keys.subscriptionFeatureFlags, activeFeatureFlags);
+        }
+
+        Helpers.showSnackBar(
+          msg: data?['message'] ?? '🎉 Free Trial activated! AI Voice Khata is unlocked.',
+        );
+
+        await getCurrentSubscription();
+        update();
+        return true;
+      } else {
+        final errorMsg = data?['message']?.toString() ?? 'Unable to activate free trial.';
+        Helpers.showSnackBar(msg: errorMsg);
+        update();
+        return false;
+      }
+    } catch (_) {
+      _isStartingTrial = false;
+      Helpers.showSnackBar(msg: 'Unable to start trial. Please check connection and retry.');
+      update();
+      return false;
+    }
   }
 
   Future<void> startPlanPurchase({
@@ -321,6 +529,7 @@ class SubscriptionController extends GetxController {
           HiveHelp.write(Keys.subscriptionPlanCode, _pendingPlanCode);
         }
         HiveHelp.write(Keys.subscriptionBillingCycle, selectedBillingCycle);
+        HiveHelp.write(Keys.subscriptionIsTrial, false);
         _pendingOrderId = '';
         _pendingPlanCode = '';
         Helpers.showSnackBar(msg: 'Plan activated successfully.');

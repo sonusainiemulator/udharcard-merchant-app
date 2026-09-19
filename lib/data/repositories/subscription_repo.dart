@@ -41,6 +41,16 @@ class SubscriptionRepo {
   static Future<http.Response> getPaymentHistory() async =>
       await ApiClient.get(ENDPOINT_URL: AppConstants.subscriptionHistoryUrl);
 
+  static Future<http.Response> startTrial({
+    required String planCode,
+  }) async =>
+      await ApiClient.post(
+        ENDPOINT_URL: AppConstants.subscriptionTrialStartUrl,
+        fields: {
+          'plan_code': planCode,
+        },
+      );
+
   /// POST offline upgrade request (no payment) -> admin approves later.
   static Future<http.Response> offlineRequest({
     required String planCode,

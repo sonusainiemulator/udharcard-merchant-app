@@ -19,6 +19,8 @@ import 'package:paysecure/views/screens/udhar/add_customer_screen.dart';
 import 'package:paysecure/views/screens/udhar/customer_ledger_screen.dart';
 import 'package:paysecure/views/screens/udhar/select_user_sheet.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:paysecure/utils/services/subscription_gate_service.dart';
+import 'package:paysecure/views/screens/subscription/widgets/upgrade_feature_sheet.dart';
 import 'package:paysecure/views/screens/voice_entry/voice_khata_sheet.dart';
 import 'package:paysecure/views/widgets/custom_appbar.dart';
 import 'package:paysecure/views/widgets/language_selection_sheet.dart';
@@ -866,6 +868,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
               SizedBox(height: 16.h),
 
+              // ── Trial Active Banner (Discreet & Elegant) ──────────────────
+              if (SubscriptionGateService.isTrialActive())
+                Padding(
+                  padding: EdgeInsets.only(bottom: 14.h),
+                  child: InkWell(
+                    onTap: () => Get.toNamed(RoutesName.subscriptionPlansScreen),
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF3B82F6).withValues(alpha: 0.5)
+                              : const Color(0xFFBFDBFE),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.stars_rounded, color: const Color(0xFF2563EB), size: 20.r),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Text(
+                              '✨ Premium Trial: ${SubscriptionGateService.trialDaysRemaining()} days left • AI Voice Khata unlocked',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Upgrade',
+                            style: GoogleFonts.outfit(
+                              fontSize: 11.5.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF2563EB),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               // ── 3. Quick Merchant Action Grid (4 Actions) ──────────────────
               GridView.count(
                 shrinkWrap: true,
@@ -1479,7 +1529,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_home_voice_khata',
-        onPressed: () => VoiceKhataSheet.show(context),
+        onPressed: () {
+          if (!SubscriptionGateService.isVoiceEntryIncluded()) {
+            UpgradeFeatureSheet.show(
+              title: 'Unlock AI VoiceKhata',
+              subtitle: 'Manage credit 10x faster using simple voice commands — no typing needed.',
+            );
+            return;
+          }
+          VoiceKhataSheet.show(context);
+        },
         backgroundColor: const Color(0xFF00A86B),
         elevation: 6,
         icon: Container(

@@ -11,6 +11,8 @@ import '../../widgets/custom_appbar.dart';
 import 'add_customer_screen.dart';
 import 'customer_ledger_screen.dart';
 import '../voice_entry/voice_khata_sheet.dart';
+import '../../../utils/services/subscription_gate_service.dart';
+import '../subscription/widgets/upgrade_feature_sheet.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
@@ -197,7 +199,16 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             children: [
               FloatingActionButton.extended(
                 heroTag: 'fab_customer_voice_khata',
-                onPressed: () => VoiceKhataSheet.show(context),
+                onPressed: () {
+                  if (!SubscriptionGateService.isVoiceEntryIncluded()) {
+                    UpgradeFeatureSheet.show(
+                      title: 'Unlock AI VoiceKhata',
+                      subtitle: 'Manage credit 10x faster using simple voice commands — no typing needed.',
+                    );
+                    return;
+                  }
+                  VoiceKhataSheet.show(context);
+                },
                 backgroundColor: const Color(0xFF00A86B),
                 elevation: 6,
                 icon: Container(

@@ -31,7 +31,7 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Fetch current merchant subscription.
+     * Fetch current merchant subscription with resolved entitlements.
      */
     public function current(Request $request)
     {
@@ -48,10 +48,203 @@ class SubscriptionController extends Controller
             ->orderByDesc('id')
             ->first();
 
+        $basicPlan = SubscriptionPlan::where('code', 'basic')->first();
+        $defaultFeatureFlags = [
+            'has_voice_entry' => false,
+            'has_soundbox' => false,
+            'has_desktop_access' => true,
+            'pdf_bill_access' => true,
+            'customer_limit' => null,
+        ];
+
+        // Check if existing subscription has expired
+        if ($subscription) {
+            if ($subscription->status === 'trial' && $subscription->trial_ends_at && now()->gt($subscription->trial_ends_at)) {
+                $subscription->status = 'expired';
+                $subscription->save();
+
+                $user = User::find($merchantId);
+                if ($user) {
+                    $user->current_plan_code = 'basic';
+                    $user->subscription_status = 'expired';
+                    $user->save();
+                }
+            }
+        }
+
+        $isActivePaid = $subscription && $subscription->status === 'active' && (!$subscription->renews_at || now()->lte($subscription->renews_at));
+        $isActiveTrial = $subscription && $subscription->status === 'trial' && $subscription->trial_ends_at && now()->lte($subscription->trial_ends_at);
+
+        if ($isActivePaid || $isActiveTrial) {
+            $plan = $subscription->plan;
+            $featureFlags = $plan ? ($plan->feature_flags ?? $defaultFeatureFlags) : $defaultFeatureFlags;
+            $remainingDays = $subscription->remainingTrialDays();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'subscription' => $subscription,
+                    'plan' => $plan,
+                    'plan_code' => $plan?->code ?? 'basic',
+                    'plan_name' => $plan?->name ?? 'Basic Plan',
+                    'is_active' => true,
+                    'is_trial' => $isActiveTrial,
+                    'trial_days_remaining' => $remainingDays,
+                    'feature_flags' => $featureFlags,
+                    'can_use_voice' => !empty($featureFlags['has_voice_entry']),
+                    'can_use_soundbox' => !empty($featureFlags['has_soundbox']),
+                    'renews_at' => $subscription->renews_at?->toIso8601String(),
+                    'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
+                ],
+            ], 200);
+        }
+
+        // Fallback to Free Basic Plan (Zero Disruption Guarantee)
         return response()->json([
             'status' => 'success',
             'data' => [
                 'subscription' => $subscription,
+                'plan' => $basicPlan,
+                'plan_code' => 'basic',
+                'plan_name' => 'Basic Plan',
+                'is_active' => true,
+                'is_trial' => false,
+                'trial_days_remaining' => 0,
+                'feature_flags' => $defaultFeatureFlags,
+                'can_use_voice' => false,
+                'can_use_soundbox' => false,
+                'renews_at' => null,
+                'trial_ends_at' => null,
+            ],
+        ], 200);
+    }
+
+    /**
+     * Start a Free Trial for a plan (e.g. Premium 7-Day Trial).
+     */
+    public function startTrial(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'plan_code' => 'required|string',
+            'merchant_id' => 'nullable|integer',
+            'merchant_phone' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $merchantId = $this->resolveMerchantId($request);
+        if (!$merchantId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Merchant identity is required.',
+            ], 422);
+        }
+
+        $plan = SubscriptionPlan::where('code', $request->plan_code)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$plan) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Selected plan was not found or is inactive.',
+            ], 404);
+        }
+
+        if ($plan->trial_days <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This plan does not offer a free trial period.',
+            ], 400);
+        }
+
+        // Check if merchant has already used a trial
+        $existingTrial = MerchantSubscription::where('merchant_id', $merchantId)
+            ->where(function ($query) {
+                $query->where('status', 'trial')
+                    ->orWhereNotNull('trial_ends_at');
+            })
+            ->first();
+
+        if ($existingTrial) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'A free trial has already been claimed for this merchant account.',
+            ], 400);
+        }
+
+        // Check if merchant already has an active paid subscription
+        $activeSubscription = MerchantSubscription::where('merchant_id', $merchantId)
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('renews_at')
+                    ->orWhere('renews_at', '>', now());
+            })
+            ->first();
+
+        if ($activeSubscription) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You already have an active paid subscription.',
+            ], 400);
+        }
+
+        $trialEndsAt = now()->addDays($plan->trial_days);
+
+        $subscription = DB::transaction(function () use ($merchantId, $plan, $trialEndsAt) {
+            // Cancel any old pending checkouts
+            MerchantSubscription::where('merchant_id', $merchantId)
+                ->whereIn('status', ['pending'])
+                ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+            $newSubscription = MerchantSubscription::create([
+                'merchant_id' => $merchantId,
+                'subscription_plan_id' => $plan->id,
+                'billing_cycle' => 'monthly',
+                'status' => 'trial',
+                'started_at' => now(),
+                'trial_ends_at' => $trialEndsAt,
+                'renews_at' => $trialEndsAt,
+                'auto_renew' => false,
+                'meta' => [
+                    'plan_code' => $plan->code,
+                    'trial_days' => $plan->trial_days,
+                    'started_at' => now()->toIso8601String(),
+                    'activated_via' => 'app_free_trial',
+                ],
+            ]);
+
+            $user = User::find($merchantId);
+            if ($user) {
+                $user->current_plan_code = $plan->code;
+                $user->subscription_status = 'trial';
+                $user->subscription_renews_at = $trialEndsAt;
+                $user->save();
+            }
+
+            return $newSubscription;
+        });
+
+        $subscription->load('plan');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Congratulations! Your {$plan->trial_days}-day Free Trial of {$plan->name} is now active.",
+            'data' => [
+                'subscription' => $subscription,
+                'plan' => $plan,
+                'plan_code' => $plan->code,
+                'is_trial' => true,
+                'trial_days_remaining' => $plan->trial_days,
+                'feature_flags' => $plan->feature_flags,
+                'can_use_voice' => !empty($plan->feature_flags['has_voice_entry']),
+                'can_use_soundbox' => !empty($plan->feature_flags['has_soundbox']),
+                'trial_ends_at' => $trialEndsAt->toIso8601String(),
             ],
         ], 200);
     }
