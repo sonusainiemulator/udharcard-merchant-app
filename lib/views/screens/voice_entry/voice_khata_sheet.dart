@@ -150,7 +150,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
 
                     // VoiceKhata Brand Badge
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                       decoration: BoxDecoration(
                         color: emerald.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20.r),
@@ -160,17 +160,68 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.mic, color: emerald, size: 16.sp),
-                          HSpace(6.w),
+                          HSpace(5.w),
                           Text(
                             "VoiceKhata",
                             style: GoogleFonts.outfit(
-                              fontSize: 14.sp,
+                              fontSize: 13.sp,
                               fontWeight: FontWeight.w700,
                               color: emerald,
                               letterSpacing: 0.2,
                             ),
                           ),
                         ],
+                      ),
+                    ),
+
+                    // Gemini 3.8 / Live Mode Toggle Switch
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _controller.toggleLiveMode();
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: _controller.isLiveMode
+                              ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                              : Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(
+                            color: _controller.isLiveMode
+                                ? const Color(0xFFEF4444)
+                                : Colors.blue.withValues(alpha: 0.4),
+                            width: _controller.isLiveMode ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8.w,
+                              height: 8.w,
+                              decoration: BoxDecoration(
+                                color: _controller.isLiveMode
+                                    ? const Color(0xFFEF4444)
+                                    : Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            HSpace(5.w),
+                            Text(
+                              _controller.isLiveMode ? "LIVE AI" : "Gemini Live",
+                              style: GoogleFonts.outfit(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: _controller.isLiveMode
+                                    ? const Color(0xFFEF4444)
+                                    : Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
@@ -324,21 +375,25 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                 Center(
                   child: Text(
                     controller.isListening
-                        ? "Listening..."
+                        ? (controller.isLiveMode ? "● Gemini Live: Listening..." : "Listening...")
                         : controller.isThinking
-                            ? "VoiceKhata AI Processing..."
-                            : "Tap Mic to Speak",
+                            ? "Gemini AI Processing..."
+                            : (controller.isLiveMode ? "Gemini Live Active (Waiting...)" : "Tap Mic to Speak"),
                     style: GoogleFonts.outfit(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
-                      color: controller.isListening ? emerald : textColor,
+                      color: controller.isLiveMode
+                          ? const Color(0xFFEF4444)
+                          : (controller.isListening ? emerald : textColor),
                     ),
                   ),
                 ),
                 VSpace(3.h),
                 Center(
                   child: Text(
-                    "Say the whole bill or transaction.",
+                    controller.isLiveMode
+                        ? "Hands-free Live mode on. Say 'Band karo' to stop."
+                        : "Say the whole bill or transaction.",
                     style: GoogleFonts.inter(
                       fontSize: 12.sp,
                       color: subtleText,

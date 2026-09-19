@@ -74,12 +74,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `AppDelegate.swift`: Cleaned up redundant protocol conformance (`UNUserNotificationCenterDelegate`) for clean builds on modern iOS SDKs.
   - **Verification**: Verified on iOS simulator (iPhone 17) and physical iOS 27.0 device (Sonu's iPhone 16e). App now boots directly into the Splash screen and transitions cleanly to the Merchant Login screen without freezing or crashing.
 
-#### 🎙️ Voice Entry AI Upgrade — Google Gemini 2.0 Flash & Smooth Offline Fallback
-- **Latest Flagship Model (`gemini-2.0-flash`)**: Integrated Google's latest, fastest Flash model for near-instant (<1s) multilingual Indian speech-to-ledger parsing.
-- **Dynamic Config**: Added support for custom `GEMINI_MODEL` via `.env` (defaults to `gemini-2.0-flash`), allowing effortless model switching.
-- **Seamless Offline Fallback**: If internet drops, API quota is reached, or no key is present, system automatically falls back to the on-device Indian Kirana NLP parser in 0ms with zero disruption.
-- **Haptic Tactile Feedback**: Added native haptic vibrations (`HapticFeedback.mediumImpact()` on mic tap, `lightImpact()` on parse completion) for ultra-smooth physical feedback.
-- **Ledger Auto-Linking**: Extracted customer names are automatically linked against the merchant's customer list, auto-filling customer ID and phone number.
+#### 🎙️ Voice Entry AI Upgrade — Google Gemini 2.0 Flash & Gemini Live (3.8) Support
+- **Gemini 3.8 / Live Hands-Free Support**: Added full hands-free live conversational mode with continuous listening.
+- **Continuous Voice Loop**: In Live Mode, after TTS speaks the transaction confirmation, the system automatically re-arms listening without requiring the merchant to touch the screen.
+- **Voice Stop Commands**: Hands-free termination: merchants can say *"Band karo"*, *"Stop"*, *"Ruk jao"*, or *"Exit"* to pause Live mode at any time.
+- **Dynamic Live UI**: Added interactive "Gemini Live" glowing switch pill and real-time status banner in `VoiceKhataSheet`.
+- **Configurable Live Model**: Configured via `GEMINI_LIVE_MODEL` or `GEMINI_MODEL` (supports `gemini-2.0-flash-exp`, `gemini-2.0-flash`, or custom user aliases like `gemini-3.8-live`).
+- **Seamless Offline Fallback**: Zero-latency instant fallback to on-device Indian Kirana NLP parser in 0ms if offline or without API key.
+- **Haptic Feedback & Auto-Linking**: Integrated native haptic clicks and auto-linking with customer records.
 
 ## [1.0.65] - 2026-09-19
 

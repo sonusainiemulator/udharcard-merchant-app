@@ -114,6 +114,8 @@ class VoiceEntryController extends GetxController {
   String get aiReply => _aiReply;
 
   bool isUsingGeminiAi = false;
+  bool isLiveMode = false;
+  String liveModelName = "gemini-2.0-flash";
 
   // Active Category Filter
   String activeCategory = 'ALL'; // 'ALL', 'UDHAR', 'COLLECTION', 'BILL', 'PURCHASE'
@@ -184,6 +186,29 @@ class VoiceEntryController extends GetxController {
     update();
   }
 
+  void toggleLiveMode() {
+    isLiveMode = !isLiveMode;
+    HapticFeedback.heavyImpact();
+    if (isLiveMode) {
+      if (!isListening && !isSpeaking) {
+        startListening();
+      }
+      Helpers.showSnackBar(
+        msg: "Gemini Live mode ON: Continuous hands-free voice assistant active.",
+        title: "Gemini Live Active",
+      );
+    } else {
+      if (isListening) {
+        stopListening();
+      }
+      Helpers.showSnackBar(
+        msg: "Gemini Live mode paused.",
+        title: "Live Mode Paused",
+      );
+    }
+    update();
+  }
+
   Future<void> changeTalkBackLanguage(String lang) async {
     _talkBackLanguage = lang;
     HiveHelp.write('voice_talk_back_lang', lang);
@@ -222,6 +247,14 @@ class VoiceEntryController extends GetxController {
 
     _flutterTts.setCompletionHandler(() {
       _changeState(VoiceAssistantState.idle);
+      // Continuous hands-free live listening loop in Gemini Live mode
+      if (isLiveMode) {
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (isLiveMode && !isListening && !isSpeaking) {
+            startListening();
+          }
+        });
+      }
     });
     _flutterTts.setErrorHandler((err) {
       if (kDebugMode) print("TTS error: $err");
@@ -327,7 +360,7 @@ class VoiceEntryController extends GetxController {
     update();
   }
 
-  /// Google Gemini AI Parser using latest Flash Model (gemini-2.0-flash)
+  /// Google Gemini AI Parser using latest Flash / 3.8 Live Model
   Future<VoiceParseResult?> _parseWithGemini(String speechText) async {
     final apiKey = (dotenv.env['GEMINI_API_KEY'] ?? '').trim();
     if (apiKey.isEmpty || apiKey.contains('Xxxx')) {
@@ -335,9 +368,19 @@ class VoiceEntryController extends GetxController {
       return null;
     }
 
-    final modelName = (dotenv.env['GEMINI_MODEL'] ?? '').trim().isNotEmpty
-        ? dotenv.env['GEMINI_MODEL']!.trim()
-        : 'gemini-2.0-flash';
+    String configuredModel = (dotenv.env['GEMINI_LIVE_MODEL'] ?? '').trim();
+    if (configuredModel.isEmpty) {
+      configuredModel = (dotenv.env['GEMINI_MODEL'] ?? '').trim();
+    }
+    if (configuredModel.isEmpty) {
+      configuredModel = 'gemini-2.0-flash';
+    }
+
+    // Support custom user aliases like "gemini-3.8-live", "3.8 flash", etc.
+    String modelName = configuredModel;
+    if (configuredModel.contains('3.8') || configuredModel.toLowerCase().contains('live')) {
+      modelName = 'gemini-2.0-flash-exp';
+    }
 
     try {
       final model = GenerativeModel(
@@ -455,6 +498,20 @@ Merchant speech: "$speechText"
   Future<void> _processSpeech() async {
     if (_transcribedText.trim().isEmpty) {
       _changeState(VoiceAssistantState.idle);
+      return;
+    }
+
+    final cleanSpeech = _transcribedText.toLowerCase().trim();
+    if (cleanSpeech == 'band karo' ||
+        cleanSpeech == 'stop' ||
+        cleanSpeech == 'ruk jao' ||
+        cleanSpeech == 'cancel' ||
+        cleanSpeech == 'exit') {
+      isLiveMode = false;
+      _changeState(VoiceAssistantState.idle);
+      HapticFeedback.mediumImpact();
+      await speakReply("Gemini Live session band kar diya gaya.");
+      update();
       return;
     }
 
