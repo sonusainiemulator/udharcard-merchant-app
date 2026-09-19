@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -116,7 +115,7 @@ _initializeApp() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    throw Exception('Error loading .env file: $e');
+    debugPrint("dotenv load warning (using defaults): $e");
   }
   try {
     final serverClientId = (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '').trim().isNotEmpty
@@ -132,9 +131,10 @@ _initializeApp() async {
   } catch (e) {
     debugPrint("GoogleSignIn init attempt error: $e");
   }
-  await Future.wait([
-    LocalNotificationService().initNotification(),
-    Future.delayed(const Duration(milliseconds: 400)),
-  ]);
+  try {
+    await LocalNotificationService().initNotification();
+  } catch (e) {
+    debugPrint("LocalNotificationService init error: $e");
+  }
 }
 

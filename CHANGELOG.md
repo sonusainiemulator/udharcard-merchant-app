@@ -5,6 +5,75 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.66] - 2026-09-20
+
+### 🛡️ Admin Subscription Management Panel — Full Deployment
+
+#### Subscription Tab on Admin User Profile
+- **Added "Subscription" tab** to all admin user profile pages (`/admin/user/view-profile/{id}`) alongside existing Profile, Transaction, Payment History, Withdraw History, and KYC tabs.
+- **Left Panel — Current Plan Summary Card**:
+  - Displays plan badge with contextual icon and color: Gold (amber, Soundbox icon), Premium (royal blue, mic icon), Basic (grey, checklist icon).
+  - Real-time status badge: `Free Trial (X days left)`, `Active Paid Subscriber`, `Subscription Expired`, or `Free Tier`.
+  - Shows renewal date, billing cycle (monthly/yearly), and subscription start date.
+  - Lists active feature flags: AI Voice Khata Entry, UdharCard Soundbox Device, Desktop Access, PDF Bill Generation.
+- **Left Panel — Admin Actions Card**:
+  - `Give Free Trial Days` button → opens modal to grant +7/14/30/60 additional trial days with an optional admin note. Shows current trial end date in the modal for context.
+  - `Change / Assign Plan` button → opens modal to manually set any plan (Basic/Premium/Gold), subscription status (Active/Trial/Expired/Basic), billing cycle, and duration (months) for the merchant.
+- **Right Panel — Subscription History Table**:
+  - Full chronological table of all subscription records for the merchant: plan badge, status badge, billing cycle, start date, expiry/trial-end date (with `diffForHumans()` relative time), and last payment date.
+  - Active/trial rows highlighted with `table-active` class and a green indicator dot.
+  - Empty state with an illustration and a CTA button to start a free trial for merchants with zero history.
+  - Inline sub-rows show admin trial extension metadata (extra days granted, admin note, date extended).
+
+#### Admin Sidebar — Subscriptions & Plans Section
+- **New sidebar group** added below User Management with live dynamic badge counts from `SidebarDataService`.
+- **All Subscribers** (`/admin/subscriptions`) — paginated directory with search and plan/status filters.
+- **7-Day Free Trials** (`/admin/subscriptions/trials`) — active trial merchants sorted by expiry, with 1-click extend action.
+- **Plans & Pricing** (`/admin/subscriptions/plans`) — edit plan name, monthly/yearly price, trial days, features list, voice prompts, and active/inactive toggle per plan — no app update required.
+- **Upgrade Requests** (`/admin/subscriptions/requests`) — approve or reject merchant offline UPI/bank upgrade requests with status filter tabs (All / Pending / Approved / Rejected) and confirmation modals.
+
+#### Backend (Laravel — `pay.udharcard.shop`)
+- **New route**: `GET admin/user/subscription/{id}` → `admin.user.subscription` (UsersController@userSubscription).
+- **New controller method** `userSubscription()` in `UsersController`: passes `subscriptions` (full history) and `activeSubscription` (current active/trial record with plan) to the view.
+- **Updated `userViewProfile()`** in `UsersController` to also pass `subscriptions` and `activeSubscription` data to the existing profile view for sidebar badge computation.
+- **New Blade views deployed** to server:
+  - `resources/views/admin/user_management/user_subscription.blade.php` — subscription profile tab page.
+  - `resources/views/admin/subscriptions/plans.blade.php` — plans & pricing control panel.
+  - `resources/views/admin/subscriptions/requests.blade.php` — offline upgrade request management.
+- All views, config, and application cache cleared post-deployment.
+
+#### 🧪 Merchant App Subscription Lifecycle End-to-End Verification (100% Tested)
+- **API Authentication Resolution**:
+  - Ensured `/merchant/subscription/*` routes are protected under the `auth:sanctum` middleware group in `routes/api.php`, allowing bearer tokens to resolve merchant identity automatically without requiring redundant request parameters.
+- **Subscription Model & Database Setup**:
+  - Deployed `App\Models\SubscriptionPayment` to production server.
+  - Created and verified `subscription_payments` database table in production MySQL to support online checkout orders and payment verification callbacks.
+  - Fixed `myUpgradeStatus()` in `SubscriptionController.php` to query both `active` and `trial` statuses so active trials are accurately returned.
+- **Full End-to-End Automated Verification**:
+  - `GET /api/subscription/plans`: Verified public plans response with Basic (Free), Premium (₹29/mo, 7-day trial, AI Voice), and Gold (₹129/mo, Soundbox).
+  - `GET /api/merchant/subscription/current`: Tested fresh user onboarding defaulting to Basic Plan (`can_use_voice: false`, `is_trial: false`).
+  - `POST /api/merchant/subscription/trial/start`: Successfully tested 1-tap 7-day Free Trial activation unlocking `can_use_voice: true` and 7 days remaining.
+  - Trial Guard: Verified duplicate trial prevention properly rejects secondary trial attempts.
+  - `POST /api/merchant/subscription/checkout`: Verified checkout order generation (`sub_order_...`) with calculated amount in paise.
+  - `POST /api/merchant/subscription/verify`: Verified payment verification callback transitioning status to `active` and updating merchant renewal dates.
+  - `POST /api/merchant/subscription/offline-request`: Verified offline upgrade request submission for admin approval.
+  - `GET /api/merchant/subscription/my-upgrade-status`: Verified pending, approved, and active subscription states.
+  - Admin Approval: Verified admin approval flow transitions request from `pending` to `approved` and updates merchant's active plan.
+  - Admin User Profile: Verified `/admin/user/view-profile/{id}` renders with subscription tab and historical records.
+  - Flutter Analysis & Unit Tests: Verified `flutter analyze` passes with 0 issues and `subscription_system_test.dart` passes with 4/4 assertions.
+
+#### 🐛 iOS 17+ / iOS 27 Launch Deadlock & Watchdog Crash Fix
+- **Root Cause Analysis (100% Proven via LLDB Backtrace & Process Sampling)**:
+  - App froze on a blank white screen on iOS launch and was killed by the OS SpringBoard watchdog timer (`0x8badf00d` crash).
+  - Profiling revealed 100% deadlock on `com.apple.main-thread`: `SwiftFlutterTtsPlugin.setLanguage` -> `SwiftFlutterTtsPlugin.languages` -> `TextToSpeech` -> `AXCoreUtilities axUnsafeForcedSync` -> `OS_dispatch_semaphore.wait(wallTimeout:)` -> `semaphore_wait_trap`.
+  - `VoiceSoundboxService.onInit()` was eagerly calling `_initTts()` synchronously before the first Flutter frame was rendered. On modern iOS (iOS 17, 18, and iOS 27.0), synchronous XPC calls to speech synthesis services during app launch deadlock the main thread.
+- **Fixes & Improvements**:
+  - `VoiceSoundboxService`: Removed synchronous `_initTts()` from `onInit()`. Converted TTS initialization to lazy loading on the first payment announcement call (`announcePayment`), removing it entirely from the startup critical path.
+  - `initHive()`: Added multi-tier fallback with error handling to guarantee Hive local storage initializes gracefully even if iOS sandbox directory permissions vary.
+  - `_initializeApp()` in `main.dart`: Wrapped `.env` loading and `LocalNotificationService().initNotification()` with defensive catch blocks so non-critical startup errors never prevent `runApp()` from executing.
+  - `AppDelegate.swift`: Cleaned up redundant protocol conformance (`UNUserNotificationCenterDelegate`) for clean builds on modern iOS SDKs.
+  - **Verification**: Verified on iOS simulator (iPhone 17) and physical iOS 27.0 device (Sonu's iPhone 16e). App now boots directly into the Splash screen and transitions cleanly to the Merchant Login screen without freezing or crashing.
+
 ## [1.0.65] - 2026-09-19
 
 ### 💳 Full In-App Purchase & Dynamic Subscription System with Admin Controls & Free Trials

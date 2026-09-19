@@ -15,7 +15,9 @@ class VoiceSoundboxService extends GetxService {
     super.onInit();
     final dynamic stored = HiveHelp.read('soundbox_voice_alerts');
     isSoundboxEnabled.value = stored == null ? true : (stored == true);
-    _initTts();
+    // Do not initialize TTS synchronously during onInit / app startup.
+    // Querying speech voices synchronously during iOS launch blocks the main thread
+    // and causes iOS watchdog termination (crash 0x8badf00d).
   }
 
   Future<void> _initTts() async {
