@@ -176,23 +176,44 @@ class UdharController extends GetxController {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
+          List<dynamic> rawList = [];
           if (data['data'] != null) {
             if (data['data'] is Map && data['data']['data'] != null) {
-              usersList = List<dynamic>.from(data['data']['data']);
+              rawList = List<dynamic>.from(data['data']['data']);
             } else if (data['data'] is Map &&
                 data['data']['contacts'] != null) {
-              usersList = List<dynamic>.from(data['data']['contacts']);
+              rawList = List<dynamic>.from(data['data']['contacts']);
             } else if (data['data'] is Map &&
                 data['data']['customers'] != null) {
-              usersList = List<dynamic>.from(data['data']['customers']);
+              rawList = List<dynamic>.from(data['data']['customers']);
             } else if (data['data'] is List) {
-              usersList = List<dynamic>.from(data['data']);
-            } else {
-              usersList = [];
+              rawList = List<dynamic>.from(data['data']);
             }
-          } else {
-            usersList = [];
           }
+          usersList = rawList.map((item) {
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
+              final rawId = map['id'] ??
+                  map['source_id'] ??
+                  map['customer_id'] ??
+                  map['user_id'];
+              String resolvedId = (rawId ?? '').toString();
+              if (resolvedId.isEmpty && map['contact_identifier'] != null) {
+                resolvedId = map['contact_identifier']
+                    .toString()
+                    .replaceAll(RegExp(r'[^0-9]'), '');
+              }
+              map['id'] = resolvedId;
+              map['customer_id'] = resolvedId;
+              map['outstanding_balance'] = map['outstanding_balance'] ??
+                  map['net_balance'] ??
+                  map['stored_balance'] ??
+                  0;
+              map['credit_limit'] = map['credit_limit'] ?? 5000;
+              return map;
+            }
+            return item;
+          }).toList();
         } else {
           final msg = data['message']?.toString().trim();
           if (msg != null && msg.isNotEmpty && isManual) {
@@ -620,7 +641,9 @@ class UdharController extends GetxController {
     required String customerId,
     required double newLimit,
   }) {
-    final idx = usersList.indexWhere((u) => u['id']?.toString() == customerId);
+    final idx = usersList.indexWhere(
+      (u) => (u['id'] ?? u['source_id'] ?? '').toString() == customerId,
+    );
     if (idx != -1) {
       usersList[idx]['credit_limit'] = newLimit;
       filteredUsers = List<dynamic>.from(usersList);
@@ -634,12 +657,17 @@ class UdharController extends GetxController {
       HiveHelp.write('cached_ledger_$customerId', updated);
     }
 
-    if (selectedUser != null && selectedUser!['id']?.toString() == customerId) {
+    if (selectedUser != null &&
+        (selectedUser!['id'] ?? selectedUser!['source_id'] ?? '').toString() ==
+            customerId) {
       selectedUser = {...selectedUser!, 'credit_limit': newLimit};
     }
 
     if (customerId ==
-        (selectedUser != null ? selectedUser!['id']?.toString() : null)) {
+        (selectedUser != null
+            ? (selectedUser!['id'] ?? selectedUser!['source_id'] ?? '')
+                .toString()
+            : null)) {
       currentCreditLimit = newLimit;
     }
   }
@@ -653,6 +681,14 @@ class UdharController extends GetxController {
     bool showLoading = true,
     bool force = false,
   }) async {
+    final cleanId = customerId.trim();
+    if (cleanId.isEmpty) {
+      debugPrint("UdharController.fetchCustomerLedger: empty customerId, skipping.");
+      isLedgerLoading = false;
+      update();
+      return;
+    }
+
     if (isLedgerLoading && !force) return;
 
     if (showLoading) {
@@ -662,7 +698,7 @@ class UdharController extends GetxController {
 
     try {
       final response = await UdharRepo.getCustomerLedger(
-        customerId: customerId,
+        customerId: cleanId,
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

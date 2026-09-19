@@ -89,7 +89,7 @@ class _UdharDashboardScreenState extends State<UdharDashboardScreen> {
                   0.0;
           if (bal != 0) {
             recentActivity.add({
-              'id': u['id'] ?? u['user_id'] ?? '',
+              'id': u['id'] ?? u['source_id'] ?? u['customer_id'] ?? u['user_id'] ?? '',
               'name': u['name'] ?? u['customer_name'] ?? 'Customer',
               'type': bal > 0 ? 'given' : 'received',
               'amount': bal.abs(),

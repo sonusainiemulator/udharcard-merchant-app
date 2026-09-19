@@ -12,42 +12,37 @@ class UdharRepo {
     String paymentMethod = "cash",
     String? createdAt,
   }) async {
-    final Map<String, dynamic> legacyFields = {
+    // Standardize type to "credit" or "debit"
+    final normalizedType =
+        (type == "given" || type == "credit") ? "credit" : "debit";
+
+    final Map<String, dynamic> fields = {
       "customer_id": customerId,
       "amount": amount,
-      "type": type,
-      "payment_method": paymentMethod,
+      "type": normalizedType,
+      "payment_method": paymentMethod.isEmpty ? "cash" : paymentMethod,
       "notes": remarks,
-    };
-    if (createdAt != null && createdAt.isNotEmpty) {
-      legacyFields["created_at"] = createdAt;
-    }
-
-    final legacyResponse = await ApiClient.post(
-      ENDPOINT_URL: "${AppConstants.addUdharUrl}/$customerId/entry",
-      fields: legacyFields,
-    );
-
-    if (legacyResponse.statusCode != 404 && legacyResponse.statusCode != 405) {
-      return legacyResponse;
-    }
-
-    // Compatibility fallback for backends using /merchant/udhar/ledger payload.
-    final Map<String, dynamic> modernFields = {
-      "customer_id": customerId,
-      "email_or_phone": customerId,
-      "amount": amount,
-      "type": type == "credit" ? "given" : "received",
-      "payment_method": paymentMethod,
       "remarks": remarks,
     };
     if (createdAt != null && createdAt.isNotEmpty) {
-      modernFields["created_at"] = createdAt;
+      fields["created_at"] = createdAt;
+      fields["transaction_date"] = createdAt;
     }
 
-    return await ApiClient.post(
+    // Direct call to standard endpoint: POST /api/merchant/udhar/ledger
+    final response = await ApiClient.post(
       ENDPOINT_URL: AppConstants.addUdharUrl,
-      fields: modernFields,
+      fields: fields,
+    );
+
+    if (response.statusCode != 404 && response.statusCode != 405) {
+      return response;
+    }
+
+    // Fallback for backends routing by customer ID in path: POST /api/merchant/udhar/ledger/{customerId}/entry
+    return await ApiClient.post(
+      ENDPOINT_URL: "${AppConstants.addUdharUrl}/$customerId/entry",
+      fields: fields,
     );
   }
 
@@ -127,8 +122,16 @@ class UdharRepo {
   static Future<http.Response> getCustomerLedger({
     required String customerId,
   }) async {
+    final cleanId = customerId.trim();
+    if (cleanId.isEmpty) {
+      return http.Response(
+        '{"status":"failed","message":"Customer ID is required"}',
+        400,
+        headers: {'content-type': 'application/json'},
+      );
+    }
     final response = await ApiClient.get(
-      ENDPOINT_URL: "${AppConstants.addCustomerUrl}/$customerId/ledger",
+      ENDPOINT_URL: "${AppConstants.addCustomerUrl}/$cleanId/ledger",
     );
 
     if (response.statusCode != 404 && response.statusCode != 405) {
@@ -136,7 +139,7 @@ class UdharRepo {
     }
 
     return await ApiClient.get(
-      ENDPOINT_URL: "${AppConstants.customerLedgerUrl}/$customerId",
+      ENDPOINT_URL: "${AppConstants.customerLedgerUrl}/$cleanId",
     );
   }
 

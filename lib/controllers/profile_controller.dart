@@ -107,7 +107,8 @@ class ProfileController extends GetxController {
           ? data!.email!
           : (HiveHelp.read(Keys.userEmail) ?? '').toString();
       join_date = data == null ? '' : data.created_at.toString();
-      userPhoto = data == null ? '' : data.profilePicture ?? "";
+      final rawPhoto = data == null ? '' : (data.profilePicture ?? "");
+      userPhoto = (rawPhoto.endsWith('/default.png') || rawPhoto.endsWith('default.png')) ? '' : rawPhoto;
       fNameEditingController.text = data == null ? '' : data.firstname ?? "";
       lNameEditingController.text = data == null ? '' : data.lastname ?? "";
 
@@ -158,49 +159,45 @@ class ProfileController extends GetxController {
   Future updateProfile(context, {bool? isUpdateProfilePic = false}) async {
     isUpdateProfile = true;
     update();
-    http.Response response = await ProfileRepo.profileUpdate(
-      files:
-          isUpdateProfilePic == false
-              ? null
-              : await http.MultipartFile.fromPath(
-                'profile_picture',
-                pickedImage!.path,
-              ),
-      data: () {
-        final cleanPhoneCode = phoneCode.replaceAll('+', '').trim();
-        final fullName =
-            "${fNameEditingController.text} ${lNameEditingController.text}"
-                .trim();
-        final sanitizedUsername =
-            userNameEditingController.text.trim().isNotEmpty
-                ? userNameEditingController.text.trim()
-                : (phoneNumberEditingController.text.trim().isNotEmpty
-                    ? phoneNumberEditingController.text.trim()
-                    : fullName);
+    try {
+      final multipartFile = (isUpdateProfilePic == true && pickedImage != null)
+          ? await http.MultipartFile.fromPath(
+              'profile_picture',
+              pickedImage!.path,
+            )
+          : null;
 
-        return {
-          "name": fullName,
-          "first_name": fNameEditingController.text.trim(),
-          "last_name": lNameEditingController.text.trim(),
-          "username": sanitizedUsername,
-          "city": cityEditingController.text.trim(),
-          "state": stateEditingController.text.trim(),
-          "language": selectedLanguageId,
-          "phone": phoneNumberEditingController.text.trim(),
-          "address": addrEditingController.text.trim(),
-          "phone_code": cleanPhoneCode.isNotEmpty ? cleanPhoneCode : "91",
-        };
-      }(),
-    );
-    isUpdateProfile = false;
-    update();
-    var data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      ApiStatus.checkStatus(data['status'], data['message']);
-      if (data['status'] == 'success') {
-        final fullName =
-            "${fNameEditingController.text} ${lNameEditingController.text}"
-                .trim();
+      final cleanPhoneCode = phoneCode.replaceAll('+', '').trim();
+      final fullName =
+          "${fNameEditingController.text} ${lNameEditingController.text}"
+              .trim();
+      final sanitizedUsername =
+          userNameEditingController.text.trim().isNotEmpty
+              ? userNameEditingController.text.trim()
+              : (phoneNumberEditingController.text.trim().isNotEmpty
+                  ? phoneNumberEditingController.text.trim()
+                  : fullName);
+
+      final Map<String, String> data = {
+        "name": fullName,
+        "first_name": fNameEditingController.text.trim(),
+        "last_name": lNameEditingController.text.trim(),
+        "username": sanitizedUsername,
+        "city": cityEditingController.text.trim(),
+        "state": stateEditingController.text.trim(),
+        "language": selectedLanguageId,
+        "phone": phoneNumberEditingController.text.trim(),
+        "address": addrEditingController.text.trim(),
+        "phone_code": cleanPhoneCode.isNotEmpty ? cleanPhoneCode : "91",
+      };
+
+      http.Response response = await ProfileRepo.profileUpdate(
+        files: multipartFile,
+        data: data,
+      );
+
+      var resData = jsonDecode(response.body);
+      if (response.statusCode == 200 && resData['status'] == 'success') {
         if (fullName.isNotEmpty) {
           HiveHelp.write(Keys.userFullName, fullName);
           userName = fullName;
@@ -217,38 +214,62 @@ class ProfileController extends GetxController {
             userNameEditingController.text.trim(),
           );
         }
-        await getProfile();
-        if (context != null) Navigator.of(context).pop();
-        update();
+        pickedImage = null;
+        await getProfile(isFromRefreshIndicator: true);
+
+        Helpers.showSnackBar(
+          msg: isUpdateProfilePic == true
+              ? 'Profile picture updated successfully'
+              : (resData['message'] ?? 'Profile updated successfully'),
+        );
+
+        if (isUpdateProfilePic != true && context != null) {
+          Navigator.of(context).pop();
+        }
+      } else {
+        Helpers.showSnackBar(
+          msg: resData['message']?.toString() ??
+              'Failed to update profile. Please try again.',
+        );
       }
+    } catch (e) {
+      debugPrint("Profile update exception: $e");
+      Helpers.showSnackBar(msg: e.toString());
+    } finally {
+      isUpdateProfile = false;
       update();
-    } else {
-      Helpers.showSnackBar(msg: '${data['message']}');
     }
   }
 
   XFile? pickedImage;
   Future<void> pickImage(ImageSource source, context) async {
     try {
-        final picker = ImagePicker();
-        final pickedImageFile = await picker.pickImage(source: source);
-        final File imageFile = File(pickedImageFile!.path);
-        final int fileSizeInBytes = await imageFile.length();
-        final double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+      final picker = ImagePicker();
+      final pickedImageFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (pickedImageFile == null) return;
 
-        pickedImage = pickedImageFile;
-        if (pickedImage != null) {
-          if (fileSizeInMB >= 4) {
-            Helpers.showSnackBar(
-              msg: "Image size exceeds 4 MB. Please choose a smaller image.",
-            );
-          } else {
-            await updateProfile(context, isUpdateProfilePic: true);
-          }
-        }
-        update();
-     
+      final File imageFile = File(pickedImageFile.path);
+      final int fileSizeInBytes = await imageFile.length();
+      final double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+
+      if (fileSizeInMB >= 5) {
+        Helpers.showSnackBar(
+          msg: "Image size exceeds 5 MB. Please choose a smaller image.",
+        );
+        return;
+      }
+
+      pickedImage = pickedImageFile;
+      update();
+
+      await updateProfile(context, isUpdateProfilePic: true);
     } catch (e) {
+      debugPrint("pickImage error: $e");
       Helpers.showSnackBar(msg: e.toString());
     }
   }

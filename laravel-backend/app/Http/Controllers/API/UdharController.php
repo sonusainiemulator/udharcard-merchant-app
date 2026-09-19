@@ -373,8 +373,33 @@ class UdharController extends Controller
     public function ledgerList($customer_id)
     {
         try {
-            $customer = UdharCustomer::where('merchant_id', Auth::id())->findOrFail($customer_id);
-            $ledgers = UdharLedger::where('customer_id', $customer_id)
+            $merchantId = Auth::id();
+            $cleanId = is_string($customer_id) ? trim($customer_id) : $customer_id;
+            if (is_string($cleanId) && str_starts_with($cleanId, 'CUS-')) {
+                $cleanId = substr($cleanId, 4);
+            }
+            if (empty($cleanId)) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Invalid customer ID'
+                ], 400);
+            }
+
+            $customer = UdharCustomer::where('merchant_id', $merchantId)
+                ->where(function ($q) use ($cleanId) {
+                    $q->where('id', $cleanId)
+                      ->orWhere('customer_user_id', $cleanId);
+                })
+                ->first();
+
+            if (!$customer) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Customer not found'
+                ], 404);
+            }
+
+            $ledgers = UdharLedger::where('customer_id', $customer->id)
                 ->latest()
                 ->paginate(20);
 
@@ -392,10 +417,60 @@ class UdharController extends Controller
     /**
      * Add a ledger entry (Credit or Debit).
      */
-    public function addLedgerEntry(Request $request)
+    public function addLedgerEntry(Request $request, $customer_id = null)
     {
+        $input = $request->all();
+
+        // 1. Resolve customer_id from route param if present or in body
+        if (!empty($customer_id) && empty($input['customer_id'])) {
+            $input['customer_id'] = $customer_id;
+        }
+
+        // 2. Normalize customer_id (strip CUS- prefix)
+        if (!empty($input['customer_id'])) {
+            $cid = (string) $input['customer_id'];
+            if (str_starts_with($cid, 'CUS-')) {
+                $cid = substr($cid, 4);
+            }
+            if (is_numeric($cid)) {
+                $input['customer_id'] = (int) $cid;
+            } else {
+                $input['customer_id'] = $cid;
+            }
+        }
+
+        // 3. Normalize type (given -> credit, received -> debit)
+        if (!empty($input['type'])) {
+            $typeLower = strtolower(trim((string) $input['type']));
+            if (in_array($typeLower, ['given', 'credit', 'cr'])) {
+                $input['type'] = 'credit';
+            } elseif (in_array($typeLower, ['received', 'debit', 'dr', 'got'])) {
+                $input['type'] = 'debit';
+            }
+        }
+
+        // 4. Notes / Remarks compatibility
+        if (empty($input['notes']) && !empty($input['remarks'])) {
+            $input['notes'] = $input['remarks'];
+        }
+        if (empty($input['remarks']) && !empty($input['notes'])) {
+            $input['remarks'] = $input['notes'];
+        }
+
+        // 5. Payment method fallback
+        if (empty($input['payment_method'])) {
+            $input['payment_method'] = 'cash';
+        } else {
+            $pm = strtolower(trim((string) $input['payment_method']));
+            if (!in_array($pm, ['cash', 'upi', 'bank_transfer', 'gateway'])) {
+                $input['payment_method'] = 'cash';
+            }
+        }
+
+        $request->merge($input);
+
         $validator = Validator::make($request->all(), [
-            'customer_id' => 'required|exists:udhar_customers,id',
+            'customer_id' => 'required',
             'type' => 'required|in:credit,debit',
             'amount' => 'required|numeric|min:0.01',
             'payment_method' => 'required|in:cash,upi,bank_transfer,gateway',
@@ -405,21 +480,30 @@ class UdharController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($this->withErrors(collect($validator->errors())->collapse()->first()));
+            return response()->json($this->withErrors(collect($validator->errors())->collapse()->first()), 422);
         }
 
         DB::beginTransaction();
         try {
             $merchantId = Auth::id();
-            $customer = UdharCustomer::where('merchant_id', $merchantId)->findOrFail($request->customer_id);
+            $customer = UdharCustomer::where('merchant_id', $merchantId)
+                ->where(function ($q) use ($request) {
+                    $q->where('id', $request->customer_id)
+                      ->orWhere('customer_user_id', $request->customer_id);
+                })
+                ->first();
 
-            $amount = $request->amount;
-            $newOutstanding = $customer->outstanding_balance;
+            if (!$customer) {
+                return response()->json($this->withErrors('Customer not found for this merchant.'), 404);
+            }
+
+            $amount = (float) $request->amount;
+            $newOutstanding = (float) $customer->outstanding_balance;
 
             if ($request->type === 'credit') {
                 // Verify credit limit if dynamic limit is set (>0)
                 if ($customer->credit_limit > 0 && ($newOutstanding + $amount) > $customer->credit_limit) {
-                    return response()->json($this->withErrors('Credit limit exceeded. Transaction denied.'));
+                    return response()->json($this->withErrors('Credit limit exceeded. Transaction denied.'), 422);
                 }
                 $newOutstanding += $amount;
             } else {
@@ -440,6 +524,7 @@ class UdharController extends Controller
                 'due_date' => $request->due_date ?? $customer->due_date,
                 'created_by' => 'merchant',
                 'verification_status' => 'unverified',
+                'created_at' => $request->created_at ?? now(),
             ]);
 
             // Update customer balance & due date
@@ -457,7 +542,7 @@ class UdharController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json($this->withErrors($e->getMessage()));
+            return response()->json($this->withErrors($e->getMessage()), 500);
         }
     }
 

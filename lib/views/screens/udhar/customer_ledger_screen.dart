@@ -35,7 +35,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.find<UdharController>().fetchCustomerLedger(widget.customerId);
+      if (widget.customerId.trim().isNotEmpty) {
+        Get.find<UdharController>().fetchCustomerLedger(widget.customerId);
+      }
     });
   }
 
@@ -456,7 +458,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                       onPressed: () {
                         final userMap = controller.usersList.firstWhere(
                           (u) =>
-                              u['id'].toString() == widget.customerId,
+                              (u['id'] ?? u['source_id'] ?? u['user_id'] ?? '')
+                                  .toString() ==
+                              widget.customerId,
                           orElse:
                               () => {
                                 "id": widget.customerId,
@@ -495,7 +499,9 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                       onPressed: () {
                         final userMap = controller.usersList.firstWhere(
                           (u) =>
-                              u['id'].toString() == widget.customerId,
+                              (u['id'] ?? u['source_id'] ?? u['user_id'] ?? '')
+                                  .toString() ==
+                              widget.customerId,
                           orElse:
                               () => {
                                 "id": widget.customerId,

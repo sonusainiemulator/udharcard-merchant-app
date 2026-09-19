@@ -173,7 +173,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                                       .isLoading ||
                                                   Get.find<ProfileController>()
                                                           .userPhoto ==
-                                                      ''
+                                                      '' ||
+                                                  Get.find<ProfileController>()
+                                                      .userPhoto
+                                                      .endsWith(
+                                                        '/default.png',
+                                                      )
                                               ? DecorationImage(
                                                 image: AssetImage(
                                                   "$rootImageDir/avatar.webp",

@@ -134,10 +134,19 @@ class RouteHelper {
     GetPage(
       name: RoutesName.customerLedgerScreen,
       page: () {
-        final args = Get.arguments ?? {};
+        final args = Get.arguments is Map ? Get.arguments as Map : {};
+        final rawId = (args['customerId'] ??
+                args['id'] ??
+                args['source_id'] ??
+                args['customer_id'] ??
+                args['user_id'] ??
+                '')
+            .toString();
+        final rawName =
+            (args['customerName'] ?? args['name'] ?? '').toString();
         return CustomerLedgerScreen(
-          customerId: (args['customerId'] ?? '').toString(),
-          customerName: (args['customerName'] ?? '').toString(),
+          customerId: rawId,
+          customerName: rawName,
         );
       },
     ),

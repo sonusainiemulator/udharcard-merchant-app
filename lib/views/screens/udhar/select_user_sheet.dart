@@ -264,8 +264,18 @@ class SelectUserSheet extends StatelessWidget {
                                     onTap: () {
                                       // Clear search state for next open
                                       controller.searchCtrl.clear();
-                                      controller.searchUsers('');
-                                      Get.back(result: Map<String, dynamic>.from(user));
+                                      final selectedMap =
+                                          Map<String, dynamic>.from(user);
+                                      final resolvedId = (selectedMap['id'] ??
+                                              selectedMap['source_id'] ??
+                                              selectedMap['customer_id'] ??
+                                              selectedMap['user_id'] ??
+                                              '')
+                                          .toString();
+                                      if (resolvedId.isNotEmpty) {
+                                        selectedMap['id'] = resolvedId;
+                                      }
+                                      Get.back(result: selectedMap);
                                     },
                                   );
                                 },

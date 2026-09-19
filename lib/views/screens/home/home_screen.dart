@@ -89,9 +89,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToLedger(Map<String, dynamic> userMap) {
-    final id = (userMap['id'] ?? userMap['user_id'] ?? '').toString();
+    final rawId = userMap['id'] ??
+        userMap['source_id'] ??
+        userMap['customer_id'] ??
+        userMap['user_id'];
+    String id = (rawId ?? '').toString().trim();
+    if (id.isEmpty && userMap['contact_identifier'] != null) {
+      id = userMap['contact_identifier']
+          .toString()
+          .replaceAll(RegExp(r'[^0-9]'), '');
+    }
     final name =
         (userMap['name'] ?? userMap['customer_name'] ?? 'Customer').toString();
+    if (id.isEmpty) {
+      Helpers.showSnackBar(msg: "Customer details unavailable.");
+      return;
+    }
     Get.to(() => CustomerLedgerScreen(customerId: id, customerName: name));
   }
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -142,21 +143,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                           width: 3.h,
                                         ),
                                         color: AppColors.imageBgColor,
-                                        image: profileController.isLoading ||
-                                                profileController.userPhoto == ''
+                                        image: profileController.pickedImage != null
                                             ? DecorationImage(
-                                                image: AssetImage(
-                                                  "$rootImageDir/avatar.webp",
+                                                image: FileImage(
+                                                  File(profileController.pickedImage!.path),
                                                 ),
                                                 fit: BoxFit.cover,
                                               )
-                                            : DecorationImage(
-                                                image: CachedNetworkImageProvider(
-                                                  profileController.userPhoto,
-                                                ),
-                                                fit: BoxFit.cover,
-                                              ),
+                                            : (profileController.isLoading ||
+                                                    profileController.userPhoto == '' ||
+                                                    profileController.userPhoto.endsWith('/default.png'))
+                                                ? DecorationImage(
+                                                    image: AssetImage(
+                                                      "$rootImageDir/avatar.webp",
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : DecorationImage(
+                                                    image: CachedNetworkImageProvider(
+                                                      profileController.userPhoto,
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                  ),
                                       ),
+                                      child: profileController.isUpdateProfile
+                                          ? Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.black.withValues(alpha: 0.45),
+                                              ),
+                                              child: Center(
+                                                child: SizedBox(
+                                                  height: 28.h,
+                                                  width: 28.h,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2.5,
+                                                    color: AppColors.mainColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : null,
                                     ),
                                     Positioned(
                                       bottom: 0,

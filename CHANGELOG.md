@@ -5,6 +5,59 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.59] - 2026-09-19
+
+### 🎨 Add Udhar & Payment Received UI/UX Overhaul
+- **Dynamic Transaction Button & State**:
+  - Automatically switches submit button label and styling based on transaction type:
+    - **Payment Received**: Label dynamically changes to `"Add Receive Transaction"`, with green theme (`AppColors.greenColor`), soft shadow, and downward arrow icon (`Icons.arrow_downward_rounded`).
+    - **Udhar Given**: Label shows `"Add Udhar Transaction"`, with red theme (`AppColors.redColor`), soft shadow, and upward arrow icon (`Icons.arrow_upward_rounded`).
+  - Screen title dynamically reflects `"Payment Received"` vs `"Add Udhar"`.
+- **Docked & Elevated Bottom Action Button**:
+  - Moved the submit action button out of the scrollview body into a dedicated `bottomNavigationBar` container.
+  - Added elevated bottom clearance (`22.h` on 3-button navigation devices, `SafeArea` with `12.h` on gesture devices), completely preventing button collision with system back/home/recents navigation buttons ("thoda sa button upper aa jata to jada acha h").
+  - Dynamically handles keyboard appearance (`10.h` inset) without blocking form fields.
+- **Enhanced Screen UI & Merchant Usability**:
+  - Reduced excessive vertical spacing between form sections from `28.h` to compact `16.h` and label spacing to `8.h`, making the entire form accessible without excessive scrolling.
+  - Added visual directional icons to transaction type and payment method toggle pills.
+  - Added modern Customer Selector card with initials avatar and clean select/clear actions.
+  - Added quick-amount suggestion chips (`+ ₹100`, `+ ₹500`, `+ ₹1,000`, `+ ₹2,000`, `+ ₹5,000`) for one-tap amount entry.
+
+### 🐛 Customer Ledger & Contact ID Resolution Fix
+- **Live Backend `MerchantContactService`**: Included `credit_limit`, `outstanding_balance`, and explicit numeric `id` mapped from `source_id` in contact responses. Prevents empty customer IDs when opening customer details.
+- **Backend `UdharController.ledgerList`**: Added resilience to customer ID parameter parsing—automatically strips `CUS-` identifier prefixes and matches against either `id` or `customer_user_id`.
+- **Frontend Safe ID Resolution**:
+  - `UdharController.fetchUsers`: Normalized raw contacts on arrival so `id` is consistently populated using `id ?? source_id ?? customer_id ?? user_id ?? regex(contact_identifier)`.
+  - `CustomerLedgerScreen`: Guarded `initState` so `fetchCustomerLedger` only triggers when `customerId` is non-empty. Added fallback matching across `id`, `source_id`, and `user_id` in transaction action buttons ("YOU GAVE" / "YOU GOT").
+  - `HomeScreen` & `CustomerListScreen`: Fortified `_navigateToLedger` helper with fallback ID resolution and safety warning toasts if a customer has no valid ID.
+  - `select_user_sheet.dart` & `routes_helper.dart`: Ensured selected contact map always sets resolved `'id'` and route arguments safely extract customer IDs.
+
+### 🐛 Add Udhar "The selected type is invalid" Fix
+- **Live Backend Parameter Normalization**:
+  - In `Modules/Merchant/app/Http/Controllers/Api/UdharController.php` (`addLedgerEntry`), added automatic input normalization:
+    - Accepts both `'given'` / `'credit'` (normalized to `'credit'`) and `'received'` / `'debit'` (normalized to `'debit'`).
+    - Synchronized `'remarks'` and `'notes'` keys.
+    - Added fallback for customer ID from route parameters or body (with automatic `CUS-` prefix stripping).
+  - Added REST alias routes `POST udhar/ledger/{customer_id}/entry` and `POST udhar/customers/{customer_id}/entry` in `Modules/Merchant/routes/api.php` so legacy and new clients succeed immediately.
+- **Frontend `UdharRepo.addUdhar` Direct Route Optimization**:
+  - Removed flawed fallback logic that was transforming `'credit'` to `'given'`.
+  - Now directly posts standard payload (`type: "credit"` / `"debit"`, `'notes'` and `'remarks'`) to `/merchant/udhar/ledger`, with seamless fallback.
+  - Existing builds on TestFlight work immediately due to live server normalization without requiring an immediate update.
+
+### 🖼️ Profile Update & Photo Upload Platform Fix
+- **Live Backend `Upload` Trait**:
+  - Resolved fatal `500 Call to undefined method Intervention\Image\ImageManager::usingDriver()` crash caused by Laravel 11 container `'image'` service collision with Intervention Image v2.
+  - Directly instantiates `new \Intervention\Image\ImageManager(['driver' => 'gd'])`, with resilient fallback to direct storage.
+- **Live Backend `HomeController.profile`**:
+  - Relaxed overly strict validation rules (removed `min:3` constraints on names/cities/states and allowed single-word / nullable names).
+  - Added full multi-key image support (`profile_picture`, `image`, `photo`, `avatar`).
+  - Automatically normalizes name inputs and preserves existing profile values for partial updates.
+- **Frontend `ProfileController` & `EditProfileScreen`**:
+  - Added immediate local image preview upon picking a photo before and during upload.
+  - Added visual loading spinner overlay on the avatar circle during upload.
+  - Fixed premature screen popping on photo upload so users remain on the edit page and receive immediate confirmation.
+  - Filtered out admin placeholder default image (`default.png`) so the branded vector avatar displays cleanly.
+
 ## [1.0.58] - 2026-09-07
 
 ### 🍏 iOS Stability & Firebase Configuration Hardening
