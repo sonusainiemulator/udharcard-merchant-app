@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -109,6 +112,8 @@ class VoiceEntryController extends GetxController {
 
   String _aiReply = "";
   String get aiReply => _aiReply;
+
+  bool isUsingGeminiAi = false;
 
   // Active Category Filter
   String activeCategory = 'ALL'; // 'ALL', 'UDHAR', 'COLLECTION', 'BILL', 'PURCHASE'
@@ -238,6 +243,7 @@ class VoiceEntryController extends GetxController {
   }
 
   Future<void> startListening() async {
+    HapticFeedback.mediumImpact();
     if (_assistantState == VoiceAssistantState.speaking) {
       await _flutterTts.stop();
     }
@@ -279,6 +285,7 @@ class VoiceEntryController extends GetxController {
   }
 
   Future<void> stopListening() async {
+    HapticFeedback.lightImpact();
     if (_assistantState == VoiceAssistantState.listening) {
       await _speechToText.stop();
       _processSpeech();
@@ -320,6 +327,131 @@ class VoiceEntryController extends GetxController {
     update();
   }
 
+  /// Google Gemini AI Parser using latest Flash Model (gemini-2.0-flash)
+  Future<VoiceParseResult?> _parseWithGemini(String speechText) async {
+    final apiKey = (dotenv.env['GEMINI_API_KEY'] ?? '').trim();
+    if (apiKey.isEmpty || apiKey.contains('Xxxx')) {
+      isUsingGeminiAi = false;
+      return null;
+    }
+
+    final modelName = (dotenv.env['GEMINI_MODEL'] ?? '').trim().isNotEmpty
+        ? dotenv.env['GEMINI_MODEL']!.trim()
+        : 'gemini-2.0-flash';
+
+    try {
+      final model = GenerativeModel(
+        model: modelName,
+        apiKey: apiKey,
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        ),
+      );
+
+      final prompt = '''
+You are an intelligent AI assistant for an Indian merchant ledger app (UdharCard).
+The merchant speaks in Hindi, Hinglish, or English.
+Analyze the user's speech and extract information into strictly valid JSON.
+
+Categories of speech:
+1. "transaction": Merchant giving credit or receiving payment.
+   Examples:
+   - "Ramesh ko 500 rupaye udhar diya" -> action: "transaction", name: "Ramesh", amount: 500, type: "Given", category: "UDHAR"
+   - "Suresh se 1200 mile" -> action: "transaction", name: "Suresh", amount: 1200, type: "Received", category: "COLLECTION"
+2. "purchase_order": Stock/grocery items that are finished and need to be ordered.
+   Example: "Doodh aur bread khatam ho gaya mangwana hai" -> action: "purchase_order", purchase_items: ["Doodh", "Bread"]
+3. "balance_query": Checking balance of customer or total.
+   Example: "Ramesh ka kitna baki hai?" -> action: "balance_query", name: "Ramesh"
+4. "itemized_bill": Items with quantity and price.
+   Example: "2 kg cheeni 40 rupaye aur 1 packet surf 60 rupaye" -> action: "itemized_bill", bill_items: [{"title": "Cheeni", "quantity": 2, "unit": "kg", "unitPrice": 40, "totalPrice": 80}]
+5. "help": Greeting or asking how to use.
+
+Output JSON structure:
+{
+  "action": "transaction" | "purchase_order" | "balance_query" | "itemized_bill" | "help",
+  "name": "Customer Name or empty string",
+  "amount": number,
+  "type": "Given" | "Received",
+  "category": "UDHAR" | "COLLECTION" | "PURCHASE" | "BILL",
+  "purchase_items": ["item 1", "item 2"],
+  "bill_items": [{"title": "Item", "quantity": 1, "unit": "kg", "unitPrice": 50, "totalPrice": 50}],
+  "remarks": "short remarks if any",
+  "reply": "Friendly short reply in Roman Hinglish to speak back to the merchant"
+}
+
+Merchant speech: "$speechText"
+''';
+
+      final response = await model
+          .generateContent([Content.text(prompt)])
+          .timeout(const Duration(milliseconds: 3500));
+
+      final text = response.text?.trim() ?? '';
+      if (text.isEmpty) return null;
+
+      final data = jsonDecode(text);
+      final action = (data['action'] ?? '').toString().toLowerCase();
+      final name = (data['name'] ?? '').toString().trim();
+      final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+      final type = (data['type'] ?? 'Given').toString();
+      final category = (data['category'] ?? 'UDHAR').toString();
+      final reply = (data['reply'] ?? '').toString();
+      final remarks = (data['remarks'] ?? '').toString();
+
+      List<VoiceBillItem> billItems = [];
+      if (data['bill_items'] is List) {
+        for (final item in data['bill_items']) {
+          if (item is Map) {
+            billItems.add(VoiceBillItem(
+              title: (item['title'] ?? 'Item').toString(),
+              quantity: (item['quantity'] as num?)?.toDouble() ?? 1.0,
+              unit: (item['unit'] ?? '').toString(),
+              unitPrice: (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
+              totalPrice: (item['totalPrice'] as num?)?.toDouble() ?? 0.0,
+            ));
+          }
+        }
+      }
+
+      List<String> pItems = [];
+      if (data['purchase_items'] is List) {
+        for (final it in data['purchase_items']) {
+          pItems.add(it.toString());
+        }
+      }
+
+      // Link with existing customer ledger if found
+      final matchedCustomer = findMatchingCustomer(name, '');
+      final displayName = matchedCustomer != null ? matchedCustomer['name'] : name;
+
+      isUsingGeminiAi = true;
+      return VoiceParseResult(
+        name: displayName,
+        phone: matchedCustomer?['phone']?.toString() ?? '',
+        amount: amount,
+        type: type,
+        category: category,
+        isQuery: action == 'balance_query',
+        isHelp: action == 'help',
+        isPurchaseOrder: action == 'purchase_order',
+        items: billItems,
+        purchaseItems: pItems,
+        matchedCustomer: matchedCustomer,
+        remarks: remarks,
+        reply: reply.isNotEmpty
+            ? reply
+            : (type == 'Given'
+                ? '$displayName ko ₹${amount.toInt()} udhar add kar diya gaya.'
+                : '$displayName se ₹${amount.toInt()} mil gaye.'),
+      );
+    } catch (e) {
+      if (kDebugMode) print("Gemini Flash parsing error, fallback to local NLP: $e");
+      isUsingGeminiAi = false;
+      return null;
+    }
+  }
+
   Future<void> _processSpeech() async {
     if (_transcribedText.trim().isEmpty) {
       _changeState(VoiceAssistantState.idle);
@@ -327,8 +459,20 @@ class VoiceEntryController extends GetxController {
     }
 
     _changeState(VoiceAssistantState.thinking);
+    HapticFeedback.lightImpact();
 
-    final parsed = parseVoiceInstruction(_transcribedText);
+    // 1. Try Google's latest Gemini 2.0 Flash AI Model if API key is present
+    VoiceParseResult? parsed;
+    try {
+      parsed = await _parseWithGemini(_transcribedText);
+    } catch (_) {}
+
+    // 2. Seamless Instant Fallback to Local Smart NLP (0ms, Offline Kirana dictionary)
+    if (parsed == null) {
+      isUsingGeminiAi = false;
+      parsed = parseVoiceInstruction(_transcribedText);
+    }
+
     latestParsedResult = parsed;
 
     if (parsed.isQuery) {
