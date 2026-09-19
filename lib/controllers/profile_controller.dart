@@ -218,9 +218,11 @@ class ProfileController extends GetxController {
         await getProfile(isFromRefreshIndicator: true);
 
         Helpers.showSnackBar(
+          title: 'Success',
           msg: isUpdateProfilePic == true
               ? 'Profile picture updated successfully'
               : (resData['message'] ?? 'Profile updated successfully'),
+          bgColor: const Color(0xFF10B981),
         );
 
         if (isUpdateProfilePic != true && context != null) {

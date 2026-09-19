@@ -41,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Get.isRegistered<UdharController>()) {
         Get.find<UdharController>().fetchUsers();
+        Get.find<UdharController>().fetchReports(silent: true);
       }
       if (Get.isRegistered<AppController>()) {
         Get.find<AppController>().getDashboard();
@@ -316,6 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: () async {
           if (Get.isRegistered<UdharController>()) {
             await Get.find<UdharController>().fetchUsers();
+            await Get.find<UdharController>().fetchReports(silent: true);
           }
           if (Get.isRegistered<AppController>()) {
             await Get.find<AppController>().getDashboard();
@@ -389,87 +391,159 @@ class _HomeScreenState extends State<HomeScreen> {
               // ── 1. Hero 3-Metric Balance Ledger Banner ────────────────────
               GetBuilder<UdharController>(
                 builder: (udharCtrl) {
-                  double totalDiya = 0.0;
-                  double totalMila = 0.0;
                   int customerCount = udharCtrl.usersList.length;
 
-                  for (var u in udharCtrl.usersList) {
-                    final b = double.tryParse(
-                            (u['balance'] ?? u['udhar_balance'] ?? 0)
-                                .toString()) ??
-                        0.0;
-                    final given = double.tryParse(
-                            (u['total_given'] ?? u['total_diya'] ?? (b > 0 ? b : 0))
-                                .toString()) ??
-                        0.0;
-                    final received = double.tryParse(
-                            (u['total_received'] ?? u['total_mila'] ?? (b < 0 ? b.abs() : 0))
-                                .toString()) ??
-                        0.0;
+                  // 1. Calculate totals directly from customer balances (always accurate)
+                  double totalCustomerOutstanding = 0.0;
+                  double totalCustomerAdvance = 0.0;
 
-                    totalDiya += given;
-                    totalMila += received;
+                  for (var u in udharCtrl.usersList) {
+                    final rawBal = u['outstanding_balance'] ??
+                        u['net_balance'] ??
+                        u['stored_balance'] ??
+                        u['balance'] ??
+                        u['udhar_balance'] ??
+                        0;
+                    final b = double.tryParse(rawBal.toString()) ?? 0.0;
+                    if (b > 0) {
+                      totalCustomerOutstanding += b;
+                    } else if (b < 0) {
+                      totalCustomerAdvance += b.abs();
+                    }
                   }
-                  final double pendingBalance = totalDiya - totalMila;
+
+                  // 2. Check if reportsSummary has transaction aggregates
+                  double totalDiya = 0.0;
+                  double totalMila = 0.0;
+                  if (udharCtrl.reportsSummary.isNotEmpty &&
+                      udharCtrl.reportsSummary['total_credit_given'] != null) {
+                    totalDiya = double.tryParse(
+                            udharCtrl.reportsSummary['total_credit_given']
+                                .toString()) ??
+                        0.0;
+                    totalMila = double.tryParse(
+                            udharCtrl.reportsSummary['total_debit_received']
+                                .toString()) ??
+                        0.0;
+                  }
+
+                  // If reportsSummary has no totals yet but customers have balances, fallback to customer sums
+                  if (totalDiya == 0.0 &&
+                      totalMila == 0.0 &&
+                      totalCustomerOutstanding > 0) {
+                    totalDiya = totalCustomerOutstanding;
+                    totalMila = totalCustomerAdvance;
+                  }
+
+                  final double pendingBalance = totalDiya > totalMila
+                      ? (totalDiya - totalMila)
+                      : totalCustomerOutstanding;
 
                   return Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(18.r),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF0F62E2)
-                          : const Color(0xFF0857E6), // solid brand blue, no gradient
-                      borderRadius: BorderRadius.circular(22.r),
+                      color: isDark ? const Color(0xFF17212B) : Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        width: 1,
+                        color: isDark
+                            ? const Color(0xFF25303D)
+                            : const Color(0xFFE2E8F0),
+                        width: 1.2,
                       ),
+                      boxShadow: isDark
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A)
+                                    .withValues(alpha: 0.05),
+                                blurRadius: 18,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Top Header Row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
                                 Container(
-                                  padding: EdgeInsets.all(6.r),
+                                  padding: EdgeInsets.all(8.r),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8.r),
+                                    color: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(10.r),
                                   ),
                                   child: const Icon(
                                     Icons.account_balance_wallet_rounded,
-                                    color: Color(0xFF38BDF8),
-                                    size: 16,
+                                    color: Color(0xFF0F5BD8),
+                                    size: 18,
                                   ),
                                 ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  "Digital Merchant Ledger",
-                                  style: TextStyle(
-                                    color: const Color(0xFFCBD5E1),
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                SizedBox(width: 10.w),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Digital Merchant Ledger",
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF0F172A),
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.2,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Text(
+                                      "Real-time business balance",
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? const Color(0xFF94A3B8)
+                                            : const Color(0xFF64748B),
+                                        fontSize: 10.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                             Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w, vertical: 4.h),
+                                  horizontal: 10.w, vertical: 5.h),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
+                                color: isDark
+                                    ? const Color(0xFF25303D)
+                                    : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(
+                                  color: isDark
+                                      ? const Color(0xFF334155)
+                                      : const Color(0xFFE2E8F0),
+                                  width: 1,
+                                ),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Container(
                                     width: 6.r,
                                     height: 6.r,
                                     decoration: const BoxDecoration(
-                                      color: Color(0xFF38BDF8),
+                                      color: Color(0xFF10B981),
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -477,7 +551,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     "$customerCount Customers",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: isDark
+                                          ? const Color(0xFFE2E8F0)
+                                          : const Color(0xFF334155),
                                       fontSize: 11.sp,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -488,7 +564,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
 
-                        SizedBox(height: 16.h),
+                        SizedBox(height: 14.h),
+                        Divider(
+                          color: isDark
+                              ? const Color(0xFF25303D)
+                              : const Color(0xFFF1F5F9),
+                          height: 1,
+                          thickness: 1,
+                        ),
+                        SizedBox(height: 14.h),
 
                         // 3-Metrics Columns Row
                         Row(
@@ -500,29 +584,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(
-                                        Icons.call_made_rounded,
-                                        color: Color(0xFFF87171),
-                                        size: 13,
+                                      Container(
+                                        padding: EdgeInsets.all(3.r),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF450A0A)
+                                              : const Color(0xFFFEF2F2),
+                                          borderRadius:
+                                              BorderRadius.circular(5.r),
+                                        ),
+                                        child: const Icon(
+                                          Icons.arrow_upward_rounded,
+                                          color: Color(0xFFDC2626),
+                                          size: 11,
+                                        ),
                                       ),
-                                      SizedBox(width: 3.w),
+                                      SizedBox(width: 4.w),
                                       Text(
                                         "Total Diya",
                                         style: TextStyle(
-                                          color: const Color(0xFF94A3B8),
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : const Color(0xFF64748B),
                                           fontSize: 11.sp,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 4.h),
+                                  SizedBox(height: 6.h),
                                   Text(
                                     "₹${totalDiya.toStringAsFixed(0)}",
                                     style: TextStyle(
-                                      color: const Color(0xFFF87171),
-                                      fontSize: 18.sp,
+                                      color: isDark
+                                          ? const Color(0xFFF87171)
+                                          : const Color(0xFFDC2626),
+                                      fontSize: 17.sp,
                                       fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
                                     ),
                                   ),
                                 ],
@@ -532,7 +631,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               height: 38.h,
                               width: 1,
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: isDark
+                                  ? const Color(0xFF25303D)
+                                  : const Color(0xFFF1F5F9),
                               margin: EdgeInsets.symmetric(horizontal: 6.w),
                             ),
 
@@ -543,29 +644,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(
-                                        Icons.call_received_rounded,
-                                        color: Color(0xFF34D399),
-                                        size: 13,
+                                      Container(
+                                        padding: EdgeInsets.all(3.r),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF052E16)
+                                              : const Color(0xFFF0FDF4),
+                                          borderRadius:
+                                              BorderRadius.circular(5.r),
+                                        ),
+                                        child: const Icon(
+                                          Icons.arrow_downward_rounded,
+                                          color: Color(0xFF16A34A),
+                                          size: 11,
+                                        ),
                                       ),
-                                      SizedBox(width: 3.w),
+                                      SizedBox(width: 4.w),
                                       Text(
                                         "Total Mila",
                                         style: TextStyle(
-                                          color: const Color(0xFF94A3B8),
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : const Color(0xFF64748B),
                                           fontSize: 11.sp,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 4.h),
+                                  SizedBox(height: 6.h),
                                   Text(
                                     "₹${totalMila.toStringAsFixed(0)}",
                                     style: TextStyle(
-                                      color: const Color(0xFF34D399),
-                                      fontSize: 18.sp,
+                                      color: isDark
+                                          ? const Color(0xFF4ADE80)
+                                          : const Color(0xFF16A34A),
+                                      fontSize: 17.sp,
                                       fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
                                     ),
                                   ),
                                 ],
@@ -575,7 +691,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               height: 38.h,
                               width: 1,
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: isDark
+                                  ? const Color(0xFF25303D)
+                                  : const Color(0xFFF1F5F9),
                               margin: EdgeInsets.symmetric(horizontal: 6.w),
                             ),
 
@@ -586,29 +704,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(
-                                        Icons.pending_actions_rounded,
-                                        color: Color(0xFF38BDF8),
-                                        size: 13,
+                                      Container(
+                                        padding: EdgeInsets.all(3.r),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF172554)
+                                              : const Color(0xFFEFF6FF),
+                                          borderRadius:
+                                              BorderRadius.circular(5.r),
+                                        ),
+                                        child: const Icon(
+                                          Icons.pending_actions_rounded,
+                                          color: Color(0xFF2563EB),
+                                          size: 11,
+                                        ),
                                       ),
-                                      SizedBox(width: 3.w),
+                                      SizedBox(width: 4.w),
                                       Text(
                                         "Pending",
                                         style: TextStyle(
-                                          color: const Color(0xFF94A3B8),
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : const Color(0xFF64748B),
                                           fontSize: 11.sp,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 4.h),
+                                  SizedBox(height: 6.h),
                                   Text(
                                     "₹${pendingBalance.abs().toStringAsFixed(0)}",
                                     style: TextStyle(
-                                      color: const Color(0xFF38BDF8),
-                                      fontSize: 18.sp,
+                                      color: isDark
+                                          ? const Color(0xFF60A5FA)
+                                          : const Color(0xFF0F5BD8),
+                                      fontSize: 17.sp,
                                       fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
                                     ),
                                   ),
                                 ],
@@ -616,31 +749,40 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 14.h),
+
+                        SizedBox(height: 16.h),
+
+                        // Action Buttons Row
                         Row(
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   if (Get.isRegistered<BottomNavController>()) {
-                                    Get.find<BottomNavController>().changeScreen(1);
+                                    Get.find<BottomNavController>()
+                                        .changeScreen(1);
                                   } else {
                                     Get.toNamed(RoutesName.customerListScreen);
                                   }
                                 },
-                                icon: const Icon(Icons.menu_book_rounded, size: 16),
+                                icon: const Icon(
+                                  Icons.menu_book_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                                 label: const Text('Open ledgers'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF0F172A),
+                                  backgroundColor: const Color(0xFF0F5BD8),
+                                  foregroundColor: Colors.white,
                                   elevation: 0,
-                                  padding: EdgeInsets.symmetric(vertical: 11.h),
+                                  padding:
+                                      EdgeInsets.symmetric(vertical: 11.h),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12.r),
                                   ),
                                   textStyle: TextStyle(
                                     fontSize: 12.sp,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -654,23 +796,42 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
                                   if (newCust != null &&
                                       Get.isRegistered<UdharController>()) {
-                                    Get.find<UdharController>().fetchUsers(force: true);
+                                    Get.find<UdharController>()
+                                        .fetchUsers(force: true);
                                   }
                                 },
-                                icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                                label: const Text('Add customer'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: BorderSide(
-                                    color: Colors.white.withValues(alpha: 0.28),
+                                icon: Icon(
+                                  Icons.person_add_alt_1_rounded,
+                                  size: 16,
+                                  color: isDark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF0F5BD8),
+                                ),
+                                label: Text(
+                                  'Add customer',
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? const Color(0xFF60A5FA)
+                                        : const Color(0xFF0F5BD8),
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                  padding: EdgeInsets.symmetric(vertical: 11.h),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFEFF6FF),
+                                  side: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF3B82F6)
+                                            .withValues(alpha: 0.4)
+                                        : const Color(0xFFBFDBFE),
+                                    width: 1.1,
+                                  ),
+                                  padding:
+                                      EdgeInsets.symmetric(vertical: 11.h),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  textStyle: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),

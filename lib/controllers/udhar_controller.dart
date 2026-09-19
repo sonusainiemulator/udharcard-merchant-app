@@ -242,6 +242,9 @@ class UdharController extends GetxController {
     }
     isUsersLoading = false;
     update();
+
+    // Refresh realtime reports summary silently in background
+    fetchReports(silent: true);
   }
 
   void searchUsers(String query) {
@@ -1105,7 +1108,7 @@ class UdharController extends GetxController {
     }
   }
 
-  Future<void> fetchReports({DateTimeRange? range}) async {
+  Future<void> fetchReports({DateTimeRange? range, bool silent = false}) async {
     reportsDateRange = range ?? reportsDateRange;
     isReportsLoading = true;
     update();
@@ -1143,14 +1146,18 @@ class UdharController extends GetxController {
           payload['outstanding_customers'] ?? [],
         );
       } else {
-        Helpers.showSnackBar(
-          msg:
-              data['message']?.toString() ??
-              'Unable to fetch realtime reports.',
-        );
+        if (!silent) {
+          Helpers.showSnackBar(
+            msg:
+                data['message']?.toString() ??
+                'Unable to fetch realtime reports.',
+          );
+        }
       }
     } catch (_) {
-      Helpers.showSnackBar(msg: 'Unable to fetch realtime reports.');
+      if (!silent) {
+        Helpers.showSnackBar(msg: 'Unable to fetch realtime reports.');
+      }
     }
 
     isReportsLoading = false;

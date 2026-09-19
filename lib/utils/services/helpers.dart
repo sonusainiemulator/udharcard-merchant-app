@@ -63,7 +63,7 @@ class Helpers {
   /// SHOW VALIDATION ERROR DIALOG / TOAST
   static showSnackBar({
     String msg = "Field must not be empty!",
-    String title = "Error!",
+    String? title,
     int? durationTime = 3,
     Widget? icon,
     Widget? titleText,
@@ -73,22 +73,34 @@ class Helpers {
     SnackPosition? snackPosition = SnackPosition.TOP,
   }) {
     if (msg.trim().isEmpty) return;
-    final lowerTitle = title.toLowerCase();
+    final lowerTitle = (title ?? '').toLowerCase();
     final lowerMsg = msg.toLowerCase();
-    final bool isError = lowerTitle.contains('error') ||
-        lowerTitle.contains('failed') ||
-        lowerMsg.contains('error') ||
-        lowerMsg.contains('failed') ||
-        lowerMsg.contains('please') ||
-        lowerMsg.contains('required') ||
-        lowerMsg.contains('invalid') ||
-        lowerMsg.contains('cannot') ||
-        lowerMsg.contains('unable');
+
+    final bool isSuccess = lowerTitle.contains('success') ||
+        lowerMsg.contains('success') ||
+        lowerMsg.contains('successfully') ||
+        lowerMsg.contains('saved') ||
+        lowerMsg.contains('updated') ||
+        lowerMsg.contains('verified') ||
+        lowerMsg.contains('completed');
+
+    final bool isError = !isSuccess &&
+        (lowerTitle.contains('error') ||
+            lowerTitle.contains('failed') ||
+            lowerMsg.contains('error') ||
+            lowerMsg.contains('failed') ||
+            lowerMsg.contains('invalid') ||
+            lowerMsg.contains('cannot') ||
+            lowerMsg.contains('unable') ||
+            lowerMsg.contains('required') ||
+            lowerMsg.contains('please'));
 
     showToast(
       msg: msg,
       bgColor: bgColor ??
-          (isError ? const Color(0xFFE53935) : const Color(0xFF10B981)),
+          (isSuccess
+              ? const Color(0xFF10B981)
+              : (isError ? const Color(0xFFE53935) : const Color(0xFF10B981))),
       textColor: textColor ?? Colors.white,
       gravity: ToastGravity.BOTTOM,
     );

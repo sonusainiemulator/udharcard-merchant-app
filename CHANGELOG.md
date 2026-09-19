@@ -5,6 +5,24 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.60] - 2026-09-19
+
+### 🚀 Home Screen Ledger Data, Widget Redesign & Profile Toast Fix
+- **Accurate Realtime Ledger Aggregation**:
+  - Resolved `₹0` balance display bug on the Home screen Digital Merchant Ledger banner.
+  - Corrected balance resolution to inspect `outstanding_balance`, `net_balance`, `stored_balance`, and `balance` across all customer contacts.
+  - Added background silent synchronization with `UdharRepo.getReports()` (`fetchReports(silent: true)`) on screen init and pull-to-refresh for instant, accurate totals of **Total Diya**, **Total Mila**, and **Pending**.
+- **Modern Executive Ledger Banner Redesign**:
+  - Replaced the harsh solid blue background with a pristine, executive card design:
+    - Pure white surface in light mode with subtle border (`#E2E8F0`) and soft ambient elevation (`#0F172A` at 5% opacity).
+    - Sleek dark slate surface in dark mode (`#17212B`) with fine border (`#25303D`).
+    - Harmonious color scheme: Crimson red for **Total Diya** (`#DC2626`), Emerald green for **Total Mila** (`#16A34A`), and Deep brand blue for **Pending** (`#0F5BD8`).
+    - Balanced, high-contrast action buttons: Solid brand primary button for `"Open ledgers"` and soft-tinted secondary button for `"+ Add customer"`.
+    - Clean customer pill badge with active status indicator.
+- **Profile Update Toast Color Fix**:
+  - Fixed `Helpers.showSnackBar` so success messages (profile update, photo change, UPI ID save, custom QR) display in emerald green (`#10B981`) instead of defaulting to error red (`#E53935`).
+  - Added intelligent keyword detection for success notifications and removed misleading default error titles.
+
 ## [1.0.59] - 2026-09-19
 
 ### 🎨 Add Udhar & Payment Received UI/UX Overhaul
