@@ -18,6 +18,8 @@ import 'package:paysecure/utils/services/localstorage/keys.dart';
 import 'package:paysecure/views/screens/udhar/add_customer_screen.dart';
 import 'package:paysecure/views/screens/udhar/customer_ledger_screen.dart';
 import 'package:paysecure/views/screens/udhar/select_user_sheet.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:paysecure/views/screens/voice_entry/voice_khata_sheet.dart';
 import 'package:paysecure/views/widgets/custom_appbar.dart';
 import 'package:paysecure/views/widgets/language_selection_sheet.dart';
 import 'package:paysecure/views/widgets/spacing.dart';
@@ -1417,6 +1419,33 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               SizedBox(height: 16.h),
             ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_home_voice_khata',
+        onPressed: () => VoiceKhataSheet.show(context),
+        backgroundColor: const Color(0xFF00A86B),
+        elevation: 6,
+        icon: Container(
+          padding: EdgeInsets.all(4.r),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.mic,
+            color: Color(0xFF00A86B),
+            size: 18,
+          ),
+        ),
+        label: Text(
+          "VoiceKhata",
+          style: GoogleFonts.outfit(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: 0.2,
           ),
         ),
       ),

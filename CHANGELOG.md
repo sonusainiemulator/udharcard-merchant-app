@@ -5,6 +5,33 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.62] - 2026-09-19
+
+### 🎤 VoiceKhata ("Invoices by Voice") Full AI Feature Implementation
+- **True-to-Screenshot VoiceKhata Interface**:
+  - Implemented the exact modern Kirana voice screen matching the official VoiceKhata design:
+    - Top bar with VoiceKhata emerald microphone pill badge and active category indicator (`SALE`, `UDHAR`, `PURCHASE`, `COLLECTION`).
+    - Prominent bold hero typography: **"Invoices by Voice"** and tagline **"Speak. Bill. Done."**
+    - Rotating "Try saying" animated card cycling through Hindi/Hinglish Kirana prompts:
+      - `"2 kilo sugar 40 rupees, 3 soap 30 each — Ramesh, unpaid"`
+      - `"Rajesh ko 2000 rupay udhaar diya"`
+      - `"Sandipan se 500 rupay mile"`
+      - `"Supplier se 5000 ka maal liya"`
+      - `"Dudhwale ko 3000 diye"`
+      - `"Good Day biscuits khatam, 5 kilo sugar mangwana"`
+    - Concentric glowing pulsating soundwave animation rings around the emerald core microphone button.
+    - Live speech transcription with real-time waveform audio indicators.
+    - Parsed billing & ledger card showing customer name, balance linkage, itemized breakdown (e.g. Sugar, Soap), subtotal, and unpaid/cash status.
+    - Integrated bottom dock with Pause/Resume mic, Camera button (paper bill photo attachment via camera/gallery), live audio waveform dots, Keyboard toggle button, and solid Emerald Done checkmark button.
+- **VoiceKhataSheet Bottom Modal for Global Access**:
+  - Created `VoiceKhataSheet` reusable bottom modal component allowing shopkeepers to trigger voice entries from anywhere in the app in 1 tap.
+  - Added floating VoiceKhata action buttons on both `HomeScreen` and `CustomerListScreen`.
+- **Indian Merchant NLP Engine (`VoiceEntryController`)**:
+  - Support for Credit Given (`Udhaar Diya`), Collections Received (`Paise Mile`), Supplier Credit Taken (`Maal Liya`), Supplier Payments Made (`Paise Diye`), Multi-item voice billing, and Voice Purchase Orders (`Saman Mangwana`).
+  - Automated WhatsApp purchase order sharing to suppliers and 1-tap customer WhatsApp payment reminders.
+  - Direct 1-tap save to ledger via `UdharController` without having to type or fill forms.
+  - Voice audio confirmation (TalkBack) in Hindi (`hi-IN`) and English (`en-IN`).
+
 ## [1.0.61] - 2026-09-19
 
 ### 🎨 Professional Typography Standard, Reports Dashboard Redesign & Error Fix

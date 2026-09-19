@@ -10,6 +10,7 @@ import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/custom_appbar.dart';
 import 'add_customer_screen.dart';
 import 'customer_ledger_screen.dart';
+import '../voice_entry/voice_khata_sheet.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
@@ -173,22 +174,51 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           appBar: CustomAppBar(
             title: storedLanguage['Customers'] ?? 'Customer Directory',
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => openAddCustomerScreen(
-              storedLanguage: storedLanguage,
-            ),
-            backgroundColor: AppColors.mainColor,
-            elevation: 6,
-            icon: const Icon(Icons.person_add_alt_1_rounded,
-                color: Colors.white),
-            label: Text(
-              storedLanguage['Add Customer'] ?? 'Add Customer',
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
+          floatingActionButton: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.extended(
+                heroTag: 'fab_customer_voice_khata',
+                onPressed: () => VoiceKhataSheet.show(context),
+                backgroundColor: const Color(0xFF00A86B),
+                elevation: 6,
+                icon: Container(
+                  padding: EdgeInsets.all(3.r),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.mic, color: Color(0xFF00A86B), size: 16),
+                ),
+                label: Text(
+                  "VoiceKhata",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
+              SizedBox(width: 8.w),
+              FloatingActionButton.extended(
+                heroTag: 'fab_customer_add_btn',
+                onPressed: () => openAddCustomerScreen(
+                  storedLanguage: storedLanguage,
+                ),
+                backgroundColor: AppColors.mainColor,
+                elevation: 6,
+                icon: const Icon(Icons.person_add_alt_1_rounded,
+                    color: Colors.white),
+                label: Text(
+                  storedLanguage['Add Customer'] ?? 'Add Customer',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
           body: RefreshIndicator(
             color: AppColors.mainColor,
