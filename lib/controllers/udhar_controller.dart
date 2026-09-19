@@ -343,6 +343,7 @@ class UdharController extends GetxController {
     String address = '',
     String note = '',
     String type = 'Customer',
+    bool closeScreenOnSuccess = true,
   }) async {
     final String name = nameCtrl.text.trim();
     if (name.isEmpty) {
@@ -482,7 +483,9 @@ class UdharController extends GetxController {
 
         _resetCustomerForm();
         fetchUsers(force: true);
-        _closeAddCustomerScreen(resultCustomer);
+        if (closeScreenOnSuccess) {
+          _closeAddCustomerScreen(resultCustomer);
+        }
       } else {
         final String apiMessage = _extractApiMessage(data, response.body);
         final String displayMessage;
@@ -788,19 +791,19 @@ class UdharController extends GetxController {
     update();
   }
 
-  Future<void> submitUdhar() async {
+  Future<bool> submitUdhar({bool popOnSuccess = true}) async {
     if (selectedUser == null) {
       Helpers.showSnackBar(msg: 'Please select a customer');
-      return;
+      return false;
     }
     if (amountCtrl.text.trim().isEmpty) {
       Helpers.showSnackBar(msg: 'Please enter an amount');
-      return;
+      return false;
     }
     final double? amt = double.tryParse(amountCtrl.text.trim());
     if (amt == null || amt <= 0) {
       Helpers.showSnackBar(msg: 'Please enter a valid amount');
-      return;
+      return false;
     }
 
     isSubmitting = true;
@@ -822,9 +825,10 @@ class UdharController extends GetxController {
         createdAt: selectedDate?.toIso8601String(),
       );
 
-      final data = jsonDecode(response.body);
+      final Map<String, dynamic>? data = _decodeJsonMap(response.body);
+      final bool isSuccess = _isApiSuccess(response.statusCode, data);
 
-      if (response.statusCode == 200 && data['status'] == 'success') {
+      if (isSuccess) {
         // Optimistic update
         final newLedger = {
           'amount': double.tryParse(amountStr) ?? 0.0,
@@ -833,43 +837,54 @@ class UdharController extends GetxController {
           'payment_method': paymentMethodStr,
           'created_at': DateTime.now().toIso8601String(),
         };
-        
+
         if (selectedCustomerId == (selectedUser?['id']?.toString())) {
-           ledgerTransactions.insert(0, newLedger);
-           final amount = double.tryParse(amountStr) ?? 0.0;
-           if (typeStr == 'given') {
-             currentOutstandingBalance += amount;
-           } else {
-             currentOutstandingBalance -= amount;
-           }
-           _applyLedgerDateFilter();
-           update();
+          ledgerTransactions.insert(0, newLedger);
+          final amount = double.tryParse(amountStr) ?? 0.0;
+          if (typeStr == 'given') {
+            currentOutstandingBalance += amount;
+          } else {
+            currentOutstandingBalance -= amount;
+          }
+          _applyLedgerDateFilter();
+          update();
         }
 
         Helpers.showSnackBar(
-          msg: data['message'] ?? 'Udhar transaction added successfully',
+          msg: data?['message'] ?? 'Udhar transaction added successfully',
+          title: 'Success',
         );
         _resetForm();
-        if (Get.context != null) Navigator.of(Get.context!).pop();
+        if (popOnSuccess && Get.context != null && Navigator.canPop(Get.context!)) {
+          Navigator.of(Get.context!).pop();
+        }
         await fetchUsers(force: true);
+        await fetchReports(silent: true);
         if (selectedCustomerId.isNotEmpty) {
           await fetchCustomerLedger(selectedCustomerId, force: true);
         }
+        return true;
       } else {
+        final String apiMessage = _extractApiMessage(data, response.body);
         Helpers.showSnackBar(
-          msg:
-              data['message']?.toString() ??
-              'Unable to add transaction. Please try again.',
+          msg: apiMessage.isNotEmpty
+              ? apiMessage
+              : 'Unable to add transaction. Please try again.',
+          title: 'Error',
         );
+        return false;
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint("submitUdhar error: $e");
       Helpers.showSnackBar(
         msg: 'Unable to add transaction. Please try again.',
+        title: 'Error',
       );
+      return false;
+    } finally {
+      isSubmitting = false;
+      update();
     }
-
-    isSubmitting = false;
-    update();
   }
 
   void _resetForm() {

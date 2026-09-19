@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'udhar_controller.dart';
@@ -495,6 +496,13 @@ class VoiceEntryController extends GetxController {
       category = 'BILL';
     }
 
+    // Extract 10-digit Indian phone number if spoken
+    String extractedPhone = '';
+    final phoneMatch = RegExp(r'\b([6-9]\d{9})\b').firstMatch(text);
+    if (phoneMatch != null) {
+      extractedPhone = phoneMatch.group(1) ?? '';
+    }
+
     // ── 6. Customer / Party Name Extraction ──────────────────────────────────
     String cleaned = lower
         .replaceAll(RegExp(r'\d+(?:\.\d+)?'), '')
@@ -511,8 +519,8 @@ class VoiceEntryController extends GetxController {
         ? 'Customer'
         : words.map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
 
-    // Match with existing ledger contact
-    final matchedCustomer = findMatchingCustomer(name);
+    // Match with existing ledger contact (by phone first, or by name)
+    final matchedCustomer = findMatchingCustomer(name, extractedPhone);
 
     String remarks = '';
     if (lower.contains('maal liya') || lower.contains('supplier')) {
@@ -529,7 +537,7 @@ class VoiceEntryController extends GetxController {
 
       return VoiceParseResult(
         name: displayName,
-        phone: matchedCustomer?['phone']?.toString() ?? '',
+        phone: matchedCustomer?['phone']?.toString() ?? extractedPhone,
         amount: amount,
         type: type,
         category: category,
@@ -546,9 +554,21 @@ class VoiceEntryController extends GetxController {
   }
 
   /// Fuzzy match against active merchant ledger customers
-  Map<String, dynamic>? findMatchingCustomer(String name) {
+  Map<String, dynamic>? findMatchingCustomer(String name, [String phone = '']) {
     if (!Get.isRegistered<UdharController>()) return null;
     final users = Get.find<UdharController>().usersList;
+
+    if (phone.isNotEmpty) {
+      for (var u in users) {
+        if (u is Map) {
+          final uPhone = (u['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+          if (uPhone.endsWith(phone) || phone.endsWith(uPhone)) {
+            return Map<String, dynamic>.from(u);
+          }
+        }
+      }
+    }
+
     final q = name.trim().toLowerCase();
     if (q.isEmpty || q == 'customer') return null;
 
@@ -563,7 +583,7 @@ class VoiceEntryController extends GetxController {
     return null;
   }
 
-  /// 1-Tap Direct Save to Ledger via UdharController
+  /// 1-Tap Direct Save to Ledger via UdharController with full Backend & Udhar User App synchronization
   Future<void> saveParsedEntryDirectly() async {
     if (!hasQuickEntry) {
       Helpers.showSnackBar(
@@ -582,38 +602,94 @@ class VoiceEntryController extends GetxController {
       }
       final udharController = Get.find<UdharController>();
 
+      // Apply voice prefill to populate amount & transaction type
       udharController.applyVoiceEntryPrefill(
         name: parsedName,
         amount: parsedAmount,
         type: parsedType.isEmpty ? 'Given' : parsedType,
       );
 
-      if (udharController.selectedUser != null) {
-        await udharController.submitUdhar();
+      // Set custom remarks
+      if (parsedRemarks.isNotEmpty) {
+        udharController.remarksCtrl.text = parsedRemarks;
       } else {
-        udharController.nameCtrl.text = parsedName;
-        udharController.phoneCtrl.text = latestParsedResult?.phone.isNotEmpty == true
-            ? latestParsedResult!.phone
-            : '9876543210';
-        final newCustomer = await udharController.addCustomer();
-        if (newCustomer != null) {
-          udharController.selectedUser = newCustomer;
-          await udharController.submitUdhar();
+        udharController.remarksCtrl.text = 'Added via VoiceKhata';
+      }
+
+      Map<String, dynamic>? targetCustomer = udharController.selectedUser;
+
+      // If customer not already in active ledger, try to resolve real phone from speech or phonebook
+      if (targetCustomer == null) {
+        String phoneToUse = latestParsedResult?.phone ?? '';
+
+        if (phoneToUse.isEmpty) {
+          // Attempt smart match with device phonebook contacts
+          try {
+            if (await FlutterContacts.requestPermission(readonly: true)) {
+              final contacts = await FlutterContacts.getContacts(withProperties: true);
+              final q = parsedName.trim().toLowerCase();
+              for (final c in contacts) {
+                final cName = c.displayName.trim().toLowerCase();
+                if (cName == q || cName.contains(q) || q.contains(cName)) {
+                  if (c.phones.isNotEmpty) {
+                    final raw = c.phones.first.number.replaceAll(RegExp(r'\D'), '');
+                    if (raw.length >= 10) {
+                      phoneToUse = raw.substring(raw.length - 10);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) print("Phonebook lookup error: $e");
+          }
+        }
+
+        if (phoneToUse.isNotEmpty) {
+          // Create new customer in backend with their real phone number so Udhar Users App syncs!
+          udharController.nameCtrl.text = parsedName;
+          udharController.phoneCtrl.text = phoneToUse;
+          targetCustomer = await udharController.addCustomer(closeScreenOnSuccess: false);
+          if (targetCustomer != null) {
+            udharController.selectedUser = targetCustomer;
+          }
         }
       }
 
-      Helpers.showSnackBar(
-        msg: 'Voice entry saved directly to ledger!',
-        title: 'Success',
-      );
+      // If still no valid customer (no real phone number found):
+      if (targetCustomer == null && udharController.selectedUser == null) {
+        Helpers.showSnackBar(
+          msg: '$parsedName ka mobile number dalein taki Udhar User app se hisab sync ho sake.',
+          title: 'Mobile Number Required',
+        );
+        isSubmittingEntry = false;
+        update();
+        await openQuickAddEntry();
+        return;
+      }
 
-      await speakReply(
-        parsedType == 'Given'
-            ? '$parsedName ko ${parsedAmount.toInt()} rupaye udhar ledger mein add ho gaye.'
-            : '$parsedName se ${parsedAmount.toInt()} rupaye ledger mein jama ho gaye.',
-      );
+      // Submit directly to backend API without popping the current screen context
+      final bool success = await udharController.submitUdhar(popOnSuccess: false);
+
+      if (success) {
+        saveTransaction();
+        _transcribedText = "";
+        sandboxTextCtrl.clear();
+        clearAttachedBillImage();
+
+        await speakReply(
+          parsedType == 'Given'
+              ? '$parsedName ko ${parsedAmount.toInt()} rupaye udhar ledger mein add ho gaye.'
+              : '$parsedName se ${parsedAmount.toInt()} rupaye ledger mein jama ho gaye.',
+        );
+      }
     } catch (e) {
       if (kDebugMode) print("Error in saveParsedEntryDirectly: $e");
+      Helpers.showSnackBar(
+        msg: 'Transaction sync failed. Please try again.',
+        title: 'Error',
+      );
     } finally {
       isSubmittingEntry = false;
       update();
