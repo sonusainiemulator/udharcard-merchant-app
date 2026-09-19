@@ -163,12 +163,13 @@ class _ChatLedgerScreenState extends State<ChatLedgerScreen> {
                               // We use reverse, so index 0 is the newest transaction. 
                               // Assuming controller returns newest first (descending).
                               final tx = controller.filteredLedgerTransactions[i];
-                              final bool isCredit = tx['type'] == 'given'; 
+                              final String rawType = (tx['type'] ?? '').toString().toLowerCase().trim();
+                              final bool isCredit = rawType == 'given' || rawType == 'credit'; 
                               final double amount = double.tryParse(tx['amount']?.toString() ?? '') ?? 0.0;
                               
                               final String remarks = tx['remarks']?.toString().isNotEmpty == true 
                                   ? tx['remarks'].toString() 
-                                  : (isCredit ? 'Udhar Given' : 'Payment Received');
+                                  : (isCredit ? 'आपने दिया (Udhar Given)' : 'आपको मिला (Payment Received)');
                               
                               final String dateString = Helpers.formatDateAndTime(tx['created_at']);
                               

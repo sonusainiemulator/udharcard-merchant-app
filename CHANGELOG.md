@@ -5,6 +5,23 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.64] - 2026-09-19
+
+### 📊 Customer Ledger UX/UI Overhaul & Transaction Direction Clarity
+- **Fixed Credit/Debit Direction Inversion Bug**:
+  - Resolved bug where ledger entries returned with backend type `'credit'` were evaluated as `false` in `tx['type'] == 'given'`, causing all Udhar Given transactions to mistakenly display as green downward arrows with minus amounts and labeled as *"Udhar Aaya (Payment Received)"*.
+  - Expanded direction detection logic to reliably evaluate `given`, `credit`, `received`, `debit`, and `taken`.
+- **Khatabook / OkCredit Standard Redesign of `CustomerLedgerScreen`**:
+  - **Crystal-Clear Bilingual Direction Badges**: Implemented bold red `↗ आपने दिया (YOU GAVE)` badge with `+ ₹...` amount for Udhar Given, and green `↙ आपको मिला (YOU GOT)` badge with `- ₹...` amount for Payment Received.
+  - **Dynamic Net Status & Summary Header**: Replaced ambiguous text with dynamic status indicators: `LENE HAIN (बाकी लेना है)` with red highlight, `DENE HAIN (एडवांस मिला)` with green highlight, and `HISAB BARABAR (चुकता)` when balance is zero.
+  - **Two-Column Ledger Summary**: Added quick-glance totals for `कुल दिया (Total Gave)` and `कुल मिला (Total Got)` alongside the credit limit utilization bar.
+  - **Post-Transaction Running Balance**: Implemented backward-chain cumulative balance computation displaying `बैलेंस: ₹... बाकी` on every ledger card so merchants and customers know the exact account state after each transaction.
+  - **Khatabook-Style Column Headers**: Added structured header rows separating entry dates/details from Gave and Got amounts.
+  - **Bilingual Bottom Navigation Bar**: Redesigned thumb-friendly buttons to clearly read `आपने दिया (YOU GAVE) • उधार / सामान दिया` (Red) and `आपको मिला (YOU GOT) • पैसा / पेमेंट मिला` (Green).
+  - **Interactive Transaction Detail Receipt Modal**: Tapping any transaction card displays a complete receipt breakdown with attached bill receipt images and a 1-tap button to share the receipt on WhatsApp.
+- **Fixed Direction Logic in `ChatLedgerScreen`**:
+  - Corrected `isCredit` check in the chat bubble view to properly reflect Gave entries on the right (red bubble) and Got entries on the left (green bubble).
+
 ## [1.0.63] - 2026-09-19
 
 ### 🚀 Offline-First Engine, 60/120 FPS Smoothness, FinTech Soundbox & Reliability
