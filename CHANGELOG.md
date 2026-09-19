@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     2. Local `.env` `RAZORPAY_KEY_ID`
     3. Legacy `.env` `RAZORPAY_KEY`
     4. Fallback test sandbox key `rzp_test_1DP5mmOlF5G5ag`
+- **TestFlight Deployment (v1.0.68+69)**:
+  - Exported production IPA with `ExportOptions.plist` and Team ID `DPVZF7DM83`.
+  - Successfully uploaded to Apple App Store Connect TestFlight (`Delivery UUID: 54b414ae-1ba7-4d17-9e22-835c9d96fdd5`).
+- **Android APK Build & GitHub Release (v1.0.68)**:
+  - Built production signed release APK (`udharcard-merchant-app-v1.0.68-release.apk`).
+  - Built debug APK (`udharcard-merchant-app-v1.0.68-debug.apk`).
+  - Published GitHub Release `v1.0.68` with both APK binaries attached.
 - **Permanent Agent Policy Codified (`.agents/AGENTS.md`)**:
   - Added mandatory rule to log exact Date & Time on each completed task and immediately push all commits to GitHub.
 
