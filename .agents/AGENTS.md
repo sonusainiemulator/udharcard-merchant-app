@@ -16,6 +16,9 @@ Copy-Item "build\app\outputs\flutter-apk\app-debug.apk" "build\app\outputs\flutt
 ```
 Then pass the renamed files to `gh release create`.
 
-# Changelog Policy
-Always update `CHANGELOG.md` upon completing any feature, bug fix, refactoring, or significant task.
+# Changelog & GitHub Push Policy (Mandatory)
+Always update `CHANGELOG.md` upon completing each and every feature, bug fix, refactoring, or significant task.
+- Every new entry in `CHANGELOG.md` MUST include the exact **Date and Time** (e.g. `YYYY-MM-DD HH:MM:SS IST`).
+- Immediately after making the entry and committing the changes, **always push to GitHub** (`git push origin master` or the current branch).
+- Never skip pushing to GitHub after completing a task.
 

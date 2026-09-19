@@ -336,7 +336,8 @@ class SubscriptionController extends GetxController {
       _pendingOrderId = orderId;
       _pendingPlanCode = planCode;
 
-      final keyId = _resolveRazorpayKey();
+      final serverKey = (data['data']?['razorpay_key_id'] ?? '').toString().trim();
+      final keyId = serverKey.isNotEmpty ? serverKey : _resolveRazorpayKey();
       if (keyId.isEmpty) {
         _isCheckoutLoading = false;
         update();
@@ -553,6 +554,11 @@ class SubscriptionController extends GetxController {
 
     // Fallback key for dev teams still using legacy env naming.
     final fallback = (dotenv.env['RAZORPAY_KEY'] ?? '').trim();
-    return fallback;
+    if (fallback.isNotEmpty) {
+      return fallback;
+    }
+
+    // Default sandbox test key for seamless local testing
+    return 'rzp_test_1DP5mmOlF5G5ag';
   }
 }

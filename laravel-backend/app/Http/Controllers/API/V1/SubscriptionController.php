@@ -499,6 +499,7 @@ class SubscriptionController extends Controller
                 'billing_cycle' => $request->billing_cycle,
                 'amount' => $amount,
                 'currency' => $plan->currency ?? 'INR',
+                'razorpay_key_id' => env('RAZORPAY_KEY_ID', 'rzp_test_1DP5mmOlF5G5ag'),
             ],
         ], 200);
     }

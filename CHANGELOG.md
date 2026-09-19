@@ -5,7 +5,28 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.67] - 2026-09-20
+## [1.0.68] - 2026-09-20 01:30:00 IST
+
+### 💳 Razorpay Test Mode Sandbox Integration & Key Resolution
+
+#### Details
+- **Test Mode API Key Configured**:
+  - Configured Razorpay sandbox test key ID (`rzp_test_1DP5mmOlF5G5ag`) in `.env` for safe sandbox testing without real transactions.
+  - Added server-side `.env` configuration `RAZORPAY_KEY_ID=rzp_test_1DP5mmOlF5G5ag` on production backend (`pay.udharcard.shop`).
+- **Dynamic Backend Key Delivery**:
+  - Updated `SubscriptionController@createCheckout` API response to return `'razorpay_key_id' => env('RAZORPAY_KEY_ID', 'rzp_test_1DP5mmOlF5G5ag')`.
+  - Enables switching between Test Mode and Live Mode (`rzp_live_...`) directly from the backend server without requiring any new mobile app store build or user update.
+- **Flutter Subscription Controller (`lib/controllers/subscription_controller.dart`)**:
+  - Updated `startPlanPurchase` to prioritize the server-provided `razorpay_key_id` from the checkout initiation response.
+  - Added multi-tier fallback in `_resolveRazorpayKey`:
+    1. Server API response (`data.razorpay_key_id`)
+    2. Local `.env` `RAZORPAY_KEY_ID`
+    3. Legacy `.env` `RAZORPAY_KEY`
+    4. Fallback test sandbox key `rzp_test_1DP5mmOlF5G5ag`
+- **Permanent Agent Policy Codified (`.agents/AGENTS.md`)**:
+  - Added mandatory rule to log exact Date & Time on each completed task and immediately push all commits to GitHub.
+
+## [1.0.67] - 2026-09-20 01:25:00 IST
 
 ### 🐛 Fixed Admin Subscriber Route & Missing Database Table (`/admin/subscriber`)
 
