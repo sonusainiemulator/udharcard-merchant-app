@@ -5,6 +5,26 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.70] - 2026-09-20 19:05:00 IST
+
+### 🚀 Version Bump — Dynamic Subscription Plans Release
+
+#### Summary
+- Bumped app version from `1.0.69+70` → `1.0.70+71`.
+- This release packages all dynamic subscription plan changes from v1.0.69 into a new versioned APK build.
+
+#### What's Included (carried from v1.0.69)
+- **Dynamic Subscription Plan UI**: Plan names, trial banners, feature lists, and card color themes now driven entirely by backend API responses (`GET /api/subscription/plans`, `GET /api/subscription/current`). No hardcoded plan strings remain.
+- **Admin Portal Clarity**: Admin Offline Upgrade Requests table now shows the merchant's current active subscription status alongside the originally requested plan, preventing confusion between historical requests and the active plan.
+- **Admin Login Blocked in Merchant App**: Phone number `9992433121` (admin account) is now blocked from logging in via the merchant app — merchant-only authentication enforced.
+- **Bug Fixes**: Crash fixes for iOS 27 (iPhone 16e) related to package compatibility.
+
+#### Build Artifacts
+- `udharcard-merchant-app-v1.0.70-release.apk` (76 MB)
+- `udharcard-merchant-app-v1.0.70-debug.apk` (175 MB)
+
+---
+
 ## [1.0.69] - 2026-09-20 14:53:00 IST
 
 ### ⚡ Dynamic Subscription Plans, Trial Banners, and Admin Upgrade Requests Clarification
