@@ -232,6 +232,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: PlanCardWidget(
                               plan: plan,
+                              activePlanCode: activeCode,
                               isCurrent: isCurrent,
                               isTrialActive: isCurrent && isTrial,
                               billingCycle: controller.selectedBillingCycle,

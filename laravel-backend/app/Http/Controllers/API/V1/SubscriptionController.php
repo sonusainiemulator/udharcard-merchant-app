@@ -78,10 +78,19 @@ class SubscriptionController extends Controller
                 ], 422);
             }
 
+            // Prioritize active or trial subscriptions so newer pending/cancelled orders don't mask active state
             $subscription = MerchantSubscription::with('plan')
                 ->where('merchant_id', $merchantId)
+                ->whereIn('status', ['active', 'trial'])
                 ->orderByDesc('id')
                 ->first();
+
+            if (!$subscription) {
+                $subscription = MerchantSubscription::with('plan')
+                    ->where('merchant_id', $merchantId)
+                    ->orderByDesc('id')
+                    ->first();
+            }
 
             $basicPlan = SubscriptionPlan::where('code', 'basic')->first();
             $defaultFeatureFlags = [

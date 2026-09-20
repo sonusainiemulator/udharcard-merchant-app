@@ -5,6 +5,42 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.68] - 2026-09-20 13:06:00 IST
+
+### 🛠️ Fix Premium Free Trial Displaying Gold Plan in Admin Panel & App Gating
+
+#### Root Cause Analysis
+1. **API Subscription Masking (`SubscriptionController@current`)**:
+   - When a merchant activated a 7-day Premium Free Trial and subsequently attempted checkout or initiated an offline Gold request, a new subscription row with status `pending` was created with a higher ID.
+   - `SubscriptionController@current` queried `orderByDesc('id')->first()`, selecting the `pending` row instead of active trial, causing the mobile app to fall back to the Basic plan and re-display the trial CTA.
+2. **Admin `extendTrial` Reused Existing Plan ID**:
+   - `Admin\SubscriptionController@extendTrial` fetched `$sub = MerchantSubscription::where('merchant_id', $id)->orderByDesc('id')->first()`. If the user had a previous or pending Gold subscription, it set `$sub->status = 'trial'` and updated `$merchant->current_plan_code = 'gold'`.
+3. **Admin `index` Query Filtered `type = 'user'`**:
+   - `Admin\SubscriptionController@index` queried `User::where('type', 'user')`, omitting all merchants registered with `type = 'merchant'` from the admin subscription table.
+4. **Eloquent `activeSubscription` `latestOfMany` Join Bug**:
+   - In `User.php`, `activeSubscription` was defined as `->whereIn('status', ['active', 'trial'])->latestOfMany()`. Without a scoped closure inside `latestOfMany()`, Laravel generated `select max(id) from merchant_subscriptions` across all rows (including `pending`). When row #15 was pending, the outer join on `status in ('active', 'trial')` returned `null`.
+5. **Mobile Trial Button Gating (`PlanCardWidget`)**:
+   - `isEligibleForTrial` checked `trialDays > 0 && !isTrialActive && !isCurrent`. For paid active Gold merchants, `!isTrialActive` was true, erroneously rendering "Start 7-Day Free Trial" on the Premium plan card.
+
+#### Key Changes
+- **Backend API (`SubscriptionController@current`)**:
+   - Prioritized subscriptions with `whereIn('status', ['active', 'trial'])` so pending or cancelled checkout attempts never mask an ongoing trial or active plan.
+- **Backend Eloquent Model (`User@activeSubscription`)**:
+   - Replaced un-scoped `latestOfMany()` with `ofMany(['id' => 'max'], function($query) { $query->whereIn('status', ['active', 'trial']); })`, correctly resolving active trials.
+- **Backend Admin Controllers (`SubscriptionController` & `AdminSubscriptionController`)**:
+   - Updated `extendTrial()` to strictly enforce `SubscriptionPlan::where('code', 'premium')` and update `$merchant->current_plan_code = 'premium'`.
+   - Updated `assignPlan()` to force target plan to `premium` if status `trial` is selected.
+   - Updated `index()` to query `User::whereIn('type', ['merchant', 'user'])`, ensuring all merchants are visible in Admin.
+- **Admin Blade Views (`user_subscription.blade.php` & `subscriptions/index.blade.php`)**:
+   - Resolved plan code strictly: if status is `trial`, plan is guaranteed to display as `Premium Plan (AI Voice Khata)`.
+- **Flutter Mobile App (`plan_card_widget.dart` & `subscription_plans_screen.dart`)**:
+   - Added `activePlanCode` to `PlanCardWidget`.
+   - Updated `isEligibleForTrial` to require `(activePlanCode.isEmpty || activePlanCode.toLowerCase() == 'basic')`, preventing paid Gold subscribers from seeing the trial activation button.
+- **Production Server Deployment & Verification**:
+   - Deployed updated controllers, model method, and blade templates to live server `pay.udharcard.shop`.
+   - Cleaned up abandoned pending subscription #15 and verified User 213 returns active 7-day Premium trial via API and Admin panel.
+   - Verified 4/4 Flutter unit tests and `flutter analyze` passing with 0 warnings.
+
 ## [1.0.68] - 2026-09-20 01:30:00 IST
 
 ### 💳 Razorpay Test Mode Sandbox Integration & Key Resolution

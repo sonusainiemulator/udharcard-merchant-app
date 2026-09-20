@@ -9,6 +9,7 @@ class PlanCardWidget extends StatelessWidget {
     required this.billingCycle,
     required this.onSelectPlan,
     required this.onStartTrial,
+    this.activePlanCode = '',
     this.isLoading = false,
   });
 
@@ -18,6 +19,7 @@ class PlanCardWidget extends StatelessWidget {
   final String billingCycle;
   final VoidCallback onSelectPlan;
   final VoidCallback onStartTrial;
+  final String activePlanCode;
   final bool isLoading;
 
   @override
@@ -40,6 +42,12 @@ class PlanCardWidget extends StatelessWidget {
     final periodLabel = isFree
         ? 'forever'
         : (billingCycle == 'yearly' ? '/year' : '/month');
+
+    // Only merchants on free Basic plan can claim a free trial
+    final bool isEligibleForTrial = trialDays > 0 &&
+        !isTrialActive &&
+        !isCurrent &&
+        (activePlanCode.isEmpty || activePlanCode.toLowerCase() == 'basic');
 
     // Features list
     final dynamic rawFeatures = plan['features'];
@@ -305,8 +313,8 @@ class PlanCardWidget extends StatelessWidget {
               else
                 Column(
                   children: [
-                    // Trial Button if available & not currently on paid/trial
-                    if (trialDays > 0 && !isTrialActive && !isCurrent)
+                    // Trial Button if available & merchant is currently on Basic plan
+                    if (isEligibleForTrial)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: SizedBox(

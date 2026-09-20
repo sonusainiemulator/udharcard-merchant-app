@@ -352,10 +352,14 @@ class AdminSubscriptionController extends Controller
 
         $newTrialEnd = $baseDate->copy()->addDays($days);
 
+        $premiumPlan = SubscriptionPlan::where('code', 'premium')->first() ?? SubscriptionPlan::first();
+
+        $subscription->subscription_plan_id = $premiumPlan->id;
         $subscription->status = 'trial';
         $subscription->trial_ends_at = $newTrialEnd;
         $subscription->renews_at = $newTrialEnd;
         $subscription->meta = array_merge($subscription->meta ?? [], [
+            'plan_code' => 'premium',
             'trial_extended' => true,
             'extended_days' => $days,
             'extended_notes' => $request->notes,
@@ -365,6 +369,7 @@ class AdminSubscriptionController extends Controller
 
         $user = User::find($subscription->merchant_id);
         if ($user) {
+            $user->current_plan_code = 'premium';
             $user->subscription_status = 'trial';
             $user->subscription_renews_at = $newTrialEnd;
             $user->save();
