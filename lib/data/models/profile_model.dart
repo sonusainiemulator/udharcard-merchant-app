@@ -78,8 +78,21 @@ class Profile {
     dynamic state;
     dynamic address_one;
     dynamic profilePicture;
-    dynamic  lastSeenActivity;
-    dynamic  created_at;
+    dynamic lastSeenActivity;
+    dynamic created_at;
+    dynamic shopName;
+    dynamic businessName;
+    dynamic businessType;
+    dynamic isShopOnline;
+    dynamic shopOpeningTime;
+    dynamic shopClosingTime;
+    dynamic shopClosedDays;
+    dynamic landmark;
+    dynamic whatsappNumber;
+    dynamic shopDescription;
+    dynamic gstNumber;
+    dynamic panNumber;
+    dynamic zipCode;
 
     Profile({
         this.id,
@@ -99,6 +112,19 @@ class Profile {
         this.city,
         this.state,
         this.address_one,
+        this.shopName,
+        this.businessName,
+        this.businessType,
+        this.isShopOnline,
+        this.shopOpeningTime,
+        this.shopClosingTime,
+        this.shopClosedDays,
+        this.landmark,
+        this.whatsappNumber,
+        this.shopDescription,
+        this.gstNumber,
+        this.panNumber,
+        this.zipCode,
     });
 
     factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -119,6 +145,24 @@ class Profile {
         created_at: json["created_at"],
         profilePicture: json["profile_picture"],
         lastSeenActivity: json["last-seen-activity"],
+        shopName: json["shop_name"] ?? json["business_name"],
+        businessName: json["business_name"],
+        businessType: json["business_type"],
+        isShopOnline: json["is_shop_online"] == null
+            ? true
+            : (json["is_shop_online"] == true ||
+                json["is_shop_online"] == 1 ||
+                json["is_shop_online"].toString() == "1" ||
+                json["is_shop_online"].toString().toLowerCase() == "true"),
+        shopOpeningTime: json["shop_opening_time"] ?? "09:00 AM",
+        shopClosingTime: json["shop_closing_time"] ?? "09:30 PM",
+        shopClosedDays: json["shop_closed_days"] ?? "Open All Days",
+        landmark: json["landmark"],
+        whatsappNumber: json["whatsapp_number"],
+        shopDescription: json["shop_description"],
+        gstNumber: json["gst_number"],
+        panNumber: json["pan_number"],
+        zipCode: json["zip_code"],
     );
 
 }

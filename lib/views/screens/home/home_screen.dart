@@ -7,6 +7,7 @@ import 'package:paysecure/config/app_colors.dart';
 import 'package:paysecure/config/dimensions.dart';
 import 'package:paysecure/controllers/app_controller.dart';
 import 'package:paysecure/controllers/bottom_nav_controller.dart';
+import 'package:paysecure/controllers/profile_controller.dart';
 import 'package:paysecure/controllers/udhar_controller.dart';
 import 'package:paysecure/notification_service/notification_controller.dart';
 import 'package:paysecure/routes/routes_name.dart';
@@ -64,16 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  String _greetingMessage() {
-    final int hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) {
-      return "Good Morning 👋";
-    } else if (hour >= 12 && hour < 17) {
-      return "Good Afternoon ☀️";
-    } else {
-      return "Good Evening 🌙";
-    }
-  }
 
   Future<void> _sendWhatsAppReminder(
       String phone, String name, double amount) async {
@@ -191,43 +182,96 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             SizedBox(width: 10.w),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  merchantDisplayName,
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                SizedBox(height: 1.h),
-                Row(
-                  children: [
-                    Container(
-                      width: 6.r,
-                      height: 6.r,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
+            Expanded(
+              child: GetBuilder<ProfileController>(
+                builder: (profileCtrl) {
+                  final String currentShopName = profileCtrl.displayShopName;
+                  final bool isOnline = profileCtrl.isShopOnline;
+                  final String timings = profileCtrl.shopTimingDisplay;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        currentShopName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14.5.sp,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 5.w),
-                    Text(
-                      _greetingMessage(),
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? const Color(0xFF94A3B8)
-                            : const Color(0xFF64748B),
+                      SizedBox(height: 2.h),
+                      GestureDetector(
+                        onTap: () => profileCtrl.toggleShopOnlineStatus(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                              decoration: BoxDecoration(
+                                color: isOnline
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4.r),
+                                border: Border.all(
+                                  color: isOnline
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                                      : const Color(0xFFEF4444).withValues(alpha: 0.5),
+                                  width: 0.7,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 5.r,
+                                    height: 5.r,
+                                    decoration: BoxDecoration(
+                                      color: isOnline
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  SizedBox(width: 3.5.w),
+                                  Text(
+                                    isOnline ? "Open" : "Closed",
+                                    style: TextStyle(
+                                      fontSize: 9.5.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: isOnline
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFFEF4444),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 5.w),
+                            Flexible(
+                              child: Text(
+                                timings,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -351,6 +395,92 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Shop Closed / Offline Alert Banner ───────────────────
+              GetBuilder<ProfileController>(
+                builder: (profileCtrl) {
+                  if (profileCtrl.isShopOnline) return const SizedBox.shrink();
+                  return Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    padding: EdgeInsets.symmetric(
+                      vertical: 10.h,
+                      horizontal: 14.w,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(6.r),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.store_mall_directory_outlined,
+                            color: const Color(0xFFEF4444),
+                            size: 18.sp,
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Dukan Band Hai (Store Offline)",
+                                style: TextStyle(
+                                  fontSize: 12.5.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                "Grahakon ko dukan band dikhegi",
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        ElevatedButton(
+                          onPressed: () => profileCtrl.toggleShopOnlineStatus(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            "Open Now",
+                            style: TextStyle(
+                              fontSize: 11.5.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               // ── Subscription Plan Usage Banner ─────────────────────
               GetBuilder<UdharController>(
                 builder: (udharCtrl) {

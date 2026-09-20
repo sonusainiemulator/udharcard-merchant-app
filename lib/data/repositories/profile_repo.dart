@@ -24,6 +24,25 @@ class ProfileRepo {
     );
   }
 
+  static Future<http.Response> updateShopStatus({
+    required bool isShopOnline,
+    String? shopOpeningTime,
+    String? shopClosingTime,
+    String? shopClosedDays,
+  }) async {
+    final Map<String, dynamic> data = {
+      'is_shop_online': isShopOnline ? '1' : '0',
+    };
+    if (shopOpeningTime != null) data['shop_opening_time'] = shopOpeningTime;
+    if (shopClosingTime != null) data['shop_closing_time'] = shopClosingTime;
+    if (shopClosedDays != null) data['shop_closed_days'] = shopClosedDays;
+
+    return await ApiClient.post(
+      ENDPOINT_URL: AppConstants.shopStatusUrl,
+      fields: data,
+    );
+  }
+
   static Future<http.Response> profilePassUpdate(
           {required Map<String, dynamic> data}) async =>
       await ApiClient.post(

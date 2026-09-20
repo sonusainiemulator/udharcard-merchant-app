@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::any('/setting', 'setting');
             Route::any('/profile', 'profile');
             Route::any('/merchant/profile', 'profile');
+            Route::post('/merchant/shop-status', 'updateShopStatus');
             Route::post('/change-password', 'changePassword');
             Route::get('/pusher/config', 'pusherConfig');
             Route::get('/language', 'language');

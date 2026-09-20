@@ -34,4 +34,13 @@ class Keys {
   static String subscriptionTrialDaysRemaining = "subscriptionTrialDaysRemaining";
   static String subscriptionFeatureFlags = "subscriptionFeatureFlags";
   static String isAppLockEnabled = "isAppLockEnabled";
+  static String shopName = "shopName";
+  static String isShopOnline = "isShopOnline";
+  static String shopOpeningTime = "shopOpeningTime";
+  static String shopClosingTime = "shopClosingTime";
+  static String shopClosedDays = "shopClosedDays";
+  static String businessType = "businessType";
+  static String landmark = "landmark";
+  static String whatsappNumber = "whatsappNumber";
+  static String shopDescription = "shopDescription";
 }

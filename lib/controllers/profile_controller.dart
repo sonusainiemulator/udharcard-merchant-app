@@ -29,6 +29,78 @@ class ProfileController extends GetxController {
   TextEditingController addrEditingController = TextEditingController();
   TextEditingController deleteEditingController = TextEditingController();
 
+  // -----------------------shop & timing details-----------------
+  TextEditingController shopNameEditingController = TextEditingController();
+  TextEditingController shopOpeningTimeEditingController =
+      TextEditingController(text: "09:00 AM");
+  TextEditingController shopClosingTimeEditingController =
+      TextEditingController(text: "09:30 PM");
+  TextEditingController shopClosedDaysEditingController =
+      TextEditingController(text: "Open All Days");
+  TextEditingController businessTypeEditingController = TextEditingController();
+  TextEditingController landmarkEditingController = TextEditingController();
+  TextEditingController whatsappEditingController = TextEditingController();
+  TextEditingController shopDescEditingController = TextEditingController();
+  TextEditingController gstEditingController = TextEditingController();
+  TextEditingController panEditingController = TextEditingController();
+  TextEditingController zipCodeEditingController = TextEditingController();
+
+  bool isShopOnline = true;
+  bool isUpdatingShopStatus = false;
+
+  String get displayShopName {
+    final name = shopNameEditingController.text.trim();
+    if (name.isNotEmpty) return name;
+    final cached = HiveHelp.read(Keys.shopName)?.toString().trim() ?? '';
+    if (cached.isNotEmpty) return cached;
+    return userName.isNotEmpty ? userName : 'UdharCard Merchant';
+  }
+
+  String get shopTimingDisplay {
+    final open = shopOpeningTimeEditingController.text.trim();
+    final close = shopClosingTimeEditingController.text.trim();
+    if (open.isNotEmpty && close.isNotEmpty) {
+      return "$open - $close";
+    }
+    return "09:00 AM - 09:30 PM";
+  }
+
+  Future<void> toggleShopOnlineStatus([bool? targetStatus]) async {
+    final newStatus = targetStatus ?? !isShopOnline;
+    isShopOnline = newStatus;
+    HiveHelp.write(Keys.isShopOnline, newStatus);
+    update();
+
+    try {
+      isUpdatingShopStatus = true;
+      update();
+      final response = await ProfileRepo.updateShopStatus(
+        isShopOnline: newStatus,
+        shopOpeningTime: shopOpeningTimeEditingController.text.trim(),
+        shopClosingTime: shopClosingTimeEditingController.text.trim(),
+        shopClosedDays: shopClosedDaysEditingController.text.trim(),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          Fluttertoast.showToast(
+            msg: newStatus
+                ? "🟢 Dukan Khuli Hai (Store is Open)"
+                : "🔴 Dukan Band Hai (Store is Closed)",
+            backgroundColor:
+                newStatus ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+            textColor: Colors.white,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error toggling shop status: $e");
+    } finally {
+      isUpdatingShopStatus = false;
+      update();
+    }
+  }
+
   Future validateEditProfile(context) async {
     if (fNameEditingController.text.isEmpty && lNameEditingController.text.isEmpty) {
       Helpers.showSnackBar(msg: 'Full Name is required');
@@ -148,6 +220,46 @@ class ProfileController extends GetxController {
                 .firstWhere((e) => e.phoneCode.toString() == phoneCode)
                 .code;
       }
+
+      final fetchedShopName =
+          (data?.shopName ?? data?.businessName ?? '').toString().trim();
+      shopNameEditingController.text = fetchedShopName.isNotEmpty
+          ? fetchedShopName
+          : (HiveHelp.read(Keys.shopName) ?? '').toString();
+      if (fetchedShopName.isNotEmpty) {
+        HiveHelp.write(Keys.shopName, fetchedShopName);
+        HiveHelp.write('shop_name', fetchedShopName);
+      }
+
+      isShopOnline =
+          data?.isShopOnline ?? (HiveHelp.read(Keys.isShopOnline) ?? true);
+      HiveHelp.write(Keys.isShopOnline, isShopOnline);
+
+      shopOpeningTimeEditingController.text =
+          (data?.shopOpeningTime ?? HiveHelp.read(Keys.shopOpeningTime) ?? '09:00 AM')
+              .toString();
+      shopClosingTimeEditingController.text =
+          (data?.shopClosingTime ?? HiveHelp.read(Keys.shopClosingTime) ?? '09:30 PM')
+              .toString();
+      shopClosedDaysEditingController.text =
+          (data?.shopClosedDays ?? HiveHelp.read(Keys.shopClosedDays) ?? 'Open All Days')
+              .toString();
+
+      businessTypeEditingController.text =
+          (data?.businessType ?? HiveHelp.read(Keys.businessType) ?? '')
+              .toString();
+      landmarkEditingController.text =
+          (data?.landmark ?? HiveHelp.read(Keys.landmark) ?? '').toString();
+      whatsappEditingController.text =
+          (data?.whatsappNumber ?? HiveHelp.read(Keys.whatsappNumber) ?? '')
+              .toString();
+      shopDescEditingController.text =
+          (data?.shopDescription ?? HiveHelp.read(Keys.shopDescription) ?? '')
+              .toString();
+      gstEditingController.text = (data?.gstNumber ?? '').toString();
+      panEditingController.text = (data?.panNumber ?? '').toString();
+      zipCodeEditingController.text = (data?.zipCode ?? '').toString();
+
       update();
     } catch (e, s) {
       print(s);
@@ -189,6 +301,19 @@ class ProfileController extends GetxController {
         "phone": phoneNumberEditingController.text.trim(),
         "address": addrEditingController.text.trim(),
         "phone_code": cleanPhoneCode.isNotEmpty ? cleanPhoneCode : "91",
+        "shop_name": shopNameEditingController.text.trim(),
+        "business_name": shopNameEditingController.text.trim(),
+        "business_type": businessTypeEditingController.text.trim(),
+        "is_shop_online": isShopOnline ? '1' : '0',
+        "shop_opening_time": shopOpeningTimeEditingController.text.trim(),
+        "shop_closing_time": shopClosingTimeEditingController.text.trim(),
+        "shop_closed_days": shopClosedDaysEditingController.text.trim(),
+        "landmark": landmarkEditingController.text.trim(),
+        "whatsapp_number": whatsappEditingController.text.trim(),
+        "shop_description": shopDescEditingController.text.trim(),
+        "gst_number": gstEditingController.text.trim(),
+        "pan_number": panEditingController.text.trim(),
+        "zip_code": zipCodeEditingController.text.trim(),
       };
 
       http.Response response = await ProfileRepo.profileUpdate(
@@ -214,6 +339,18 @@ class ProfileController extends GetxController {
             userNameEditingController.text.trim(),
           );
         }
+        if (shopNameEditingController.text.trim().isNotEmpty) {
+          HiveHelp.write(Keys.shopName, shopNameEditingController.text.trim());
+          HiveHelp.write('shop_name', shopNameEditingController.text.trim());
+        }
+        HiveHelp.write(Keys.isShopOnline, isShopOnline);
+        HiveHelp.write(Keys.shopOpeningTime, shopOpeningTimeEditingController.text.trim());
+        HiveHelp.write(Keys.shopClosingTime, shopClosingTimeEditingController.text.trim());
+        HiveHelp.write(Keys.shopClosedDays, shopClosedDaysEditingController.text.trim());
+        HiveHelp.write(Keys.businessType, businessTypeEditingController.text.trim());
+        HiveHelp.write(Keys.landmark, landmarkEditingController.text.trim());
+        HiveHelp.write(Keys.whatsappNumber, whatsappEditingController.text.trim());
+        HiveHelp.write(Keys.shopDescription, shopDescEditingController.text.trim());
         pickedImage = null;
         await getProfile(isFromRefreshIndicator: true);
 

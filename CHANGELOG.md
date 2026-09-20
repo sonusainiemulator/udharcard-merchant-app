@@ -5,6 +5,45 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.70] - 2026-09-20 22:55:00 IST
+
+### 🏪 Shop Timings, Live Online/Offline Status & Comprehensive Merchant Profile
+
+#### Summary
+Implemented end-to-end support for merchant shop opening/closing timings, 1-tap live online/offline store status toggle, shop branding in app headers, and a complete professional business profile across both the Laravel backend (`pay.udharcard.shop`) and the Merchant mobile app.
+
+#### 1. Backend Enhancements (Laravel `pay.udharcard.shop`)
+- **Database Migration**: Created and executed `2026_09_20_000002_add_shop_timings_and_status_to_users_table.php` on live production server. Added fields:
+  - `is_shop_online` (BOOLEAN, default true)
+  - `shop_opening_time` (VARCHAR, default "09:00 AM")
+  - `shop_closing_time` (VARCHAR, default "09:30 PM")
+  - `shop_closed_days` (VARCHAR, default "Open All Days")
+  - `landmark` (VARCHAR, nullable)
+  - `whatsapp_number` (VARCHAR, nullable)
+  - `shop_description` (TEXT, nullable)
+- **API Endpoints**:
+  - `POST /api/v1/merchant/shop-status`: Dedicated 1-tap endpoint to quickly toggle `is_shop_online` and update store timings.
+  - `POST /api/v1/user/profile-update` & `GET /api/v1/user/profile`: Extended to fetch, update, and return all shop branding, timings, landmark, WhatsApp, and tax information.
+
+#### 2. Merchant Mobile App UI & State Management (`udharcard-merchant-ios-app`)
+- **Header Shop Branding & Status Pill (`home_screen.dart`)**:
+  - Replaced static greeting with dynamic Merchant Shop Name (`profileController.displayShopName`).
+  - Added interactive 🟢 Open / 🔴 Closed status pill with live timings display (`09:00 AM - 09:30 PM`).
+  - Tapping the status badge opens a quick toggle bottom sheet.
+  - Added dynamic Shop Closed / Offline warning banner on the Home dashboard when the merchant sets the store to offline.
+- **Profile Setting Screen (`profile_setting_screen.dart`)**:
+  - Added dedicated "Shop & Business Profile" card displaying the shop name, category, timings, weekly off, and an instant Online/Offline switch.
+- **Edit Profile Screen (`edit_profile_screen.dart`)**:
+  - **Shop Status & Timings Card**: Interactive toggle with green/red status indicator, native TimePicker dialogs for Opening & Closing times, and Weekly Off holiday dropdown.
+  - **Shop & Business Details Card**: Shop name input, Business Category dropdown (Kirana, Dairy, Pharmacy, Clothing, Electronics, etc.), and Shop Tagline/Description.
+  - **Owner & Contact Info Card**: Owner full name, +91 primary mobile number, and dedicated Customer WhatsApp Business number.
+  - **Shop Address & Location Card**: Shop street address, Nearby Landmark (e.g. Near Shiv Mandir), City, State, and 6-digit PIN code.
+  - **Tax & Business Verification Card (Optional)**: GSTIN (15-digit) and PAN Card (10-digit).
+- **Offline & Local Storage Caching**:
+  - All shop details and live online/offline states are persisted locally in Hive so the app instantly displays merchant branding even when offline.
+
+---
+
 ## [1.0.70] - 2026-09-20 19:05:00 IST
 
 ### 🚀 Version Bump — Dynamic Subscription Plans Release

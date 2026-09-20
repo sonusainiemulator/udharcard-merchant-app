@@ -15,6 +15,7 @@ class AppConstants {
   static const String updatePassUrl = '/update-pass';
   static const String languageUrl = '/language';
   static const String profileUrl = '/profile';
+  static const String shopStatusUrl = '/merchant/shop-status';
   static const String profilePassUpdateUrl = '/change-password';
   static const String verificationUrl = '/kyc/list';
   static const String identityVerificationUrl = '/kyc/submit';

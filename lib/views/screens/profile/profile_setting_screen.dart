@@ -248,6 +248,171 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       ),
                       VSpace(16.h),
 
+                      // ── Shop & Business Profile Card ───────────────────────
+                      GetBuilder<ProfileController>(
+                        builder: (profileCtrl) {
+                          final String currentShopName = profileCtrl.displayShopName;
+                          final bool isOnline = profileCtrl.isShopOnline;
+                          final String timings = profileCtrl.shopTimingDisplay;
+                          final String closedDays = profileCtrl.shopClosedDaysEditingController.text.trim();
+
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 16.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 14.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppThemes.getFillColor(),
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(
+                                color: isOnline
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                                    : const Color(0xFFEF4444).withValues(alpha: 0.35),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      height: 44.h,
+                                      width: 44.h,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: (isOnline
+                                                ? const Color(0xFF10B981)
+                                                : const Color(0xFFEF4444))
+                                            .withValues(alpha: 0.12),
+                                      ),
+                                      child: Icon(
+                                        Icons.storefront_rounded,
+                                        color: isOnline
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFFEF4444),
+                                        size: 24.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            currentShopName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: t.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15.sp,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 6.r,
+                                                height: 6.r,
+                                                decoration: BoxDecoration(
+                                                  color: isOnline
+                                                      ? const Color(0xFF10B981)
+                                                      : const Color(0xFFEF4444),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              SizedBox(width: 5.w),
+                                              Text(
+                                                isOnline
+                                                    ? "Dukan Khuli Hai (Online)"
+                                                    : "Dukan Band Hai (Offline)",
+                                                style: t.bodySmall?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11.5.sp,
+                                                  color: isOnline
+                                                      ? const Color(0xFF10B981)
+                                                      : const Color(0xFFEF4444),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Instant Online/Offline Switch
+                                    Transform.scale(
+                                      scale: 0.85,
+                                      child: Switch.adaptive(
+                                        value: isOnline,
+                                        activeTrackColor: const Color(0xFF10B981),
+                                        onChanged: (val) =>
+                                            profileCtrl.toggleShopOnlineStatus(val),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 10.h),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12.w,
+                                    vertical: 8.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Get.isDarkMode
+                                        ? AppColors.darkBgColor
+                                        : AppColors.black10.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.access_time_rounded,
+                                        size: 15.sp,
+                                        color: AppColors.mainColor,
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Expanded(
+                                        child: Text(
+                                          "Timing: $timings${closedDays.isNotEmpty && closedDays != 'Open All Days' ? ' • $closedDays' : ''}",
+                                          style: t.bodySmall?.copyWith(
+                                            fontSize: 11.5.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppThemes.getBlack50Color(),
+                                          ),
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () => Get.toNamed(
+                                          RoutesName.editProfileScreen,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              "Change",
+                                              style: TextStyle(
+                                                fontSize: 11.5.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.mainColor,
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              size: 15.sp,
+                                              color: AppColors.mainColor,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
                       // ── My Subscription Card ──────────────────────────────
                       GetBuilder<SubscriptionController>(
                         init: SubscriptionController.to,
