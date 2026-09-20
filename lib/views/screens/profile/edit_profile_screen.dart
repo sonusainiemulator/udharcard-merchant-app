@@ -152,8 +152,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final profileController = Get.find<ProfileController>();
+    profileController.loadLocalProfileInfo();
+    if (profileController.profileList.isEmpty) {
+      profileController.getProfile();
+    }
     final initialName = "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}".trim();
-    _fullNameCtrl = TextEditingController(text: initialName);
+    final resolvedName = initialName.isNotEmpty
+        ? initialName
+        : (profileController.userName.isNotEmpty
+            ? profileController.userName
+            : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim());
+    _fullNameCtrl = TextEditingController(text: resolvedName);
+    if (resolvedName.isNotEmpty) {
+      _syncNames(resolvedName, profileController);
+    }
   }
 
   @override
@@ -187,8 +199,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           final currentName =
               "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}"
                   .trim();
-          if (currentName.isNotEmpty) {
-            _fullNameCtrl.text = currentName;
+          final resolved = currentName.isNotEmpty
+              ? currentName
+              : (profileController.userName.isNotEmpty
+                  ? profileController.userName
+                  : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim());
+          if (resolved.isNotEmpty) {
+            _fullNameCtrl.text = resolved;
+            _syncNames(resolved, profileController);
           }
         }
         return GetBuilder<AppController>(
@@ -207,7 +225,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     isFromRefreshIndicator: true,
                   );
                   final initialName = "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}".trim();
-                  _fullNameCtrl.text = initialName;
+                  if (initialName.isNotEmpty) {
+                    _fullNameCtrl.text = initialName;
+                  }
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -334,9 +354,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                               VSpace(12.h),
                               Text(
-                                profileController.isLoading
-                                    ? ""
-                                    : profileController.userName,
+                                profileController.userName.isNotEmpty
+                                    ? profileController.userName
+                                    : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? "Merchant").toString(),
                                 style: t.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 17.sp,
@@ -344,7 +364,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                               VSpace(4.h),
                               Text(
-                                profileController.userEmail,
+                                profileController.userEmail.isNotEmpty
+                                    ? profileController.userEmail
+                                    : (HiveHelp.read(Keys.userEmail) ?? "").toString(),
                                 style: t.bodySmall?.copyWith(
                                   color: AppThemes.getBlack50Color(),
                                   fontSize: 12.sp,
@@ -355,17 +377,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
 
+                      // ── Non-blocking progress indicator ──────────────────
+                      if (profileController.isLoading)
+                        LinearProgressIndicator(
+                          backgroundColor: AppColors.mainColor.withValues(alpha: 0.15),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.mainColor),
+                          minHeight: 2.5,
+                        ),
+
                       // ── Form Fields ─────────────────────────────────────
-                      profileController.isLoading
-                          ? Padding(
-                              padding: EdgeInsets.only(top: 40.h),
-                              child: Helpers.appLoader(),
-                            )
-                          : Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 16.w,
-                                vertical: 20.h,
-                              ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 20.h,
+                        ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -935,9 +960,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                             onChanged: (value) async {
                                               selectedLanguageVal = value;
                                               Language selectedList =
-                                                  await profileController.languageList
+                                                  profileController.languageList
                                                       .firstWhere(
                                                         (e) => e.name.toString() == value.toString(),
+                                                        orElse: () => profileController.languageList.first,
                                                       );
                                               profileController.selectedLanguageId =
                                                   selectedList.id.toString();

@@ -5,6 +5,40 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.74] - 2026-09-21 01:01:00 IST
+
+### 🛠️ Edit Profile Infinite Loading Fix & End-to-End Merchant Profile Synchronization
+
+#### Summary
+Bumped version to `1.0.74+75`. Diagnosed and resolved the issue where the Edit Profile screen was stuck on a circular loading spinner with blank profile information. Conducted an exhaustive study of the local Laravel backend (`laravel-backend/`) and live production backend (`pay.udharcard.shop`), synchronized the API data contract for merchant profile details, hardened error-handling across all list lookups, and added comprehensive local offline caching in Hive so profile forms open instantly without delay.
+
+#### 🌐 Backend Enhancements (`HomeController.php` Local & Live via SSH)
+- **Resolved Missing Countries**:
+  - `GET /api/profile` now populates `$data['countries']` with default country data (India `IN`, `+91`, `IND`), resolving empty lists in the mobile app.
+- **Resilient Active Languages Fallback**:
+  - Replaced restrictive `where('default_status', true)` with `where('status', 1)` and guaranteed fallback to English, preventing missing element errors.
+- **Default Merchant Timings & Attributes**:
+  - Populated clean fallbacks for `is_shop_online` (`true`), `shop_opening_time` (`09:00 AM`), `shop_closing_time` (`09:30 PM`), `shop_closed_days` (`Open All Days`), and sanitized name fields.
+- **Live Server Deployment**:
+  - Deployed updated `HomeController.php` to `/www/wwwroot/pay.udharcard.shop/app/Http/Controllers/Api/V1/HomeController.php` via SSH and verified with curl and artisan tinker.
+
+#### 📱 Mobile App Fixes (`profile_controller.dart` & `edit_profile_screen.dart`)
+- **Eliminated Full-Screen Blocking Loader**:
+  - Removed `profileController.isLoading ? Helpers.appLoader() : Column(...)` in `edit_profile_screen.dart`.
+  - The form fields are now ALWAYS rendered and immediately interactive.
+  - While background network sync takes place, a sleek non-intrusive `LinearProgressIndicator` runs across the top of the form.
+- **Safe `firstWhere` Lookups**:
+  - Added `orElse` callbacks to all `languageList.firstWhere` and `countryList.firstWhere` calls in `_getInfo` and `edit_profile_screen.dart`, preventing unhandled `StateError: Bad state: No element` crashes.
+- **Instant Offline Pre-population (`loadLocalProfileInfo`)**:
+  - Expanded `loadLocalProfileInfo()` in `ProfileController` to pre-populate all 16 controllers (`fName`, `lName`, `userName`, `shopName`, `address`, `city`, `state`, `openingTime`, `closingTime`, `closedDays`, `businessType`, `landmark`, `whatsapp`, `shopDesc`, `gst`, `pan`, `zipCode`) directly from Hive cache.
+- **InitState Profile Fetch & Full Name Sync**:
+  - `EditProfileScreen.initState()` now immediately calls `loadLocalProfileInfo()` and triggers `profileController.getProfile()` if the remote profile list is empty.
+  - Automatically resolves `_fullNameCtrl` from `fName` + `lName` or fallback `userName`/`userFullName`.
+- **Network Timeout Guard**:
+  - Wrapped `ProfileRepo.getProfile()` with an 8-second timeout so edge connections gracefully fall back to local cache without leaving the user waiting.
+
+---
+
 ## [1.0.73] - 2026-09-21 00:35:00 IST
 
 ### 🎙️ Gemini 3.8 Live & Gemini 3.8 Live Extended Thinking Migration across App & Live Server Backend via SSH

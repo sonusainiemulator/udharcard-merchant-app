@@ -958,14 +958,40 @@ class HomeController extends Controller
                 return $query;
             });
             if ($request->isMethod('get')) {
+                $userProfile->name = $userProfile->name ?? (trim(($userProfile->firstname ?? '') . ' ' . ($userProfile->lastname ?? '')) ?: ($userProfile->username ?? 'Merchant'));
+                $userProfile->is_shop_online = (bool)($userProfile->is_shop_online ?? true);
+                $userProfile->shop_opening_time = $userProfile->shop_opening_time ?: '09:00 AM';
+                $userProfile->shop_closing_time = $userProfile->shop_closing_time ?: '09:30 PM';
+                $userProfile->shop_closed_days = $userProfile->shop_closed_days ?: 'Open All Days';
+                $userProfile->phone_code = $userProfile->phone_code ?: '91';
+                $userProfile->country = $userProfile->country ?: 'India';
+
                 $data['userProfile'] = $userProfile;
                 $data['user'] = $userProfile;
-                $data['userProfile']['name'] = $userProfile->name ?? null;
+                $data['userProfile']['name'] = $userProfile->name;
                 $data['userProfile']['profile_picture'] = getFile($userProfile->image_driver, $userProfile->image);
-                $data['userProfile']['language_id'] = $userProfile->language_id ?? null;
+                $data['userProfile']['language_id'] = $userProfile->language_id ?? 1;
                 $data['wallets'] = $wallets;
-                $data['languages'] = Language::select('id', 'name')->where('default_status', true)->orderBy('name', 'ASC')->get();
-                $data['base_currency'] = basicControl()->base_currency;
+                
+                $languages = Language::select('id', 'name')->where('status', 1)->orderBy('name', 'ASC')->get();
+                if ($languages->isEmpty()) {
+                    $languages = collect([
+                        (object)['id' => 1, 'name' => 'English']
+                    ]);
+                }
+                $data['languages'] = $languages;
+                
+                $data['countries'] = [
+                    [
+                        'id' => 1,
+                        'name' => 'India',
+                        'code' => 'IN',
+                        'phone_code' => '91',
+                        'iso_code' => 'IND',
+                    ],
+                ];
+                
+                $data['base_currency'] = basicControl()->base_currency ?? 'INR';
                 $data['userProfile']['qr_link'] = $userProfile->qr_link ? route('public.qr.Payment', $userProfile->qr_link) : null;
 
                 return response()->json($this->withSuccess($data));

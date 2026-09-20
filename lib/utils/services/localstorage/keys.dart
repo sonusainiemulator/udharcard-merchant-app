@@ -43,4 +43,10 @@ class Keys {
   static String landmark = "landmark";
   static String whatsappNumber = "whatsappNumber";
   static String shopDescription = "shopDescription";
+  static String city = "city";
+  static String state = "state";
+  static String address = "address";
+  static String gstNumber = "gstNumber";
+  static String panNumber = "panNumber";
+  static String zipCode = "zipCode";
 }

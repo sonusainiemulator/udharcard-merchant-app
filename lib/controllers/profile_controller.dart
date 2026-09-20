@@ -102,9 +102,26 @@ class ProfileController extends GetxController {
   }
 
   Future validateEditProfile(context) async {
-    if (fNameEditingController.text.isEmpty && lNameEditingController.text.isEmpty) {
+    if (fNameEditingController.text.trim().isEmpty && lNameEditingController.text.trim().isEmpty) {
+      final fallbackName = userName.trim().isNotEmpty
+          ? userName.trim()
+          : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim();
+      if (fallbackName.isNotEmpty) {
+        final parts = fallbackName.split(RegExp(r'\s+'));
+        fNameEditingController.text = parts.first;
+        lNameEditingController.text = parts.length > 1 ? parts.sublist(1).join(' ') : parts.first;
+      }
+    }
+    if (phoneNumberEditingController.text.trim().isEmpty) {
+      final cachedPhone = (HiveHelp.read(Keys.userPhone) ?? '').toString().trim();
+      if (cachedPhone.isNotEmpty) {
+        phoneNumberEditingController.text = cachedPhone;
+      }
+    }
+
+    if (fNameEditingController.text.trim().isEmpty && lNameEditingController.text.trim().isEmpty) {
       Helpers.showSnackBar(msg: 'Full Name is required');
-    } else if (phoneNumberEditingController.text.isEmpty) {
+    } else if (phoneNumberEditingController.text.trim().isEmpty) {
       Helpers.showSnackBar(msg: 'Phone Number is required');
     } else {
       await updateProfile(context);
@@ -136,19 +153,36 @@ class ProfileController extends GetxController {
     }
 
     try {
-      http.Response response = await ProfileRepo.getProfile();
+      final response = await ProfileRepo.getProfile().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          debugPrint("getProfile timeout (8s) - falling back to cached Hive data");
+          return http.Response(
+            jsonEncode({'status': 'timeout', 'message': 'Request timed out'}),
+            408,
+          );
+        },
+      );
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
+        if (data['status'] == 'success' && data['message'] != null) {
           profileList.clear();
           languageList.clear();
           countryList.clear();
 
-          qrLink = data['message']['userProfile']['qr_link'] ?? "";
-          HiveHelp.write(Keys.baseCurrency, data['message']['base_currency'] ?? "");
-          profileList.add(ProfileModel.fromJson(data).message!.userProfile!);
-          languageList.addAll(ProfileModel.fromJson(data).message!.languages!);
-          countryList.addAll(ProfileModel.fromJson(data).message!.countries!);
+          qrLink = data['message']?['userProfile']?['qr_link'] ?? "";
+          HiveHelp.write(Keys.baseCurrency, data['message']?['base_currency'] ?? "INR");
+          
+          final profileModel = ProfileModel.fromJson(data);
+          if (profileModel.message?.userProfile != null) {
+            profileList.add(profileModel.message!.userProfile!);
+          }
+          if (profileModel.message?.languages != null) {
+            languageList.addAll(profileModel.message!.languages!);
+          }
+          if (profileModel.message?.countries != null) {
+            countryList.addAll(profileModel.message!.countries!);
+          }
           if (profileList.isNotEmpty) {
             var profileData = profileList[0];
             _getInfo(profileData); 
@@ -156,14 +190,19 @@ class ProfileController extends GetxController {
         } else {
           ApiStatus.checkStatus(data['status'], data['message']);
         }
-      } else {
-        var data = jsonDecode(response.body);
-        Helpers.showSnackBar(msg: '${data['message']}');
+      } else if (response.statusCode != 408) {
+        try {
+          var data = jsonDecode(response.body);
+          if (data['message'] != null) {
+            Helpers.showSnackBar(msg: '${data['message']}');
+          }
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint("Error fetching profile: $e");
     } finally {
       isLoading = false;
+      loadLocalProfileInfo();
       update();
     }
   }
@@ -181,17 +220,20 @@ class ProfileController extends GetxController {
       join_date = data == null ? '' : data.created_at.toString();
       final rawPhoto = data == null ? '' : (data.profilePicture ?? "");
       userPhoto = (rawPhoto.endsWith('/default.png') || rawPhoto.endsWith('default.png')) ? '' : rawPhoto;
-      fNameEditingController.text = data == null ? '' : data.firstname ?? "";
-      lNameEditingController.text = data == null ? '' : data.lastname ?? "";
+      
+      final fName = data == null ? '' : (data.firstname ?? "");
+      final lName = data == null ? '' : (data.lastname ?? "");
+      if (fName.isNotEmpty) fNameEditingController.text = fName;
+      if (lName.isNotEmpty) lNameEditingController.text = lName;
 
-      if (data?.name != null && data!.name!.isNotEmpty) {
-        HiveHelp.write(Keys.userFullName, data.name);
+      if (data?.name != null && data!.name!.toString().isNotEmpty) {
+        HiveHelp.write(Keys.userFullName, data.name.toString());
       }
-      if (data?.email != null && data!.email!.isNotEmpty) {
-        HiveHelp.write(Keys.userEmail, data.email);
+      if (data?.email != null && data!.email!.toString().isNotEmpty) {
+        HiveHelp.write(Keys.userEmail, data.email.toString());
       }
-      if (data?.phone != null && data!.phone!.isNotEmpty) {
-        HiveHelp.write(Keys.userPhone, data.phone);
+      if (data?.phone != null && data!.phone!.toString().isNotEmpty) {
+        HiveHelp.write(Keys.userPhone, data.phone.toString());
       }
 
       userNameEditingController.text = userName;
@@ -201,23 +243,34 @@ class ProfileController extends GetxController {
       cityEditingController.text = data == null ? '' : data.city ?? "";
       stateEditingController.text = data == null ? '' : data.state ?? "";
       addrEditingController.text = data == null ? '' : data.address_one ?? "";
-      selectedLanguageId = data == null ? "1" : data.languageId.toString();
+      
+      selectedLanguageId = data == null ? "1" : (data.languageId ?? "1").toString();
       if (languageList.isNotEmpty) {
         selectedLanguage =
             languageList
-                .firstWhere((e) => e.id.toString() == selectedLanguageId)
+                .firstWhere(
+                  (e) => e.id.toString() == selectedLanguageId,
+                  orElse: () => languageList.first,
+                )
                 .name;
       }
 
-      phoneCode = data == null ? "" : data.phoneCode;
+      phoneCode = data == null ? "+91" : (data.phoneCode ?? "+91");
       if (countryList.isNotEmpty) {
+        final cleanPhone = phoneCode.replaceAll('+', '').trim();
         countryName =
             countryList
-                .firstWhere((e) => e.phoneCode.toString() == phoneCode)
+                .firstWhere(
+                  (e) => e.phoneCode.toString().replaceAll('+', '').trim() == cleanPhone,
+                  orElse: () => countryList.first,
+                )
                 .name;
         countryCode =
             countryList
-                .firstWhere((e) => e.phoneCode.toString() == phoneCode)
+                .firstWhere(
+                  (e) => e.phoneCode.toString().replaceAll('+', '').trim() == cleanPhone,
+                  orElse: () => countryList.first,
+                )
                 .code;
       }
 
@@ -256,14 +309,28 @@ class ProfileController extends GetxController {
       shopDescEditingController.text =
           (data?.shopDescription ?? HiveHelp.read(Keys.shopDescription) ?? '')
               .toString();
-      gstEditingController.text = (data?.gstNumber ?? '').toString();
-      panEditingController.text = (data?.panNumber ?? '').toString();
-      zipCodeEditingController.text = (data?.zipCode ?? '').toString();
+      gstEditingController.text = (data?.gstNumber ?? HiveHelp.read(Keys.gstNumber) ?? '').toString();
+      panEditingController.text = (data?.panNumber ?? HiveHelp.read(Keys.panNumber) ?? '').toString();
+      zipCodeEditingController.text = (data?.zipCode ?? HiveHelp.read(Keys.zipCode) ?? '').toString();
+
+      // Write all to Hive for complete offline availability
+      HiveHelp.write(Keys.shopOpeningTime, shopOpeningTimeEditingController.text);
+      HiveHelp.write(Keys.shopClosingTime, shopClosingTimeEditingController.text);
+      HiveHelp.write(Keys.shopClosedDays, shopClosedDaysEditingController.text);
+      HiveHelp.write(Keys.businessType, businessTypeEditingController.text);
+      HiveHelp.write(Keys.landmark, landmarkEditingController.text);
+      HiveHelp.write(Keys.whatsappNumber, whatsappEditingController.text);
+      HiveHelp.write(Keys.shopDescription, shopDescEditingController.text);
+      HiveHelp.write(Keys.address, addrEditingController.text);
+      HiveHelp.write(Keys.city, cityEditingController.text);
+      HiveHelp.write(Keys.state, stateEditingController.text);
+      HiveHelp.write(Keys.gstNumber, gstEditingController.text);
+      HiveHelp.write(Keys.panNumber, panEditingController.text);
+      HiveHelp.write(Keys.zipCode, zipCodeEditingController.text);
 
       update();
     } catch (e, s) {
-      print(s);
-      Helpers.showSnackBar(msg: e.toString());
+      debugPrint("Error in _getInfo: $e\n$s");
     }
   }
 
@@ -532,14 +599,88 @@ class ProfileController extends GetxController {
     String hiveName = (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim();
     if (hiveName.isNotEmpty) {
       userName = hiveName;
+      if (fNameEditingController.text.trim().isEmpty && lNameEditingController.text.trim().isEmpty) {
+        final parts = hiveName.split(RegExp(r'\s+'));
+        if (parts.length == 1) {
+          fNameEditingController.text = parts.first;
+          lNameEditingController.text = parts.first;
+        } else if (parts.length > 1) {
+          fNameEditingController.text = parts.first;
+          lNameEditingController.text = parts.sublist(1).join(' ');
+        }
+      }
     }
     String hiveEmail = (HiveHelp.read(Keys.userEmail) ?? '').toString().trim();
     if (hiveEmail.isNotEmpty) {
       userEmail = hiveEmail;
     }
     String hivePhone = (HiveHelp.read(Keys.userPhone) ?? '').toString().trim();
-    if (hivePhone.isNotEmpty) {
+    if (hivePhone.isNotEmpty && phoneNumberEditingController.text.trim().isEmpty) {
       phoneNumberEditingController.text = hivePhone;
+    }
+    if (userNameEditingController.text.trim().isEmpty) {
+      userNameEditingController.text = (HiveHelp.read(Keys.userName) ?? hiveName).toString().trim();
+    }
+
+    final cachedShop = (HiveHelp.read(Keys.shopName) ?? HiveHelp.read('shop_name') ?? '').toString().trim();
+    if (cachedShop.isNotEmpty && shopNameEditingController.text.trim().isEmpty) {
+      shopNameEditingController.text = cachedShop;
+    }
+    final cachedOnline = HiveHelp.read(Keys.isShopOnline);
+    if (cachedOnline != null) {
+      isShopOnline = cachedOnline == true || cachedOnline.toString() == '1' || cachedOnline.toString().toLowerCase() == 'true';
+    }
+    final cachedOpen = (HiveHelp.read(Keys.shopOpeningTime) ?? '').toString().trim();
+    if (cachedOpen.isNotEmpty) {
+      shopOpeningTimeEditingController.text = cachedOpen;
+    }
+    final cachedClose = (HiveHelp.read(Keys.shopClosingTime) ?? '').toString().trim();
+    if (cachedClose.isNotEmpty) {
+      shopClosingTimeEditingController.text = cachedClose;
+    }
+    final cachedDays = (HiveHelp.read(Keys.shopClosedDays) ?? '').toString().trim();
+    if (cachedDays.isNotEmpty) {
+      shopClosedDaysEditingController.text = cachedDays;
+    }
+    final cachedBiz = (HiveHelp.read(Keys.businessType) ?? '').toString().trim();
+    if (cachedBiz.isNotEmpty && businessTypeEditingController.text.trim().isEmpty) {
+      businessTypeEditingController.text = cachedBiz;
+    }
+    final cachedLandmark = (HiveHelp.read(Keys.landmark) ?? '').toString().trim();
+    if (cachedLandmark.isNotEmpty && landmarkEditingController.text.trim().isEmpty) {
+      landmarkEditingController.text = cachedLandmark;
+    }
+    final cachedWhatsapp = (HiveHelp.read(Keys.whatsappNumber) ?? '').toString().trim();
+    if (cachedWhatsapp.isNotEmpty && whatsappEditingController.text.trim().isEmpty) {
+      whatsappEditingController.text = cachedWhatsapp;
+    }
+    final cachedDesc = (HiveHelp.read(Keys.shopDescription) ?? '').toString().trim();
+    if (cachedDesc.isNotEmpty && shopDescEditingController.text.trim().isEmpty) {
+      shopDescEditingController.text = cachedDesc;
+    }
+    final cachedAddr = (HiveHelp.read(Keys.address) ?? '').toString().trim();
+    if (cachedAddr.isNotEmpty && addrEditingController.text.trim().isEmpty) {
+      addrEditingController.text = cachedAddr;
+    }
+    final cachedCity = (HiveHelp.read(Keys.city) ?? '').toString().trim();
+    if (cachedCity.isNotEmpty && cityEditingController.text.trim().isEmpty) {
+      cityEditingController.text = cachedCity;
+    }
+    final cachedState = (HiveHelp.read(Keys.state) ?? '').toString().trim();
+    if (cachedState.isNotEmpty && stateEditingController.text.trim().isEmpty) {
+      stateEditingController.text = cachedState;
+    }
+    final cachedGst = (HiveHelp.read(Keys.gstNumber) ?? '').toString().trim();
+    if (cachedGst.isNotEmpty && gstEditingController.text.trim().isEmpty) {
+      gstEditingController.text = cachedGst;
+    }
+    final cachedPan = (HiveHelp.read(Keys.panNumber) ?? '').toString().trim();
+    if (cachedPan.isNotEmpty && panEditingController.text.trim().isEmpty) {
+      panEditingController.text = cachedPan;
+    }
+    final cachedZip = (HiveHelp.read(Keys.zipCode) ?? '').toString().trim();
+    if (cachedZip.isNotEmpty && zipCodeEditingController.text.trim().isEmpty) {
+      zipCodeEditingController.text = cachedZip;
     }
     update();
   }
