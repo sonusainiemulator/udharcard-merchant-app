@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:paysecure/data/repositories/auth_repo.dart';
 import 'package:paysecure/data/source/errors/check_api_status.dart';
 import 'package:paysecure/utils/services/helpers.dart';
@@ -1029,8 +1030,15 @@ class AuthController extends GetxController {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception(
+          'Google ID token is missing. Please ensure your device has Google Play Services and an active Google account.',
+        );
+      }
+
       final OAuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
+        idToken: idToken,
       );
 
       final UserCredential userCredential =
@@ -1046,8 +1054,8 @@ class AuthController extends GetxController {
       final String email = (user.email ?? '').trim();
       final String phone = (user.phoneNumber ?? '').trim();
       final String uid = user.uid;
-      final String? idToken = await user.getIdToken();
-      final String token = idToken ?? 'firebase_google_token_$uid';
+      final String? jwtToken = await user.getIdToken();
+      final String token = jwtToken ?? 'firebase_google_token_$uid';
 
       // Persist merchant session permanently into local storage
       HiveHelp.write(Keys.token, token);
@@ -1086,11 +1094,32 @@ class AuthController extends GetxController {
       } else {
         await _navigatePostAuthentication();
       }
+    } on PlatformException catch (e) {
+      isGoogleLoading = false;
+      debugPrint("Google Sign-In PlatformException: [${e.code}] ${e.message}");
+      if (e.code == 'network_error') {
+        loginErrorMessage = 'Network error. Please check your internet connection.';
+      } else if (e.code == 'sign_in_canceled' || e.code == 'canceled') {
+        loginErrorMessage = null;
+      } else if (e.code == '10' || (e.message != null && e.message!.contains('DEVELOPER_ERROR'))) {
+        loginErrorMessage =
+            'Google Sign-In error (Code 10). Please ensure SHA-1 fingerprint (F4:1A:FB:14:ED:0B:D1:05:21:3F:1B:31:7B:AE:09:B5:CB:53:5B:6C) is registered in Firebase Console.';
+      } else if (e.code == '12500') {
+        loginErrorMessage =
+            'Google Sign-In failed (Code 12500). Please verify Google Play Services and try again.';
+      } else {
+        loginErrorMessage = e.message ?? 'Google Sign-In error (${e.code}).';
+      }
+      _notifyAuthSubmission();
+      if (loginErrorMessage != null) {
+        Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
+      }
     } on GoogleSignInException catch (e) {
       isGoogleLoading = false;
       if (e.code.name != 'canceled') {
         loginErrorMessage =
             'Google Sign-In error: ${e.description ?? e.code.name}';
+        Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
       }
       _notifyAuthSubmission();
     } on FirebaseAuthException catch (e) {
@@ -1098,11 +1127,13 @@ class AuthController extends GetxController {
       loginErrorMessage =
           e.message ?? 'Firebase authentication failed (${e.code}).';
       _notifyAuthSubmission();
+      Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
     } catch (e) {
       isGoogleLoading = false;
       final errStr = e.toString().toLowerCase();
       if (!errStr.contains('canceled') && !errStr.contains('cancelled')) {
         loginErrorMessage = 'Google Sign-In failed: $e';
+        Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
       }
       _notifyAuthSubmission();
     }

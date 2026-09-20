@@ -58,6 +58,22 @@
           }
         },
         {
+          "client_id": "118952639868-f41afb14ed0bd105213f1b317bae09b5cb535b6c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.udharcard.merchant.app",
+            "certificate_hash": "f41afb14ed0bd105213f1b317bae09b5cb535b6c"
+          }
+        },
+        {
+          "client_id": "118952639868-f3f24f76b51bb985a5c7b846793b4da10de7f034.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.udharcard.merchant.app",
+            "certificate_hash": "f3f24f76b51bb985a5c7b846793b4da10de7f034"
+          }
+        },
+        {
           "client_id": "118952639868-9la76olscg3a8nk8mnqa76rd25phqavk.apps.googleusercontent.com",
           "client_type": 3
         }

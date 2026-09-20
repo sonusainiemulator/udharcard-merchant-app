@@ -103,7 +103,7 @@ class AppConstants {
 
   //----GOOGLE AUTH
   static const String googleServerClientId =
-      "91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com";
+      "118952639868-9la76olscg3a8nk8mnqa76rd25phqavk.apps.googleusercontent.com";
 }
 
 

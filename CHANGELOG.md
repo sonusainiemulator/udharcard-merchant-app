@@ -5,12 +5,28 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.72] - 2026-09-20 23:46:00 IST
+## [1.0.72] - 2026-09-21 00:01:00 IST
 
-### 🎨 Complete 8-Screen Modern Visual Redesign (Reference UI Alignment)
+### 🎨 Complete 8-Screen Modern Visual Redesign & 🔥 Firebase / Google Auth Reconfiguration Fix
 
 #### Summary
-Bumped version from `1.0.71+72` → `1.0.72+73`. Completely redesigned the merchant mobile app across all 8 screens to match the reference design (`media_1789926633043.jpg`) with exact aesthetic alignment while strictly retaining 100% of existing functionality (AI Voice Khata, Subscription plans & gating, In-App Voice Soundbox alerts, NFC, QR scan, exports, and shop timings/online status).
+Bumped version from `1.0.71+72` → `1.0.72+73`. Completely redesigned the merchant mobile app across all 8 screens to match the reference design (`media_1789926633043.jpg`) with exact aesthetic alignment while strictly retaining 100% of existing functionality. Additionally, reconfigured and fixed Firebase Phone Authentication and Google Sign-In end-to-end.
+
+#### 🔥 Firebase & Google Sign-In Reconfiguration
+- **Fixed Android App ID Mismatch (`firebase_options.dart`)**:
+  - Corrected Android `appId` from `1:118952639868:android:2fe4d30c0e0b3300d0b8f9` (which belonged to `com.udharcard.merchant`) to `1:118952639868:android:4d4eb3940b684e7ad0b8f9` for `com.udharcard.merchant.app`.
+  - Resolves `missing-client-identifier` / `app-not-authorized` ("App verification failed") during phone verification.
+- **Fixed Google Web Client ID (`.env`, `app_constants.dart`)**:
+  - Replaced foreign/outdated client ID (`91651925903-mmutsd2fu0qrt8u35b22ou6hnrbrnc9t.apps.googleusercontent.com`) with the authentic Firebase project Web Client ID: `118952639868-9la76olscg3a8nk8mnqa76rd25phqavk.apps.googleusercontent.com`.
+  - Enables Google Identity Services to issue valid JWT ID tokens for `FirebaseAuth.instance.signInWithCredential`.
+- **Registered Keystore Certificate Hashes (`google-services.json`)**:
+  - Registered both the upload keystore (`f41afb14ed0bd105213f1b317bae09b5cb535b6c`) and debug keystore (`f3f24f76b51bb985a5c7b846793b4da10de7f034`) into `oauth_client` array.
+- **Enhanced Google Auth Error Handling (`auth_controller.dart`)**:
+  - Added dedicated handling for `PlatformException` (Code 10 Developer Error, network error, cancellation).
+  - Validated Google ID token before credential generation.
+  - Added visible feedback via `Helpers.showSnackBar`.
+- **Built Fresh Signed APKs**:
+  - Rebuilt both `app-debug.apk` and `app-release.apk` signed with the production upload certificate.
 
 #### Redesigned Screens & Enhancements
 1. **Bottom Navigation (`bottom_nav_bar.dart`, `bottom_nav_controller.dart`)**:

@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDWUxYzbkvDpbiYzrgZprhyq7DC9I3tmdA',
-    appId: '1:118952639868:android:2fe4d30c0e0b3300d0b8f9',
+    appId: '1:118952639868:android:4d4eb3940b684e7ad0b8f9',
     messagingSenderId: '118952639868',
     projectId: 'udharcard-merchant',
     storageBucket: 'udharcard-merchant.firebasestorage.app',
