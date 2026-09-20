@@ -307,3 +307,5 @@ Route::prefix('admin/subscription')->middleware('admin-subscription')->group(fun
 // ================== UDHARCARD AI ASSISTANT API ==================
 Route::post('/ai-assistant/query', [\App\Http\Controllers\AiAssistantController::class, 'query']);
 Route::get('/ai-assistant/quick-stats', [\App\Http\Controllers\AiAssistantController::class, 'quickStats']);
+Route::post('/ai-assistant/voice-parse', [\App\Http\Controllers\AiAssistantController::class, 'voiceParse']);
+Route::post('/merchant/voice-parse', [\App\Http\Controllers\AiAssistantController::class, 'voiceParse']);

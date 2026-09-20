@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,8 +19,8 @@ import '../routes/routes_name.dart';
 enum VoiceAssistantState { idle, listening, thinking, speaking }
 
 enum GeminiAiMode {
-  gemini38Live,
-  gemini38ExtendedThinking,
+  geminiLive,
+  geminiExtendedThinking,
 }
 
 class VoiceBillItem {
@@ -49,8 +50,8 @@ class VoiceBillItem {
         title: map['title'] ?? '',
         quantity: (map['quantity'] as num?)?.toDouble() ?? 1.0,
         unit: map['unit'] ?? '',
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0.0,
-        totalPrice: (map['total_price'] as num?)?.toDouble() ?? 0.0,
+        unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0.0,
+        totalPrice: (map['totalPrice'] as num?)?.toDouble() ?? 0.0,
       );
 }
 
@@ -104,6 +105,7 @@ class VoiceEntryController extends GetxController {
   bool get isListening => _assistantState == VoiceAssistantState.listening;
   bool get isThinking => _assistantState == VoiceAssistantState.thinking;
   bool get isSpeaking => _assistantState == VoiceAssistantState.speaking;
+  bool get isIdle => _assistantState == VoiceAssistantState.idle;
 
   // Talk Back Feature Controls
   bool _isTalkBackEnabled = true;
@@ -120,8 +122,8 @@ class VoiceEntryController extends GetxController {
 
   bool isUsingGeminiAi = false;
   bool isLiveMode = false;
-  GeminiAiMode activeGeminiMode = GeminiAiMode.gemini38Live;
-  bool get isExtendedThinking => activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking;
+  GeminiAiMode activeGeminiMode = GeminiAiMode.geminiLive;
+  bool get isExtendedThinking => activeGeminiMode == GeminiAiMode.geminiExtendedThinking;
 
   // Active Category Filter
   String activeCategory = 'ALL'; // 'ALL', 'UDHAR', 'COLLECTION', 'BILL', 'PURCHASE'
@@ -216,17 +218,17 @@ class VoiceEntryController extends GetxController {
   }
 
   void toggleExtendedThinking() {
-    if (activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking) {
-      activeGeminiMode = GeminiAiMode.gemini38Live;
+    if (activeGeminiMode == GeminiAiMode.geminiExtendedThinking) {
+      activeGeminiMode = GeminiAiMode.geminiLive;
       Helpers.showSnackBar(
-        msg: "Gemini 3.8 Live active (Ultra-Fast Response)",
+        msg: "Gemini 3.8 Live active (Ultra-Fast 3.8 Flash Mode)",
         title: "Gemini 3.8 Live",
       );
     } else {
-      activeGeminiMode = GeminiAiMode.gemini38ExtendedThinking;
+      activeGeminiMode = GeminiAiMode.geminiExtendedThinking;
       Helpers.showSnackBar(
-        msg: "Gemini 3.8 Live Extended Thinking active (Deep Arithmetic & Calculation Mode)",
-        title: "Extended Thinking Active",
+        msg: "Gemini 3.8 Live Extended Thinking active (Deep Reasoning & Calculation Mode)",
+        title: "Gemini 3.8 Extended Thinking",
       );
     }
     HapticFeedback.mediumImpact();
@@ -385,34 +387,29 @@ class VoiceEntryController extends GetxController {
   }
 
   /// Google Gemini AI Parser supporting:
-  /// 1. Gemini 3.8 Live (Fast Conversational Real-Time Voice)
-  /// 2. Gemini 3.8 Live Extended Thinking (Deep Arithmetic & Complex Ledger Reasoning)
+  /// 1. Gemini Live (Fast Conversational Real-Time Voice - gemini-3.6-flash)
+  /// 2. Gemini Extended Thinking (Deep Arithmetic & Complex Ledger Reasoning - gemini-3.1-pro-preview)
   Future<VoiceParseResult?> _parseWithGemini(String speechText) async {
     final apiKey = (dotenv.env['GEMINI_API_KEY'] ?? '').trim();
-    if (apiKey.isEmpty || apiKey.contains('Xxxx')) {
+    if (apiKey.isEmpty || apiKey.length < 10) {
       isUsingGeminiAi = false;
       return null;
     }
 
-    final bool useThinking = activeGeminiMode == GeminiAiMode.gemini38ExtendedThinking;
+    final bool useThinking = activeGeminiMode == GeminiAiMode.geminiExtendedThinking;
 
-    // Resolve model name based on active mode and .env settings
+    // Resolve model name based on active mode and .env settings (Gemini 3.8 Live / 3.8 Extended Thinking)
     String modelName;
     if (useThinking) {
       final envThinking = (dotenv.env['GEMINI_THINKING_MODEL'] ?? '').trim();
-      modelName = envThinking.isNotEmpty ? envThinking : 'gemini-2.0-flash-thinking-exp';
+      modelName = envThinking.isNotEmpty ? envThinking : 'gemini-3.8-flash';
     } else {
       final envLive = (dotenv.env['GEMINI_LIVE_MODEL'] ?? dotenv.env['GEMINI_MODEL'] ?? '').trim();
-      modelName = envLive.isNotEmpty ? envLive : 'gemini-2.0-flash-exp';
+      modelName = envLive.isNotEmpty ? envLive : 'gemini-3.8-flash';
     }
 
-    // Map custom user aliases
-    if (modelName.contains('3.8')) {
-      if (modelName.contains('thinking') || useThinking) {
-        modelName = 'gemini-2.0-flash-thinking-exp';
-      } else {
-        modelName = 'gemini-2.0-flash-exp';
-      }
+    if (modelName.contains('2.0') || modelName.contains('2.5') || modelName.contains('3.6') || modelName.contains('3.1')) {
+      modelName = 'gemini-3.8-flash';
     }
 
     try {
@@ -428,7 +425,7 @@ class VoiceEntryController extends GetxController {
       final String prompt;
       if (useThinking) {
         prompt = '''
-You are an advanced retail accounting AI with Extended Thinking capabilities for an Indian merchant ledger app (UdharCard).
+You are an advanced retail accounting AI with Extended Thinking capabilities (Gemini 3.8 Live Extended Thinking) for an Indian merchant ledger app (UdharCard).
 The merchant speaks in Hindi, Hinglish, or English.
 Carefully perform step-by-step arithmetic reasoning and ledger disambiguation before generating JSON.
 
@@ -463,7 +460,7 @@ Merchant speech: "$speechText"
 ''';
       } else {
         prompt = '''
-You are a real-time Gemini 3.8 Live AI assistant for an Indian merchant ledger app (UdharCard).
+You are a real-time Gemini 3.8 Live AI assistant (gemini-3.8-flash) for an Indian merchant ledger app (UdharCard).
 The merchant speaks in Hindi, Hinglish, or English.
 Analyze the user's speech and extract information into strictly valid JSON with ultra-low latency.
 
@@ -570,6 +567,84 @@ Merchant speech: "$speechText"
     }
   }
 
+  /// Secondary AI Parser: Calls Live Production Backend (pay.udharcard.shop/api/ai-assistant/voice-parse)
+  Future<VoiceParseResult?> _parseWithLiveServer(String speechText, bool useThinking) async {
+    try {
+      final url = Uri.parse('https://pay.udharcard.shop/api/ai-assistant/voice-parse');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'speech_text': speechText,
+          'mode': useThinking ? 'extended_thinking' : 'live',
+        }),
+      ).timeout(const Duration(milliseconds: 6500));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success' && body['data'] is Map) {
+          final data = body['data'];
+          final action = (data['action'] ?? '').toString().toLowerCase();
+          final name = (data['name'] ?? '').toString().trim();
+          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+          final type = (data['type'] ?? 'Given').toString();
+          final category = (data['category'] ?? 'UDHAR').toString();
+          final reply = (data['reply'] ?? '').toString();
+          final remarks = (data['remarks'] ?? '').toString();
+
+          List<VoiceBillItem> billItems = [];
+          if (data['bill_items'] is List) {
+            for (final item in data['bill_items']) {
+              if (item is Map) {
+                billItems.add(VoiceBillItem(
+                  title: (item['title'] ?? 'Item').toString(),
+                  quantity: (item['quantity'] as num?)?.toDouble() ?? 1.0,
+                  unit: (item['unit'] ?? '').toString(),
+                  unitPrice: (item['unitPrice'] as num?)?.toDouble() ?? 0.0,
+                  totalPrice: (item['totalPrice'] as num?)?.toDouble() ?? 0.0,
+                ));
+              }
+            }
+          }
+
+          List<String> pItems = [];
+          if (data['purchase_items'] is List) {
+            for (final it in data['purchase_items']) {
+              pItems.add(it.toString());
+            }
+          }
+
+          final matchedCustomer = findMatchingCustomer(name, '');
+          final displayName = matchedCustomer != null ? matchedCustomer['name'] : name;
+
+          isUsingGeminiAi = true;
+          return VoiceParseResult(
+            name: displayName,
+            phone: matchedCustomer?['phone']?.toString() ?? '',
+            amount: amount,
+            type: type,
+            category: category,
+            isQuery: action == 'balance_query',
+            isHelp: action == 'help',
+            isPurchaseOrder: action == 'purchase_order',
+            items: billItems,
+            purchaseItems: pItems,
+            matchedCustomer: matchedCustomer,
+            remarks: remarks,
+            reply: reply.isNotEmpty
+                ? reply
+                : (type == 'Given'
+                    ? '$displayName ko ₹${amount.toInt()} udhar add kar diya gaya.'
+                    : '$displayName se ₹${amount.toInt()} mil gaye.'),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print("Live server Gemini 3.8 parse fallback error: $e");
+    }
+    return null;
+  }
+
   Future<void> _processSpeech() async {
     if (_transcribedText.trim().isEmpty) {
       _changeState(VoiceAssistantState.idle);
@@ -585,7 +660,7 @@ Merchant speech: "$speechText"
       isLiveMode = false;
       _changeState(VoiceAssistantState.idle);
       HapticFeedback.mediumImpact();
-      await speakReply("Gemini Live session band kar diya gaya.");
+      await speakReply("Gemini 3.8 Live session band kar diya gaya.");
       update();
       return;
     }
@@ -593,13 +668,20 @@ Merchant speech: "$speechText"
     _changeState(VoiceAssistantState.thinking);
     HapticFeedback.lightImpact();
 
-    // 1. Try Google's latest Gemini 2.0 Flash AI Model if API key is present
+    // 1. Try Direct Google Gemini 3.8 Live / Extended Thinking AI
     VoiceParseResult? parsed;
     try {
       parsed = await _parseWithGemini(_transcribedText);
     } catch (_) {}
 
-    // 2. Seamless Instant Fallback to Local Smart NLP (0ms, Offline Kirana dictionary)
+    // 2. Try Live Server Gemini 3.8 Backend Endpoint (pay.udharcard.shop)
+    if (parsed == null) {
+      try {
+        parsed = await _parseWithLiveServer(_transcribedText, isExtendedThinking);
+      } catch (_) {}
+    }
+
+    // 3. Seamless Instant Fallback to Local Smart NLP (0ms, Offline Kirana dictionary)
     if (parsed == null) {
       isUsingGeminiAi = false;
       parsed = parseVoiceInstruction(_transcribedText);
@@ -642,10 +724,17 @@ Merchant speech: "$speechText"
     final lower = normalized.toLowerCase();
 
     // ── 1. Help & Instructions ───────────────────────────────────────────────
-    final helpWords = [
-      'hello', 'hi', 'help', 'kya kar', 'kaise', 'what can', 'namaste', 'start', 'kya hai'
-    ];
-    if (helpWords.any((word) => lower.contains(word))) {
+    final helpRegex = RegExp(
+      r'\b(hello|hi|help|kya kar|kaise|what can|namaste|start|kya hai)\b',
+      caseSensitive: false,
+    );
+    if (helpRegex.hasMatch(lower) &&
+        !lower.contains('udhar') &&
+        !lower.contains('udhaar') &&
+        !lower.contains('diya') &&
+        !lower.contains('mile') &&
+        !lower.contains('rupaye') &&
+        !lower.contains('rupees')) {
       return const VoiceParseResult(
         isHelp: true,
         category: 'HELP',
@@ -661,7 +750,7 @@ Merchant speech: "$speechText"
         !lower.contains('diya') &&
         !lower.contains('mile')) {
       final List<String> pItems = [];
-      final parts = lower.split(RegExp(r'[,|aur|\band\b]'));
+      final parts = lower.split(RegExp(r',\s*|\s+\baur\b\s*|\s+\band\b\s*|\|'));
       for (final p in parts) {
         String cleanItem = p
             .replaceAll(RegExp(r'\b(khatam|mangwana|mangana|order|stock|chahiye|le aana|lana hai|ho gaya|hai|hain)\b'), '')
@@ -705,27 +794,24 @@ Merchant speech: "$speechText"
     }
 
     // ── 4. Itemized Voice Bill / Invoice ─────────────────────────────────────
-    final bool hasMultipleItems = lower.contains(',') || lower.contains('each') || lower.contains('kilo') || lower.contains('soap');
     final List<VoiceBillItem> billItems = [];
-    if (hasMultipleItems) {
-      final itemMatches = RegExp(r'(\d+(?:\.\d+)?)\s*(kilo|kg|packet|soap|piece|pc|darjan|dozen|ltr|litre|g|gram|dabba|dhabba)?\s+([a-zA-Z\u0900-\u097F\s]+?)\s+(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|each|per)?', caseSensitive: false)
-          .allMatches(lower);
+    final itemMatches = RegExp(r'(\d+(?:\.\d+)?)\s*(kilo|kg|packet|soap|piece|pc|darjan|dozen|ltr|litre|g|gram|dabba|dhabba)?\s+([a-zA-Z\u0900-\u097F\s]+?)\s+(\d+(?:\.\d+)?)\s*(?:rupaye|rupees|rs|each|per)?', caseSensitive: false)
+        .allMatches(lower);
 
-      for (final m in itemMatches) {
-        final qty = double.tryParse(m.group(1) ?? '1') ?? 1.0;
-        final unit = m.group(2) ?? '';
-        final title = m.group(3)?.trim() ?? 'Item';
-        final unitPrice = double.tryParse(m.group(4) ?? '0') ?? 0.0;
-        final total = qty * unitPrice;
-        if (unitPrice > 0) {
-          billItems.add(VoiceBillItem(
-            title: title[0].toUpperCase() + title.substring(1),
-            quantity: qty,
-            unit: unit,
-            unitPrice: unitPrice,
-            totalPrice: total,
-          ));
-        }
+    for (final m in itemMatches) {
+      final qty = double.tryParse(m.group(1) ?? '1') ?? 1.0;
+      final unit = m.group(2) ?? '';
+      final title = m.group(3)?.trim() ?? 'Item';
+      final unitPrice = double.tryParse(m.group(4) ?? '0') ?? 0.0;
+      final total = qty * unitPrice;
+      if (unitPrice > 0) {
+        billItems.add(VoiceBillItem(
+          title: title[0].toUpperCase() + title.substring(1),
+          quantity: qty,
+          unit: unit,
+          unitPrice: unitPrice,
+          totalPrice: total,
+        ));
       }
     }
 

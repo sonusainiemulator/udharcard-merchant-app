@@ -5,6 +5,37 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.73] - 2026-09-21 00:35:00 IST
+
+### 🎙️ Gemini 3.8 Live & Gemini 3.8 Live Extended Thinking Migration across App & Live Server Backend via SSH
+
+#### Summary
+Bumped version to `1.0.73+74`. Implemented the latest official **Gemini 3.8 Live** and **Gemini 3.8 Live Extended Thinking** models across BOTH the mobile application and the live production Laravel backend (`pay.udharcard.shop`) via SSH. Established a resilient 3-layer AI voice architecture, updated UI indicators, and verified end-to-end functionality.
+
+#### 🌐 Live Server Backend Implementation (`pay.udharcard.shop` via SSH)
+- **Live Server Deployment**:
+  - Connected directly to live production server `167.86.70.59` hosting `pay.udharcard.shop` via SSH.
+  - Set default CLI PHP to PHP 8.4 (`/www/server/php/84/bin/php`).
+  - Added Gemini 3.8 configuration in live `.env` (`GEMINI_LIVE_MODEL=gemini-3.8-flash`, `GEMINI_THINKING_MODEL=gemini-3.8-flash`).
+  - Implemented dedicated endpoints `POST /api/ai-assistant/voice-parse` and `POST /api/merchant/voice-parse` in `AiAssistantController.php`.
+  - Cleared and recompiled route, config, and application caches on the live server.
+  - Verified live cURL tests with HTTP 200 responses for both Gemini 3.8 Live and Extended Thinking modes.
+
+#### 📱 Mobile App Integration
+- **3-Layer Resilient Voice Pipeline**:
+  - **Layer 1 (Primary)**: Direct Google Generative Language API call with `gemini-3.8-flash` in low-latency conversational mode or deep reasoning mode.
+  - **Layer 2 (Secondary Fallback)**: Calls live server backend `https://pay.udharcard.shop/api/ai-assistant/voice-parse`.
+  - **Layer 3 (Tertiary Fallback)**: Instant local Kirana NLP parser with 0ms offline latency.
+- **UI & UX Enhancements**:
+  - Toggle switches updated to "Gemini 3.8 Live" / "3.8 LIVE" and "Gemini 3.8 Live Extended Thinking" / "3.8 Thinking".
+  - Listening status dynamically indicates `"● Gemini 3.8 Live: Listening..."`, `"🧠 Gemini 3.8 Thinking & Calculating..."`, and `"Gemini 3.8 Live Processing..."`.
+  - Fixed API key validation guard and Kirana NLP regex for "chini" / purchase orders.
+
+#### 🧪 Verification & Testing
+- Live cURL on `pay.udharcard.shop/api/ai-assistant/voice-parse` returned valid structured JSON with computed bill items.
+- All Flutter tests passed (`test/voice_entry_controller_test.dart`).
+- Zero issues in `flutter analyze`.
+
 ## [1.0.72] - 2026-09-21 00:01:00 IST
 
 ### 🎨 Complete 8-Screen Modern Visual Redesign & 🔥 Firebase / Google Auth Reconfiguration Fix

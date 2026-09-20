@@ -174,7 +174,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                       ),
                     ),
 
-                    // Gemini 3.8 / Live Mode Toggle Switch
+                    // Gemini Live Mode Toggle Switch
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -211,7 +211,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                             ),
                             HSpace(5.w),
                             Text(
-                              _controller.isLiveMode ? "LIVE AI" : "Gemini 3.8 Live",
+                              _controller.isLiveMode ? "3.8 LIVE" : "Gemini 3.8 Live",
                               style: GoogleFonts.outfit(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w700,
@@ -225,7 +225,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                       ),
                     ),
 
-                    // Gemini 3.8 Extended Thinking Mode Toggle Switch
+                    // Gemini Extended Thinking Mode Toggle Switch
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -259,7 +259,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                             ),
                             HSpace(4.w),
                             Text(
-                              _controller.isExtendedThinking ? "Thinking ON" : "Thinking",
+                              _controller.isExtendedThinking ? "3.8 Thinking" : "Thinking",
                               style: GoogleFonts.outfit(
                                 fontSize: 11.sp,
                                 fontWeight: FontWeight.w700,
@@ -427,7 +427,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                         : controller.isThinking
                             ? (controller.isExtendedThinking
                                 ? "🧠 Gemini 3.8 Thinking & Calculating..."
-                                : "Gemini 3.8 Processing...")
+                                : "Gemini 3.8 Live Processing...")
                             : (controller.isLiveMode ? "Gemini 3.8 Live Active (Waiting...)" : "Tap Mic to Speak"),
                     style: GoogleFonts.outfit(
                       fontSize: 16.sp,

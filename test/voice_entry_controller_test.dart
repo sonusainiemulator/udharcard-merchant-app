@@ -111,4 +111,59 @@ void main() {
       expect(controller.transactionType, 'given');
     },
   );
+
+  test('parseVoiceInstruction parses Given Udhar transaction correctly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("Ramesh ko 500 rupaye udhar diya");
+    expect(result.amount, 500.0);
+    expect(result.type, 'Given');
+    expect(result.name, 'Ramesh');
+    expect(result.category, 'UDHAR');
+  });
+
+  test('parseVoiceInstruction parses Received Collection transaction correctly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("Suresh se 1200 rupaye mile");
+    expect(result.amount, 1200.0);
+    expect(result.type, 'Received');
+    expect(result.name, 'Suresh');
+    expect(result.category, 'COLLECTION');
+  });
+
+  test('parseVoiceInstruction parses Purchase Order (Khareed List) correctly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("Doodh aur bread khatam ho gaya mangwana hai");
+    expect(result.isPurchaseOrder, isTrue);
+    expect(result.category, 'PURCHASE');
+    expect(result.purchaseItems, contains('Doodh'));
+    expect(result.purchaseItems, contains('Bread'));
+  });
+
+  test('parseVoiceInstruction parses Customer Balance Query correctly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("Ramesh ka kitna balance baki hai");
+    expect(result.isQuery, isTrue);
+    expect(result.name, contains('Ramesh'));
+  });
+
+  test('parseVoiceInstruction parses Multi-Item Voice Bill with correct totals', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("2 kg chini 40 rupaye aur 1 packet tel 120 rupaye");
+    expect(result.items.length, 2);
+    expect(result.amount, 200.0); // 2*40 + 1*120
+    expect(result.category, 'BILL');
+  });
+
+  test('parseVoiceInstruction handles help keyword gracefully', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("namaste help kaise kare");
+    expect(result.isHelp, isTrue);
+    expect(result.category, 'HELP');
+  });
+
+  test('parseVoiceInstruction handles empty text gracefully', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("   ");
+    expect(result.reply, contains('saaf'));
+  });
 }
