@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.69] - 2026-09-20 14:05:00 IST
 
+### 📢 What's New in This Version (Apple App Store & TestFlight)
+- **Instant Launch & iOS 18/27 Support**: Fixed launch crash on iPhone 16 series devices; app now opens instantly with ultra-fast startup.
+- **Enhanced Reliability**: Modernized background notification management and audio session handling for uninterrupted operation.
+- **Upgraded Core Platform**: Updated iOS system libraries and dependencies for seamless performance on the latest iOS releases.
+- **AI Voice Khata & Soundbox**: Faster hands-free ledger entry and instant soundbox payment announcements.
+- **Security & Stability**: General performance enhancements and defensive error protection across all screens.
+
 ### 🍏 iOS 18+ / iOS 27 Launch Crash Fix on iPhone 16e & Package Upgrades
 
 #### Root Cause Analysis
