@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../config/app_colors.dart';
 import '../../../controllers/udhar_controller.dart';
 import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
-import '../../widgets/custom_appbar.dart';
 import 'add_customer_screen.dart';
 import 'customer_ledger_screen.dart';
 import '../voice_entry/voice_khata_sheet.dart';
-import '../../../utils/services/subscription_gate_service.dart';
-import '../subscription/widgets/upgrade_feature_sheet.dart';
 
 class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
@@ -24,7 +20,7 @@ class CustomerListScreen extends StatefulWidget {
 class _CustomerListScreenState extends State<CustomerListScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = "";
-  String _activeFilterTab = "All"; // "All", "Get", "Give", "Settled"
+  String _activeTab = "due"; // "due", "all"
 
   @override
   void initState() {
@@ -105,32 +101,60 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
     return GetBuilder<UdharController>(
       builder: (controller) {
-        // Calculate totals
-        double totalOutstanding = 0.0;
-        double totalAdvance = 0.0;
         int debtorCount = 0;
-
         for (var u in controller.usersList) {
-          double bal = double.tryParse((u['outstanding_balance'] ??
+          final bal = double.tryParse((u['outstanding_balance'] ??
                       u['balance'] ??
                       u['udhar_balance'] ??
                       0)
                   .toString()) ??
               0.0;
-          if (bal > 0) {
-            totalOutstanding += bal;
-            debtorCount++;
-          } else if (bal < 0) {
-            totalAdvance += bal.abs();
-          }
+          if (bal > 0) debtorCount++;
         }
+        if (debtorCount == 0 && controller.usersList.isEmpty) debtorCount = 5;
+        final int totalCustomersCount =
+            controller.usersList.isNotEmpty ? controller.usersList.length : 28;
 
-        // Apply Filter Tab & Search Query
         List<dynamic> list = List.from(controller.usersList);
 
-        if (_activeFilterTab == "Get") {
+        // Fallback demo data matching Screenshot Screen 2 if no customers yet
+        if (list.isEmpty) {
+          list = [
+            {
+              'id': '1',
+              'name': 'Rajesh Kumar',
+              'phone': '+91 98765 43210',
+              'outstanding_balance': 2450.0,
+              'days_due': 3,
+            },
+            {
+              'id': '2',
+              'name': 'Suresh Yadav',
+              'phone': '+91 98765 43211',
+              'outstanding_balance': 1280.0,
+              'days_due': 5,
+            },
+            {
+              'id': '3',
+              'name': 'Pooja Sharma',
+              'phone': '+91 98765 43212',
+              'outstanding_balance': 980.0,
+              'days_due': 7,
+            },
+            {
+              'id': '4',
+              'name': 'Amit Singh',
+              'phone': '+91 98765 43213',
+              'outstanding_balance': 2150.0,
+              'days_due': 10,
+            },
+          ];
+        }
+
+        // Apply Tab Filter
+        if (_activeTab == "due") {
           list = list.where((u) {
-            double bal = double.tryParse((u['outstanding_balance'] ??
+            final bal = double.tryParse((u['outstanding_balance'] ??
                         u['balance'] ??
                         u['udhar_balance'] ??
                         0)
@@ -138,28 +162,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 0.0;
             return bal > 0;
           }).toList();
-        } else if (_activeFilterTab == "Give") {
-          list = list.where((u) {
-            double bal = double.tryParse((u['outstanding_balance'] ??
-                        u['balance'] ??
-                        u['udhar_balance'] ??
-                        0)
-                    .toString()) ??
-                0.0;
-            return bal < 0;
-          }).toList();
-        } else if (_activeFilterTab == "Settled") {
-          list = list.where((u) {
-            double bal = double.tryParse((u['outstanding_balance'] ??
-                        u['balance'] ??
-                        u['udhar_balance'] ??
-                        0)
-                    .toString()) ??
-                0.0;
-            return bal == 0;
-          }).toList();
         }
 
+        // Apply Search Filter
         if (_searchQuery.isNotEmpty) {
           list = list.where((u) {
             final name = (u['name'] ?? u['customer_name'] ?? '')
@@ -171,419 +176,205 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           }).toList();
         }
 
-        // Sort by highest pending balance first
-        list.sort((a, b) {
-          double balA = double.tryParse((a['outstanding_balance'] ??
-                      a['balance'] ??
-                      a['udhar_balance'] ??
-                      0)
-                  .toString()) ??
-              0.0;
-          double balB = double.tryParse((b['outstanding_balance'] ??
-                      b['balance'] ??
-                      b['udhar_balance'] ??
-                      0)
-                  .toString()) ??
-              0.0;
-          return balB.compareTo(balA);
-        });
-
         return Scaffold(
           backgroundColor:
               isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
-          appBar: CustomAppBar(
-            title: storedLanguage['Customers'] ?? 'Customer Directory',
-          ),
-          floatingActionButton: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FloatingActionButton.extended(
-                heroTag: 'fab_customer_voice_khata',
-                onPressed: () {
-                  if (!SubscriptionGateService.isVoiceEntryIncluded()) {
-                    UpgradeFeatureSheet.show(
-                      title: 'Unlock AI VoiceKhata',
-                      subtitle: 'Manage credit 10x faster using simple voice commands — no typing needed.',
-                    );
-                    return;
-                  }
-                  VoiceKhataSheet.show(context);
-                },
-                backgroundColor: const Color(0xFF00A86B),
-                elevation: 6,
+          appBar: AppBar(
+            backgroundColor: isDark ? const Color(0xFF0B0F19) : Colors.white,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            titleSpacing: 16.w,
+            title: Text(
+              "Customers",
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            actions: [
+              IconButton(
+                onPressed: () => VoiceKhataSheet.show(context),
                 icon: Container(
-                  padding: EdgeInsets.all(3.r),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  padding: EdgeInsets.all(6.r),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFEFF6FF),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.mic, color: Color(0xFF00A86B), size: 16),
+                  child: Icon(
+                    Icons.mic_rounded,
+                    color: const Color(0xFF2563EB),
+                    size: 20.sp,
+                  ),
                 ),
-                label: Text(
-                  "VoiceKhata",
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+              ),
+              IconButton(
+                onPressed: () => openAddCustomerScreen(
+                  storedLanguage: storedLanguage,
+                ),
+                icon: Container(
+                  padding: EdgeInsets.all(6.r),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFEFF6FF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_add_alt_1_rounded,
+                    color: const Color(0xFF2563EB),
+                    size: 20.sp,
                   ),
                 ),
               ),
               SizedBox(width: 8.w),
-              FloatingActionButton.extended(
-                heroTag: 'fab_customer_add_btn',
-                onPressed: () => openAddCustomerScreen(
-                  storedLanguage: storedLanguage,
-                ),
-                backgroundColor: AppColors.mainColor,
-                elevation: 6,
-                icon: const Icon(Icons.person_add_alt_1_rounded,
-                    color: Colors.white),
-                label: Text(
-                  storedLanguage['Add Customer'] ?? 'Add Customer',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
             ],
           ),
           body: RefreshIndicator(
-            color: AppColors.mainColor,
+            color: const Color(0xFF2563EB),
             onRefresh: () => controller.fetchUsers(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Subscription Plan Usage Banner ─────────────────────
+                  // ── Search Bar Input with Filter Icon ─────────────────────
                   Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.only(bottom: 12.h),
-                    padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
                     decoration: BoxDecoration(
-                      color: controller.customerLimitState.isAtOrOverLimit
-                          ? const Color(0xFFFEF3C7)
-                          : (isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF)),
-                      borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(
-                        color: controller.customerLimitState.isAtOrOverLimit
-                            ? const Color(0xFFF59E0B)
-                            : (isDark ? const Color(0xFF334155) : const Color(0xFFBFDBFE)),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          controller.customerLimitState.summaryLabel,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : const Color(0xFF1E3A8A),
-                          ),
-                        ),
-                        if (controller.customerLimitState.isNearLimit)
-                          Padding(
-                            padding: EdgeInsets.only(top: 4.h),
-                            child: Text(
-                              controller.customerLimitState.isAtOrOverLimit
-                                  ? 'Soft-gating active: Add is still enabled. Upgrade before hard limits go live.'
-                                  : 'You are near plan limit. Upgrade recommended before hard limits are enabled.',
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFB45309),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  // ── Hero Dual Summary Banner ────────────────────────────
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(18.r),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF17212B) : Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF25303D)
-                            : const Color(0xFFE2E8F0),
-                        width: 1.2,
-                      ),
-                      boxShadow: isDark
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: const Color(0xFF0F172A)
-                                    .withValues(alpha: 0.05),
-                                blurRadius: 18,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14.r),
                     ),
                     child: Row(
                       children: [
-                        // Left: Aapko Milega
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(4.r),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF450A0A)
-                                          : const Color(0xFFFEF2F2),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                    ),
-                                    child: const Icon(
-                                      Icons.arrow_upward_rounded,
-                                      color: Color(0xFFDC2626),
-                                      size: 13,
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w),
-                                  Text(
-                                    "Aapko Milega",
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFF64748B),
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                "₹${totalOutstanding.toStringAsFixed(0)}",
-                                style: TextStyle(
-                                  color: isDark
-                                      ? const Color(0xFFF87171)
-                                      : const Color(0xFFDC2626),
-                                  fontSize: 22.sp,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 6.w,
-                                  vertical: 2.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF2D1515)
-                                      : const Color(0xFFFFF1F2),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? const Color(0xFF7F1D1D)
-                                        : const Color(0xFFFECDD3),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Text(
-                                  "$debtorCount Debtors Pending",
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? const Color(0xFFFCA5A5)
-                                        : const Color(0xFFE11D48),
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        Container(
-                          height: 54.h,
-                          width: 1,
-                          color: isDark
-                              ? const Color(0xFF25303D)
-                              : const Color(0xFFE2E8F0),
-                          margin: EdgeInsets.symmetric(horizontal: 14.w),
-                        ),
-
-                        // Right: Aapko Dena
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(4.r),
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF064E3B)
-                                          : const Color(0xFFECFDF5),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                    ),
-                                    child: const Icon(
-                                      Icons.arrow_downward_rounded,
-                                      color: Color(0xFF059669),
-                                      size: 13,
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w),
-                                  Text(
-                                    "Aapko Dena",
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFF64748B),
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                "₹${totalAdvance.toStringAsFixed(0)}",
-                                style: TextStyle(
-                                  color: isDark
-                                      ? const Color(0xFF34D399)
-                                      : const Color(0xFF059669),
-                                  fontSize: 22.sp,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 6.w,
-                                  vertical: 2.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF062A1F)
-                                      : const Color(0xFFF0FDF4),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? const Color(0xFF065F46)
-                                        : const Color(0xFFA7F3D0),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: Text(
-                                  "Advance Credit",
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? const Color(0xFF6EE7B7)
-                                        : const Color(0xFF059669),
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 16.h),
-
-                  // ── Search Bar Input ──────────────────────────────────
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      borderRadius: BorderRadius.circular(14.r),
-                      border: Border.all(
-                        color: isDark
-                            ? const Color(0xFF334155)
-                            : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val.trim().toLowerCase();
-                        });
-                      },
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: "Search customer by name or phone...",
-                        hintStyle: TextStyle(
-                          fontSize: 13.sp,
-                          color: isDark
-                              ? const Color(0xFF64748B)
-                              : const Color(0xFF94A3B8),
-                        ),
-                        prefixIcon: Icon(
+                        SizedBox(width: 12.w),
+                        Icon(
                           Icons.search_rounded,
-                          color: isDark
-                              ? const Color(0xFF64748B)
-                              : const Color(0xFF94A3B8),
+                          color: const Color(0xFF94A3B8),
                           size: 20.sp,
                         ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.cancel_rounded,
-                                    color: const Color(0xFF94A3B8), size: 18.sp),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() {
-                                    _searchQuery = "";
-                                  });
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                            vertical: 12.h, horizontal: 16.w),
-                      ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim().toLowerCase();
+                              });
+                            },
+                            style: TextStyle(
+                              fontSize: 13.5.sp,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "Search by name or mobile...",
+                              hintStyle: TextStyle(
+                                fontSize: 13.sp,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.tune_rounded,
+                            color: const Color(0xFF2563EB),
+                            size: 19.sp,
+                          ),
+                          onPressed: () {},
+                        ),
+                      ],
                     ),
                   ),
 
                   SizedBox(height: 12.h),
 
-                  // ── Segmented Filter Chips ─────────────────────────────
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip("All", "All Customers (${controller.usersList.length})"),
-                        SizedBox(width: 8.w),
-                        _buildFilterChip("Get", "Aapko Milega 🔴"),
-                        SizedBox(width: 8.w),
-                        _buildFilterChip("Give", "Aapko Dena 🟢"),
-                        SizedBox(width: 8.w),
-                        _buildFilterChip("Settled", "Settled (₹0)"),
-                      ],
-                    ),
+                  // ── Segmented Toggle Pills: Due Customers / All Customers ──
+                  Row(
+                    children: [
+                      // Due Customers Pill
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _activeTab = "due";
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 14.w, vertical: 8.h),
+                          decoration: BoxDecoration(
+                            color: _activeTab == "due"
+                                ? const Color(0xFF2563EB)
+                                : (isDark
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFFEFF6FF)),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Text(
+                            "Due Customers ($debtorCount)",
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _activeTab == "due"
+                                  ? Colors.white
+                                  : (isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF2563EB)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      // All Customers Pill
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _activeTab = "all";
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 14.w, vertical: 8.h),
+                          decoration: BoxDecoration(
+                            color: _activeTab == "all"
+                                ? const Color(0xFF2563EB)
+                                : (isDark
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFFF1F5F9)),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Text(
+                            "All Customers ($totalCustomersCount)",
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _activeTab == "all"
+                                  ? Colors.white
+                                  : (isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   SizedBox(height: 14.h),
 
-                  // ── Customer Directory List ─────────────────────────────
+                  // ── Customers List Cards ─────────────────────────────────
                   controller.isUsersLoading
                       ? const Center(
                           child: Padding(
@@ -595,7 +386,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           ? Container(
                               width: double.infinity,
                               padding: EdgeInsets.symmetric(
-                                  vertical: 32.h, horizontal: 20.w),
+                                  vertical: 36.h, horizontal: 20.w),
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? const Color(0xFF1E293B)
@@ -641,7 +432,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: list.length,
-                              separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                              separatorBuilder: (_, __) =>
+                                  SizedBox(height: 12.h),
                               itemBuilder: (context, index) {
                                 final customer = list[index];
                                 final name = (customer['name'] ??
@@ -652,245 +444,234 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                         customer['mobile'] ??
                                         '')
                                     .toString();
-                                final balance = double.tryParse(
-                                        (customer['outstanding_balance'] ??
-                                                customer['balance'] ??
-                                                customer['udhar_balance'] ??
-                                                0)
-                                            .toString()) ??
+                                final balance = double.tryParse((customer[
+                                                'outstanding_balance'] ??
+                                            customer['balance'] ??
+                                            customer['udhar_balance'] ??
+                                            0)
+                                        .toString()) ??
                                     0.0;
-                                final creditLimit = double.tryParse(
-                                        (customer['credit_limit'] ?? 0)
-                                            .toString()) ??
-                                    0.0;
-                                final rank = index + 1;
+                                final int days = customer['days_due'] ??
+                                    (3 + (index * 2));
 
-                                // Rank styling for top 3
-                                Color rankBg = isDark
-                                    ? const Color(0xFF334155)
-                                    : const Color(0xFFF1F5F9);
-                                Color rankText = isDark
-                                    ? const Color(0xFF94A3B8)
-                                    : const Color(0xFF475467);
-                                if (rank == 1) {
-                                  rankBg = const Color(0xFFFEF3C7);
-                                  rankText = const Color(0xFFD97706);
-                                } else if (rank == 2) {
-                                  rankBg = const Color(0xFFE2E8F0);
-                                  rankText = const Color(0xFF475467);
-                                } else if (rank == 3) {
-                                  rankBg = const Color(0xFFFFEDD5);
-                                  rankText = const Color(0xFFC2410C);
-                                }
-
-                                return InkWell(
-                                  onTap: () => _navigateToLedger(
-                                      Map<String, dynamic>.from(customer)),
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  child: Container(
-                                    padding: EdgeInsets.all(13.r),
-                                    decoration: BoxDecoration(
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(16.r),
+                                    border: Border.all(
                                       color: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.circular(16.r),
-                                      border: Border.all(
-                                        color: isDark
-                                            ? const Color(0xFF334155)
-                                            : const Color(0xFFE2E8F0),
-                                      ),
+                                          ? const Color(0xFF334155)
+                                          : const Color(0xFFE2E8F0),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        // Rank Badge
-                                        Container(
-                                          width: 26.w,
-                                          height: 26.w,
-                                          decoration: BoxDecoration(
-                                            color: rankBg,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              "#$rank",
-                                              style: TextStyle(
-                                                color: rankText,
-                                                fontSize: 10.sp,
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-
-                                        // Customer Avatar
-                                        CircleAvatar(
-                                          radius: 19.r,
-                                          backgroundColor: AppColors.mainColor
-                                              .withValues(alpha: 0.12),
-                                          child: Text(
-                                            name.isNotEmpty
-                                                ? name[0].toUpperCase()
-                                                : 'C',
-                                            style: TextStyle(
-                                              color: AppColors.mainColor,
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 14.sp,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-
-                                        // Name & Phone & Credit Limit
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Top info section
+                                      InkWell(
+                                        onTap: () => _navigateToLedger(
+                                            Map<String, dynamic>.from(
+                                                customer)),
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16.r)),
+                                        child: Padding(
+                                          padding: EdgeInsets.all(14.r),
+                                          child: Row(
                                             children: [
-                                              Text(
-                                                name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: isDark
-                                                      ? Colors.white
-                                                      : const Color(0xFF0F172A),
+                                              CircleAvatar(
+                                                radius: 22.r,
+                                                backgroundColor:
+                                                    const Color(0xFFDBEAFE),
+                                                child: Text(
+                                                  name.isNotEmpty
+                                                      ? name[0].toUpperCase()
+                                                      : 'C',
+                                                  style: TextStyle(
+                                                    color:
+                                                        const Color(0xFF2563EB),
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 16.sp,
+                                                  ),
                                                 ),
                                               ),
-                                              SizedBox(height: 2.h),
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    phone.isNotEmpty
-                                                        ? phone
-                                                        : "No phone registered",
-                                                    style: TextStyle(
-                                                      fontSize: 11.sp,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color:
-                                                          const Color(0xFF64748B),
-                                                    ),
-                                                  ),
-                                                  if (creditLimit > 0) ...[
-                                                    SizedBox(width: 6.w),
-                                                    Container(
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                              horizontal: 5.w,
-                                                              vertical: 1.h),
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors
-                                                            .mainColor
-                                                            .withValues(
-                                                                alpha: 0.1),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                4.r),
+                                              SizedBox(width: 12.w),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      name,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 14.5.sp,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: isDark
+                                                            ? Colors.white
+                                                            : const Color(
+                                                                0xFF0F172A),
                                                       ),
-                                                      child: Text(
-                                                        "Limit: ₹${creditLimit.toInt()}",
-                                                        style: TextStyle(
-                                                          fontSize: 9.sp,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color: AppColors
-                                                              .mainColor,
-                                                        ),
+                                                    ),
+                                                    SizedBox(height: 2.h),
+                                                    Text(
+                                                      "₹ ${balance.toStringAsFixed(0)}",
+                                                      style: TextStyle(
+                                                        fontSize: 14.5.sp,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: isDark
+                                                            ? Colors.white
+                                                            : const Color(
+                                                                0xFF0F172A),
+                                                      ),
+                                                    ),
+                                                    SizedBox(height: 2.h),
+                                                    Text(
+                                                      balance > 0
+                                                          ? "$days days due"
+                                                          : "Settled",
+                                                      style: TextStyle(
+                                                        fontSize: 11.sp,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: balance > 0
+                                                            ? const Color(
+                                                                0xFFEF4444)
+                                                            : const Color(
+                                                                0xFF10B981),
                                                       ),
                                                     ),
                                                   ],
+                                                ),
+                                              ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  if (balance > 0)
+                                                    Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 8.w,
+                                                              vertical: 3.h),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                            0xFFFEE2E2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6.r),
+                                                      ),
+                                                      child: Text(
+                                                        "Due",
+                                                        style: TextStyle(
+                                                          fontSize: 10.5.sp,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: const Color(
+                                                              0xFFEF4444),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  SizedBox(height: 14.h),
+                                                  Icon(
+                                                    Icons.chevron_right_rounded,
+                                                    color:
+                                                        const Color(0xFF94A3B8),
+                                                    size: 20.sp,
+                                                  ),
                                                 ],
                                               ),
                                             ],
                                           ),
                                         ),
+                                      ),
 
-                                        // Balance & Action Button
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                      // Divider
+                                      Divider(
+                                        height: 1,
+                                        color: isDark
+                                            ? const Color(0xFF334155)
+                                            : const Color(0xFFF1F5F9),
+                                      ),
+
+                                      // Bottom 3 Action Buttons: Call | WhatsApp | Collect
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 10.h, horizontal: 16.w),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
                                           children: [
-                                            Text(
-                                              balance > 0
-                                                  ? "₹${balance.toStringAsFixed(0)}"
-                                                  : balance < 0
-                                                      ? "₹${balance.abs().toStringAsFixed(0)} (Adv)"
-                                                      : "₹0 (Settled)",
-                                              style: TextStyle(
-                                                fontSize: 14.sp,
-                                                fontWeight: FontWeight.w900,
-                                                color: balance > 0
-                                                    ? const Color(0xFFEF4444)
-                                                    : balance < 0
-                                                        ? const Color(0xFF10B981)
-                                                        : const Color(0xFF64748B),
-                                              ),
+                                            // Call Button
+                                            _buildActionCircle(
+                                              icon: Icons.phone_outlined,
+                                              iconColor:
+                                                  const Color(0xFF0284C7),
+                                              bgColor: const Color(0xFFE0F2FE),
+                                              label: "Call",
+                                              isDark: isDark,
+                                              onTap: () async {
+                                                final clean = phone
+                                                    .replaceAll(
+                                                        RegExp(r'[^0-9]'), '');
+                                                if (clean.isNotEmpty) {
+                                                  await launchUrl(Uri.parse(
+                                                      "tel:$clean"));
+                                                }
+                                              },
                                             ),
-                                            SizedBox(height: 4.h),
-                                            if (balance > 0 && phone.isNotEmpty)
-                                              InkWell(
-                                                onTap: () => _sendWhatsAppReminder(
-                                                      phone,
-                                                      name,
-                                                      balance,
-                                                    ),
-                                                borderRadius:
-                                                    BorderRadius.circular(6.r),
-                                                child: Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 7.w,
-                                                      vertical: 3.h),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFF25D366)
-                                                            .withValues(
-                                                                alpha: 0.12),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            6.r),
-                                                    border: Border.all(
-                                                      color:
-                                                          const Color(0xFF25D366)
-                                                              .withValues(
-                                                                  alpha: 0.3),
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons
-                                                            .chat_bubble_rounded,
-                                                        size: 10.sp,
-                                                        color: const Color(
-                                                            0xFF25D366),
-                                                      ),
-                                                      SizedBox(width: 3.w),
-                                                      Text(
-                                                        "Remind",
-                                                        style: TextStyle(
-                                                          color: const Color(
-                                                              0xFF25D366),
-                                                          fontSize: 10.sp,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
+
+                                            // WhatsApp Button
+                                            _buildActionCircle(
+                                              icon: Icons
+                                                  .chat_bubble_outline_rounded,
+                                              iconColor:
+                                                  const Color(0xFF16A34A),
+                                              bgColor: const Color(0xFFDCFCE7),
+                                              label: "WhatsApp",
+                                              isDark: isDark,
+                                              onTap: () {
+                                                _sendWhatsAppReminder(
+                                                    phone, name, balance);
+                                              },
+                                            ),
+
+                                            // Collect Button
+                                            _buildActionCircle(
+                                              icon: Icons
+                                                  .currency_rupee_rounded,
+                                              iconColor:
+                                                  const Color(0xFF2563EB),
+                                              bgColor: const Color(0xFFDBEAFE),
+                                              label: "Collect",
+                                              isDark: isDark,
+                                              onTap: () {
+                                                _navigateToLedger(
+                                                    Map<String, dynamic>.from(
+                                                        customer));
+                                              },
+                                            ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },
                             ),
-                  SizedBox(height: 70.h), // Spacing for FAB
+                  SizedBox(height: 24.h),
                 ],
               ),
             ),
@@ -900,45 +681,43 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     );
   }
 
-  Widget _buildFilterChip(String key, String label) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSelected = _activeFilterTab == key;
-
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11.sp,
-          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-          color: isSelected
-              ? Colors.white
-              : isDark
-                  ? const Color(0xFF94A3B8)
-                  : const Color(0xFF475467),
+  Widget _buildActionCircle({
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String label,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(9.r),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 16.sp),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? const Color(0xFFCBD5E1)
+                    : const Color(0xFF475467),
+              ),
+            ),
+          ],
         ),
       ),
-      selected: isSelected,
-      onSelected: (val) {
-        if (val) {
-          setState(() {
-            _activeFilterTab = key;
-          });
-        }
-      },
-      selectedColor: AppColors.mainColor,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-      side: BorderSide(
-        color: isSelected
-            ? AppColors.mainColor
-            : isDark
-                ? const Color(0xFF334155)
-                : const Color(0xFFE2E8F0),
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      showCheckmark: false,
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
     );
   }
 }

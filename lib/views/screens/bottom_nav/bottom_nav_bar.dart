@@ -3,7 +3,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import '../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/bottom_nav_controller.dart';
 import '../../../notification_service/notification_controller.dart';
@@ -94,8 +93,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           ),
                           _buildNavItem(
                             index: 2,
-                            label: 'History',
-                            iconData: Icons.receipt_long_rounded,
+                            label: 'Reports',
+                            iconData: Icons.bar_chart_rounded,
                             controller: controller,
                             isDark: isDark,
                           ),
@@ -127,41 +126,33 @@ class _BottomNavBarState extends State<BottomNavBar> {
     required bool isDark,
   }) {
     final isSelected = controller.selectedIndex == index;
-    final activeColor = AppColors.mainColor;
+    const activeColor = Color(0xFF2563EB);
     final inactiveColor =
         isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
     return InkWell(
       onTap: () => controller.changeScreen(index),
-      borderRadius: BorderRadius.circular(20.r),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Row(
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               iconData,
               size: 22.sp,
               color: isSelected ? activeColor : inactiveColor,
             ),
-            if (isSelected) ...[
-              SizedBox(width: 6.w),
-              Text(
-                label,
-                style: TextStyle(
-                  color: activeColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12.sp,
-                ),
+            SizedBox(height: 3.h),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? activeColor : inactiveColor,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 11.sp,
               ),
-            ],
+            ),
           ],
         ),
       ),

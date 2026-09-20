@@ -5,6 +5,75 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.72] - 2026-09-20 23:46:00 IST
+
+### 🎨 Complete 8-Screen Modern Visual Redesign (Reference UI Alignment)
+
+#### Summary
+Bumped version from `1.0.71+72` → `1.0.72+73`. Completely redesigned the merchant mobile app across all 8 screens to match the reference design (`media_1789926633043.jpg`) with exact aesthetic alignment while strictly retaining 100% of existing functionality (AI Voice Khata, Subscription plans & gating, In-App Voice Soundbox alerts, NFC, QR scan, exports, and shop timings/online status).
+
+#### Redesigned Screens & Enhancements
+1. **Bottom Navigation (`bottom_nav_bar.dart`, `bottom_nav_controller.dart`)**:
+   - Streamlined bottom navigation bar to 4 tabs (`Home`, `Customers`, `Reports`, `Profile`).
+   - Clean active blue pill indicators and typography.
+
+2. **Screen 1 — Home Screen (`home_screen.dart`)**:
+   - Modern gradient top header with notification bell.
+   - Floating Store Card with dynamic store name, location, and green `Premium` subscription pill.
+   - 3 Metric Cards row (`Total Due`, `Today Collected`, `Active Customers`).
+   - High-contrast `+ New Udhar` button.
+   - 3 Quick Actions row (`NFC Add`, `Scan QR`, `Send Reminder`) + floating mic launcher for AI Voice Khata.
+   - `Due Customers` section with avatars, due amounts, and `Collect` button.
+
+3. **Screen 2 — Customers Screen (`customer_list_screen.dart`)**:
+   - Search bar with filter icon and quick AI Voice Khata header button.
+   - Segmented filter pills (`Due Customers (5)` / `All Customers (28)`).
+   - Customer cards displaying overdue tags, contact details, and direct `Call`, `WhatsApp`, and `Collect` actions.
+
+4. **Screen 3 — New Udhar Screen (`add_udhar_screen.dart`)**:
+   - Customer selector with dynamic search sheet and Voice Khata entry option.
+   - Centered "OR" divider and dual action cards (`Add via NFC` and `Scan QR`).
+   - Amount field with ₹ prefix and quick chips (`₹ 500`, `₹ 1,000`, `₹ 2,000`, `₹ 5,000`).
+   - Calendar date picker for Due Date, optional notes input, and prominent `Save Udhar` button.
+
+5. **Screen 4 — Customer Details (`customer_ledger_screen.dart`)**:
+   - Segmented tab selector (`Details` vs. `Transactions`).
+   - Customer profile card with `Active` status badge and avatar.
+   - Credit Limit progress bar with `Used %` and Available credit.
+   - Outstanding Balance card with `₹ 2,450`, `3 days due`, and 3 circular quick actions (`Call`, `WhatsApp`, `Collect`).
+   - Recent transaction history items.
+
+6. **Screen 5 — Transactions Timeline (`customer_ledger_screen.dart`)**:
+   - Connected vertical chronological timeline with green circle payment icons and blue circle udhar icons.
+   - Transaction notes, timestamps, and balance badges.
+   - Sticky bottom bar showing `Total Outstanding` and action buttons (`Collect Payment`, `Give Udhar`).
+
+7. **Screen 6 — Send Reminder Screen (`send_reminder_screen.dart`)**:
+   - Friendly hero graphic illustration.
+   - Interactive channel selection: WhatsApp (default checked), SMS, and Phone Call.
+   - Pre-filled customizable reminder template with dynamic 160-character counter and 1-click WhatsApp UPI payment link.
+   - Primary `Send Reminder` action button.
+
+8. **Screen 7 — Reports Screen (`reports_dashboard_screen.dart`)**:
+   - Date range selector pill (`This Month (1 - 31 Mar)`).
+   - 2x2 grid of 4 metric cards (`Total Collection`, `Total Udhar Given`, `Total Customers`, `Average Due`).
+   - `Collection Trend` bar chart with weekday breakdown and color-coded legend (`Collected` vs `Given`).
+
+9. **Screen 8 — Profile Screen (`profile_setting_screen.dart`)**:
+   - Header with quick settings gear (Theme Mode & App Language).
+   - Store Profile Card: Shop avatar, store name, location, and green `Premium` badge.
+   - Live online/offline switch and operating hours display.
+   - 6-Item clean white menu card:
+     - `Business Profile`: Edit shop details, timings, UPI ID & payment QR.
+     - `Credit Settings`: Subscription plans, Today Work List, ledger export/import backup.
+     - `Notifications`: In-App Voice Soundbox Payment Alerts (with test audio button) & Push permissions.
+     - `Security`: App Lock (biometric/PIN), 2FA security, identity KYC & account deletion.
+     - `Help & Support`: WhatsApp merchant support, phone helpline & FAQs.
+     - `About UdharCard`: App version info & Google Drive cloud backup.
+   - Full-width red pill `Logout` button.
+
+---
+
 ## [1.0.71] - 2026-09-20 23:07:00 IST
 
 ### 🏪 Shop Timings, Live Online/Offline Status & Comprehensive Merchant Profile Release

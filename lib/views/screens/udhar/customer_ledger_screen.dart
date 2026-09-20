@@ -32,6 +32,20 @@ class CustomerLedgerScreen extends StatefulWidget {
 }
 
 class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
+  String _activeTab = "details"; // "details" (Screen 4) or "transactions" (Screen 5)
+
+  Future<void> _callCustomer(String phone) async {
+    final cleanPhone = phone.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    if (cleanPhone.isEmpty) {
+      Get.snackbar('No Phone', 'Customer phone number is not available');
+      return;
+    }
+    final Uri url = Uri.parse('tel:$cleanPhone');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      Get.snackbar('Error', 'Could not open phone dialer');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -93,25 +107,13 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
         final double usageText =
             limit > 0 ? (balance / limit).clamp(0.0, 1.0) : 0.0;
 
-        // Calculate Totals for Given and Received
-        double totalGiven = 0.0;
-        double totalReceived = 0.0;
-        for (var tx in controller.ledgerTransactions) {
-          final amt = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
-          if (_isGivenTransaction(tx)) {
-            totalGiven += amt;
-          } else {
-            totalReceived += amt;
-          }
-        }
-
         final txList = controller.filteredLedgerTransactions;
         final postBalances = _calculatePostTxBalances(txList, balance);
 
         return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
+          backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
           appBar: CustomAppBar(
-            title: widget.customerName,
+            title: _activeTab == "details" ? "Customer Details" : widget.customerName,
             actions: [
               // Chat Ledger View
               IconButton(
@@ -169,6 +171,16 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                     ),
                 ],
               ),
+              // PDF Statement / Bill
+              IconButton(
+                icon: Icon(
+                  Icons.picture_as_pdf_outlined,
+                  color: AppColors.mainColor,
+                  size: 21.sp,
+                ),
+                tooltip: 'PDF Bill',
+                onPressed: () => _showPdfBillModal(context, widget.customerId),
+              ),
               // Share Statement
               IconButton(
                 icon: Icon(
@@ -186,194 +198,28 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
               ? const Center(child: CircularProgressIndicator())
               : Column(
                   children: [
-                    // ── Outstanding Balance Summary Card ────────────────────
-                    _buildOutstandingCard(
-                      context: context,
-                      balance: balance,
-                      limit: limit,
-                      usageText: usageText,
-                      totalGiven: totalGiven,
-                      totalReceived: totalReceived,
-                      isDark: isDark,
-                    ),
-
-                    // ── Quick Actions Row (WhatsApp, PDF Bill, Remind, QR) ─
-                    _buildQuickActionRow(
-                      context: context,
-                      controller: controller,
-                      balance: balance,
-                      storedLanguage: storedLanguage,
-                      isDark: isDark,
-                    ),
-
-                    // ── Active Date Filter Chip (if active) ─────────────────
-                    if (controller.ledgerDateRange != null)
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 0),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                              decoration: BoxDecoration(
-                                color: AppColors.mainColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20.r),
-                                border: Border.all(color: AppColors.mainColor.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.calendar_today_rounded, size: 12.sp, color: AppColors.mainColor),
-                                  SizedBox(width: 6.w),
-                                  Text(
-                                    "${DateFormat('dd MMM').format(controller.ledgerDateRange!.start)} - ${DateFormat('dd MMM').format(controller.ledgerDateRange!.end)}",
-                                    style: TextStyle(
-                                      fontSize: 11.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.mainColor,
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w),
-                                  GestureDetector(
-                                    onTap: () => controller.setLedgerDateRange(null),
-                                    child: Icon(Icons.close_rounded, size: 14.sp, color: AppColors.mainColor),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    VSpace(12.h),
-
-                    // ── Khatabook-Style Ledger Table Header ─────────────────
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2F6),
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: Text(
-                                "ENTRIES (तारीख एवं विवरण)",
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: AppColors.redColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(4.r),
-                              ),
-                              child: Text(
-                                "आपने दिया (₹)",
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.redColor,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: AppColors.greenColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(4.r),
-                              ),
-                              child: Text(
-                                "मिला (₹)",
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.greenColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    VSpace(6.h),
-
-                    // ── Transaction Feed List ───────────────────────────────
+                    _buildSegmentedTabToggle(isDark),
                     Expanded(
-                      child: RefreshIndicator(
-                        color: AppColors.mainColor,
-                        onRefresh: () => controller.fetchCustomerLedger(
-                          widget.customerId,
-                          showLoading: false,
-                        ),
-                        child: txList.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  SizedBox(height: 80.h),
-                                  Center(
-                                    child: Column(
-                                      children: [
-                                        Icon(
-                                          Icons.receipt_long_rounded,
-                                          size: 54.sp,
-                                          color: isDark ? Colors.white24 : Colors.black26,
-                                        ),
-                                        VSpace(12.h),
-                                        Text(
-                                          storedLanguage['No transactions found'] ??
-                                              'No transactions yet',
-                                          style: TextStyle(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.black50,
-                                          ),
-                                        ),
-                                        VSpace(4.h),
-                                        Text(
-                                          'Niche diye gaye buttons se pehli entry karein',
-                                          style: TextStyle(
-                                            fontSize: 12.sp,
-                                            color: isDark ? Colors.white38 : AppColors.black50,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : ListView.builder(
-                                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 16.h),
-                                itemCount: txList.length,
-                                itemBuilder: (context, i) {
-                                  final tx = txList[i];
-                                  final bool isGiven = _isGivenTransaction(tx);
-                                  final double amount = double.tryParse(
-                                        tx['amount']?.toString() ?? '',
-                                      ) ??
-                                      0.0;
-                                  final double postBal = postBalances[i] ?? balance;
-
-                                  return _buildLedgerTransactionCard(
-                                    context: context,
-                                    tx: tx,
-                                    isGiven: isGiven,
-                                    amount: amount,
-                                    postBalance: postBal,
-                                    isDark: isDark,
-                                  );
-                                },
-                              ),
-                      ),
+                      child: _activeTab == "details"
+                          ? _buildCustomerDetailsView(
+                              context: context,
+                              controller: controller,
+                              balance: balance,
+                              limit: limit,
+                              usageText: usageText,
+                              txList: txList,
+                              storedLanguage: storedLanguage,
+                              isDark: isDark,
+                            )
+                          : _buildTransactionsTimelineView(
+                              context: context,
+                              controller: controller,
+                              txList: txList,
+                              postBalances: postBalances,
+                              balance: balance,
+                              storedLanguage: storedLanguage,
+                              isDark: isDark,
+                            ),
                     ),
                   ],
                 ),
@@ -384,234 +230,85 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // UI Component: Outstanding Summary Card
+  // UI: Segmented Tab Toggle (Details vs Transactions)
   // ───────────────────────────────────────────────────────────────────────────
-  Widget _buildOutstandingCard({
-    required BuildContext context,
-    required double balance,
-    required double limit,
-    required double usageText,
-    required double totalGiven,
-    required double totalReceived,
-    required bool isDark,
-  }) {
-    final bool isDue = balance > 0;
-    final bool isAdvance = balance < 0;
-    final Color statusColor = isDue
-        ? AppColors.redColor
-        : (isAdvance ? AppColors.greenColor : const Color(0xFF64748B));
-
-    final String statusLabel = isDue
-        ? "LENE HAIN (बाकी लेना है)"
-        : (isAdvance ? "DENE HAIN (एडवांस मिला)" : "HISAB BARABAR (चुकता)");
-
-    final String statusSubtitle = isDue
-        ? "${widget.customerName} से कुल ₹${balance.toStringAsFixed(2)} लेना बाकी है"
-        : (isAdvance
-            ? "${widget.customerName} का ₹${balance.abs().toStringAsFixed(2)} एडवांस जमा है"
-            : "पूरा हिसाब चुकता है • कोई बकाया नहीं");
-
+  Widget _buildSegmentedTabToggle(bool isDark) {
     return Container(
-      padding: EdgeInsets.all(16.r),
-      margin: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.all(4.r),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardColor : AppColors.whiteColor,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: isDue
-              ? AppColors.redColor.withValues(alpha: 0.25)
-              : (isDark ? Colors.white12 : AppColors.borderColor),
-          width: isDue ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(20.r),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Header Row: Label & Status Pill
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'LEADGER BALANCE (कुल हिसाब)',
-                style: TextStyle(
-                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _activeTab = "details"),
+              borderRadius: BorderRadius.circular(18.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                  color: _activeTab == "details"
+                      ? (isDark ? const Color(0xFF334155) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(18.r),
+                  boxShadow: _activeTab == "details"
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isDue
-                          ? Icons.arrow_outward_rounded
-                          : (isAdvance ? Icons.arrow_downward_rounded : Icons.check_circle_outline_rounded),
-                      color: statusColor,
-                      size: 13.sp,
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      statusLabel,
-                      style: TextStyle(
-                        fontSize: 10.5.sp,
-                        fontWeight: FontWeight.w800,
-                        color: statusColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          VSpace(6.h),
-
-          // Big Net Amount
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '₹${balance.abs().toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 26.sp,
-                  fontWeight: FontWeight.w900,
-                  color: statusColor,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
+                alignment: Alignment.center,
                 child: Text(
-                  statusSubtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  "Details",
                   style: TextStyle(
-                    fontSize: 11.5.sp,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? Colors.white54 : AppColors.black50,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _activeTab == "details"
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF64748B),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
-
-          VSpace(12.h),
-          Divider(height: 1, color: isDark ? Colors.white12 : AppColors.borderColor),
-          VSpace(10.h),
-
-          // Two-Column Breakdown: Total Given vs Total Received
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        color: AppColors.redColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.arrow_upward_rounded, size: 13.sp, color: AppColors.redColor),
-                    ),
-                    SizedBox(width: 8.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'कुल दिया (Gave)',
-                          style: TextStyle(fontSize: 10.5.sp, color: isDark ? Colors.white60 : AppColors.black50),
-                        ),
-                        Text(
-                          '₹${totalGiven.toStringAsFixed(2)}',
-                          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w800, color: AppColors.redColor),
-                        ),
-                      ],
-                    ),
-                  ],
+          Expanded(
+            child: InkWell(
+              onTap: () => setState(() => _activeTab = "transactions"),
+              borderRadius: BorderRadius.circular(18.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: _activeTab == "transactions"
+                      ? (isDark ? const Color(0xFF334155) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(18.r),
+                  boxShadow: _activeTab == "transactions"
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-              ),
-              Container(width: 1, height: 28.h, color: isDark ? Colors.white12 : AppColors.borderColor),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(6.r),
-                      decoration: BoxDecoration(
-                        color: AppColors.greenColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.arrow_downward_rounded, size: 13.sp, color: AppColors.greenColor),
-                    ),
-                    SizedBox(width: 8.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'कुल मिला (Got)',
-                          style: TextStyle(fontSize: 10.5.sp, color: isDark ? Colors.white60 : AppColors.black50),
-                        ),
-                        Text(
-                          '₹${totalReceived.toStringAsFixed(2)}',
-                          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w800, color: AppColors.greenColor),
-                        ),
-                      ],
-                    ),
-                  ],
+                alignment: Alignment.center,
+                child: Text(
+                  "Transactions",
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _activeTab == "transactions"
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF64748B),
+                  ),
                 ),
-              ),
-            ],
-          ),
-
-          VSpace(10.h),
-
-          // Credit Limit Progress Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Credit Limit: ₹${limit.toInt()}',
-                style: TextStyle(
-                  color: isDark ? Colors.white54 : AppColors.black50,
-                  fontSize: 10.5.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                '${(usageText * 100).toInt()}% Used',
-                style: TextStyle(
-                  color: usageText > 0.85 ? AppColors.redColor : (isDark ? Colors.white70 : AppColors.black80),
-                  fontSize: 10.5.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          VSpace(4.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4.r),
-            child: LinearProgressIndicator(
-              value: usageText,
-              minHeight: 5.h,
-              backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                usageText > 0.85 ? AppColors.redColor : AppColors.mainColor,
               ),
             ),
           ),
@@ -621,288 +318,676 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // UI Component: Quick Action Row (WhatsApp, PDF Bill, Remind, Merchant QR)
+  // UI: Screen 4 - Customer Details View
   // ───────────────────────────────────────────────────────────────────────────
-  Widget _buildQuickActionRow({
+  Widget _buildCustomerDetailsView({
     required BuildContext context,
     required UdharController controller,
+    required double balance,
+    required double limit,
+    required double usageText,
+    required List<dynamic> txList,
+    required Map storedLanguage,
+    required bool isDark,
+  }) {
+    final customer = controller.selectedUser ?? {};
+    final phone = (customer['phone'] ?? customer['mobile'] ?? '+91 98765 43210').toString();
+    final effectiveLimit = limit > 0 ? limit : 10000.0;
+    final available = (effectiveLimit - balance).clamp(0.0, effectiveLimit);
+    final usagePercent = effectiveLimit > 0
+        ? ((balance.abs() / effectiveLimit) * 100).clamp(0, 100).toInt()
+        : 24;
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── 1. Customer Profile Card ──
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22.r,
+                  backgroundColor: const Color(0xFFE2E8F0),
+                  child: Text(
+                    widget.customerName.isNotEmpty
+                        ? widget.customerName[0].toUpperCase()
+                        : 'C',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.customerName,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        phone,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    "Active",
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF16A34A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 12.h),
+
+          // ── 2. Credit Limit & Available Card ──
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Credit Limit",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "₹ ${NumberFormat('#,##,###').format(effectiveLimit.toInt())}",
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "Available",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "₹ ${NumberFormat('#,##,###').format(available.toInt())}",
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0D9488),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4.r),
+                        child: LinearProgressIndicator(
+                          value: (usagePercent / 100.0).clamp(0.0, 1.0),
+                          minHeight: 6.h,
+                          backgroundColor: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFF0D9488)),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Text(
+                      "Used $usagePercent%",
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 12.h),
+
+          // ── 3. Outstanding Balance Card ──
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Outstanding Balance",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "₹ ${NumberFormat('#,##,###').format(balance.abs().toInt())}",
+                          style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          _showReminderOptions(context, balance, storedLanguage),
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 10.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          "3 days due",
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16.h),
+                // 3 Circular Action Buttons: Call, WhatsApp, Collect
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildRoundActionButton(
+                      icon: Icons.phone_rounded,
+                      label: "Call",
+                      bgColor: const Color(0xFF10B981),
+                      iconColor: Colors.white,
+                      isDark: isDark,
+                      onTap: () => _callCustomer(phone),
+                    ),
+                    _buildRoundActionButton(
+                      icon: Icons.chat_bubble_rounded,
+                      label: "WhatsApp",
+                      bgColor: const Color(0xFF10B981),
+                      iconColor: Colors.white,
+                      isDark: isDark,
+                      onTap: () => _sendWhatsAppReminder(balance, storedLanguage),
+                    ),
+                    _buildRoundActionButton(
+                      icon: Icons.currency_rupee_rounded,
+                      label: "Collect",
+                      bgColor: const Color(0xFF2563EB),
+                      iconColor: Colors.white,
+                      isDark: isDark,
+                      onTap: () {
+                        controller.selectUser(customer.isNotEmpty
+                            ? customer
+                            : {
+                                'id': widget.customerId,
+                                'name': widget.customerName,
+                                'phone': phone,
+                              });
+                        controller.setType('received');
+                        Get.toNamed(RoutesName.addUdharScreen);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 20.h),
+
+          // ── 4. Transaction History Section ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Transaction History",
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _activeTab = "transactions";
+                  });
+                },
+                child: Text(
+                  "View All >",
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 10.h),
+
+          if (txList.isEmpty) ...[
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 24.h),
+              alignment: Alignment.center,
+              child: Text(
+                "No transactions yet",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          ] else ...[
+            ...txList.take(4).map((tx) {
+              final bool isGiven = _isGivenTransaction(tx);
+              final double amt =
+                  double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+              final String rawDate =
+                  (tx['created_at'] ?? tx['date'] ?? '').toString();
+              DateTime? parsedDate = DateTime.tryParse(rawDate);
+              final String dateStr = parsedDate != null
+                  ? DateFormat('dd MMM yyyy').format(parsedDate)
+                  : 'Recent';
+
+              return InkWell(
+                onTap: () => _showTransactionDetailsSheet(
+                    context, tx is Map ? tx : {}, isGiven, amt, balance),
+                borderRadius: BorderRadius.circular(12.r),
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 8.h),
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36.r,
+                        height: 36.r,
+                        decoration: BoxDecoration(
+                          color: isGiven
+                              ? const Color(0xFFDBEAFE)
+                              : const Color(0xFFDCFCE7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isGiven
+                              ? Icons.currency_rupee_rounded
+                              : Icons.check_rounded,
+                          color: isGiven
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF16A34A),
+                          size: 18.sp,
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              isGiven ? "Udhar Added" : "Payment Received",
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        "${isGiven ? '' : '+ '}₹ ${NumberFormat('#,##,###').format(amt.abs().toInt())}",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: isGiven
+                              ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                              : const Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // UI: Screen 5 - Connected Vertical Timeline View
+  // ───────────────────────────────────────────────────────────────────────────
+  Widget _buildTransactionsTimelineView({
+    required BuildContext context,
+    required UdharController controller,
+    required List<dynamic> txList,
+    required Map<int, double> postBalances,
     required double balance,
     required Map storedLanguage,
     required bool isDark,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      child: Row(
-        children: [
-          Expanded(
-            child: _QuickActionBtn(
-              label: 'WhatsApp',
-              subLabel: '1-Tap Pay',
-              icon: Icons.chat_rounded,
-              color: const Color(0xFF10B981),
-              isDark: isDark,
-              onTap: () => controller.sendWhatsAppReminder({
-                'name': widget.customerName,
-                'mobile': controller.selectedUser?['mobile'] ??
-                    controller.selectedUser?['phone'] ??
-                    widget.customerId,
-                'balance': balance,
-              }),
-            ),
-          ),
-          HSpace(8.w),
-          Expanded(
-            child: _QuickActionBtn(
-              label: 'PDF Bill',
-              subLabel: 'Statement',
-              icon: Icons.picture_as_pdf_rounded,
-              color: const Color(0xFFF97316),
-              isDark: isDark,
-              onTap: () => _showPdfBillModal(context, widget.customerId),
-            ),
-          ),
-          HSpace(8.w),
-          Expanded(
-            child: _QuickActionBtn(
-              label: 'Remind',
-              subLabel: 'In-App/SMS',
-              icon: Icons.notifications_active_rounded,
-              color: const Color(0xFF0EA5E9),
-              isDark: isDark,
-              onTap: () => _showReminderOptions(context, balance, storedLanguage),
-            ),
-          ),
-          HSpace(8.w),
-          Expanded(
-            child: _QuickActionBtn(
-              label: 'QR Pay',
-              subLabel: 'Merchant QR',
-              icon: Icons.qr_code_2_rounded,
-              color: AppColors.mainColor,
-              isDark: isDark,
-              onTap: () {
-                Get.toNamed(RoutesName.qrCodeScreen);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    return Column(
+      children: [
+        Expanded(
+          child: txList.isEmpty
+              ? Center(
+                  child: Text(
+                    "No transactions found",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  itemCount: txList.length,
+                  itemBuilder: (context, i) {
+                    final tx = txList[i];
+                    final bool isGiven = _isGivenTransaction(tx);
+                    final double amt =
+                        double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
+                    final String rawDate =
+                        (tx['created_at'] ?? tx['date'] ?? '').toString();
+                    DateTime? parsedDate = DateTime.tryParse(rawDate);
+                    final String dateStr = parsedDate != null
+                        ? DateFormat('dd MMM yyyy').format(parsedDate)
+                        : 'Recent';
+                    final String timeStr = parsedDate != null
+                        ? DateFormat('hh:mm a').format(parsedDate)
+                        : '';
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // UI Component: Transaction Card (Khatabook Style - High Clarity)
-  // ───────────────────────────────────────────────────────────────────────────
-  Widget _buildLedgerTransactionCard({
-    required BuildContext context,
-    required Map tx,
-    required bool isGiven,
-    required double amount,
-    required double postBalance,
-    required bool isDark,
-  }) {
-    final Color badgeColor = isGiven ? AppColors.redColor : AppColors.greenColor;
-    final Color badgeBg = isGiven ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7);
-    final String directionSign = isGiven ? '+' : '-';
-    final String directionLabel = isGiven ? 'आपने दिया (YOU GAVE)' : 'आपको मिला (YOU GOT)';
-    final IconData directionIcon = isGiven ? Icons.arrow_outward_rounded : Icons.arrow_downward_rounded;
-
-    final String remarks = (tx['remarks'] ?? tx['notes'] ?? '').toString().trim();
-    final String paymentMethod = (tx['payment_method'] ?? 'cash').toString().toUpperCase();
-    final bool hasBill = tx['bill_image'] != null || tx['bill_image_path'] != null;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCardColor : AppColors.whiteColor,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: isDark ? Colors.white12 : AppColors.borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14.r),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left Accent Color Strip
-              Container(
-                width: 4.w,
-                color: badgeColor,
-              ),
-
-              // Main Transaction Content
-              Expanded(
-                child: InkWell(
-                  onTap: () => _showTransactionDetailsSheet(context, tx, isGiven, amount, postBalance),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-                    child: Column(
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Row 1: Direction Badge & Large Amount
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Vertical Connected Timeline Left Column
+                        Column(
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                              width: 32.r,
+                              height: 32.r,
                               decoration: BoxDecoration(
-                                color: badgeBg,
-                                borderRadius: BorderRadius.circular(6.r),
+                                color: isGiven
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF10B981),
+                                shape: BoxShape.circle,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                              child: Icon(
+                                isGiven
+                                    ? Icons.currency_rupee_rounded
+                                    : Icons.check_rounded,
+                                color: Colors.white,
+                                size: 16.sp,
+                              ),
+                            ),
+                            if (i < txList.length - 1)
+                              Container(
+                                width: 2.w,
+                                height: 50.h,
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFCBD5E1),
+                              ),
+                          ],
+                        ),
+                        SizedBox(width: 12.w),
+                        // Content Right Column
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _showTransactionDetailsSheet(
+                                context,
+                                tx is Map ? tx : {},
+                                isGiven,
+                                amt,
+                                postBalances[i] ?? balance),
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: 16.h),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(directionIcon, size: 13.sp, color: badgeColor),
-                                  SizedBox(width: 4.w),
                                   Text(
-                                    directionLabel,
+                                    dateStr,
                                     style: TextStyle(
                                       fontSize: 11.sp,
-                                      fontWeight: FontWeight.w800,
-                                      color: badgeColor,
+                                      color: const Color(0xFF64748B),
                                     ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isGiven
+                                                ? "Udhar Added"
+                                                : "Payment Received",
+                                            style: TextStyle(
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : const Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                          if (timeStr.isNotEmpty) ...[
+                                            SizedBox(height: 2.h),
+                                            Text(
+                                              timeStr,
+                                              style: TextStyle(
+                                                fontSize: 11.sp,
+                                                color: const Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      Text(
+                                        "${isGiven ? '' : '+ '}₹ ${NumberFormat('#,##,###').format(amt.abs().toInt())}",
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: isGiven
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
-                            Text(
-                              '$directionSign ₹${amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 16.5.sp,
-                                fontWeight: FontWeight.w900,
-                                color: badgeColor,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        VSpace(8.h),
-
-                        // Row 2: Remarks / Note & Optional Bill Tag
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                remarks.isNotEmpty
-                                    ? remarks
-                                    : (isGiven ? 'उधार सामान / बिक्री' : 'पेमेंट / जमा प्राप्त'),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12.5.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                                ),
-                              ),
-                            ),
-                            if (hasBill)
-                              Container(
-                                margin: EdgeInsets.only(left: 6.w),
-                                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4.r),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.receipt_rounded, size: 11.sp, color: Colors.orange.shade800),
-                                    SizedBox(width: 2.w),
-                                    Text(
-                                      'Bill',
-                                      style: TextStyle(
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange.shade800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        VSpace(8.h),
-                        Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
-                        VSpace(6.h),
-
-                        // Row 3: Date/Time + Payment Mode & Post-Tx Running Balance
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time_rounded,
-                                  size: 12.sp,
-                                  color: isDark ? Colors.white38 : AppColors.black50,
-                                ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  Helpers.formatDateAndTime(tx['created_at']),
-                                  style: TextStyle(
-                                    color: isDark ? Colors.white54 : AppColors.black50,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                SizedBox(width: 6.w),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(4.r),
-                                  ),
-                                  child: Text(
-                                    paymentMethod,
-                                    style: TextStyle(
-                                      fontSize: 9.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(6.r),
-                              ),
-                              child: Text(
-                                postBalance > 0
-                                    ? 'बैलेंस: ₹${postBalance.toStringAsFixed(2)} बाकी'
-                                    : (postBalance < 0
-                                        ? 'बैलेंस: ₹${postBalance.abs().toStringAsFixed(2)} जमा'
-                                        : 'बैलेंस: चुकता'),
-                                style: TextStyle(
-                                  fontSize: 10.5.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white70 : const Color(0xFF475569),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
+                    );
+                  },
+                ),
+        ),
+
+        // ── Sticky Bottom Bar: Total Outstanding ──
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            border: Border(
+              top: BorderSide(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Total Outstanding",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    "₹ ${NumberFormat('#,##,###').format(balance.abs().toInt())}",
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
                   ),
-                ),
+                  SizedBox(width: 4.w),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: const Color(0xFF64748B),
+                    size: 18.sp,
+                  ),
+                ],
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoundActionButton({
+    required IconData icon,
+    required String label,
+    required Color bgColor,
+    required Color iconColor,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12.r),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20.sp),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475467),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1617,72 +1702,3 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Quick Action Button
-// ─────────────────────────────────────────────────────────────────────────────
-class _QuickActionBtn extends StatelessWidget {
-  const _QuickActionBtn({
-    required this.label,
-    required this.subLabel,
-    required this.icon,
-    required this.color,
-    required this.isDark,
-    required this.onTap,
-  });
-
-  final String label;
-  final String subLabel;
-  final IconData icon;
-  final Color color;
-  final bool isDark;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 9.h, horizontal: 4.w),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: color.withValues(alpha: isDark ? 0.3 : 0.2),
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 20.sp,
-            ),
-            VSpace(4.h),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5.sp,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-            VSpace(1.h),
-            Text(
-              subLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 9.sp,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white54 : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

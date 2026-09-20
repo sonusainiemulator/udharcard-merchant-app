@@ -7,7 +7,7 @@ import 'package:paysecure/routes/routes_name.dart';
 import 'package:paysecure/views/screens/home/home_screen.dart';
 import 'package:paysecure/views/screens/profile/profile_setting_screen.dart';
 import 'package:paysecure/views/screens/udhar/customer_list_screen.dart';
-import 'package:paysecure/views/screens/voice_entry/voice_entry_screen.dart';
+import 'package:paysecure/views/screens/udhar/reports_dashboard_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +26,7 @@ void main() {
       expect(ctrl.screens.length, 4);
       expect(ctrl.screens[0].runtimeType, HomeScreen);
       expect(ctrl.screens[1].runtimeType, CustomerListScreen);
-      expect(ctrl.screens[2].runtimeType, VoiceEntryScreen);
+      expect(ctrl.screens[2].runtimeType, ReportsDashboardScreen);
       expect(ctrl.screens[3].runtimeType, ProfileSettingScreen);
       expect(ctrl.selectedIndex, 0);
     });

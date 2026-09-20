@@ -1,12 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:paysecure/views/widgets/text_theme_extension.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../config/app_colors.dart';
 import '../../../controllers/app_controller.dart';
 import '../../../controllers/app_lock_controller.dart';
@@ -17,16 +18,15 @@ import '../../../controllers/verification_controller.dart';
 import '../../../controllers/worklist_controller.dart';
 import '../../../routes/routes_name.dart';
 import '../../../themes/themes.dart';
-import '../../../utils/app_constants.dart';
 import '../../../utils/services/helpers.dart';
+import '../../../utils/services/language_service.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
-import '../../../utils/services/language_service.dart';
 import '../../../utils/services/voice_soundbox_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/language_selection_sheet.dart';
 import '../../widgets/spacing.dart';
+import '../../widgets/text_theme_extension.dart';
 
 class ProfileSettingScreen extends StatefulWidget {
   final bool? isFromHomePage;
@@ -44,13 +44,14 @@ class ProfileSettingScreen extends StatefulWidget {
 }
 
 class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
-  var controller = Get.put(ProfileController());
+  final ProfileController controller = Get.put(ProfileController());
+
   @override
   void initState() {
+    super.initState();
     if (controller.profileList.isEmpty) {
       controller.getProfile();
     }
-    super.initState();
   }
 
   @override
@@ -62,18 +63,17 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     } else if (HiveHelp.read(Keys.isDark) == false) {
       Get.find<AppController>().selectedIndex = 2;
     }
-    TextTheme t = Theme.of(context).textTheme;
+    final TextTheme t = Theme.of(context).textTheme;
+
     return GetBuilder<AppController>(
       builder: (appController) {
-        var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
+        final storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
         return GetBuilder<ProfileController>(
           builder: (profileController) {
             return PopScope(
               canPop: false,
               onPopInvokedWithResult: (didPop, result) {
-                if (didPop) {
-                  return;
-                }
+                if (didPop) return;
                 if (widget.isIdentityVerification == true ||
                     widget.isAddressVerification == true) {
                   Get.offAllNamed(RoutesName.bottomNavBar);
@@ -82,990 +82,89 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 }
               },
               child: Scaffold(
-                appBar: CustomAppBar(
-                  title:
-                      storedLanguage['Profile Settings'] ?? "Profile Settings",
-                  toolberHeight: 100.h,
-                  prefferSized: 100.h,
-                  leading:
-                      widget.isFromHomePage == true
-                          ? IconButton(
-                            onPressed: () {
-                              if (widget.isIdentityVerification == true ||
-                                  widget.isAddressVerification == true) {
-                                Get.offAllNamed(RoutesName.bottomNavBar);
-                              } else {
-                                Get.back();
-                              }
-                            },
-                            icon: Image.asset(
-                              "$rootImageDir/back.png",
-                              height: 22.h,
-                              width: 22.h,
-                              color:
-                                  Get.isDarkMode
-                                      ? AppColors.whiteColor
-                                      : AppColors.blackColor,
-                              fit: BoxFit.fitHeight,
-                            ),
-                          )
-                          : const SizedBox(),
+                backgroundColor: Get.isDarkMode
+                    ? AppColors.darkBgColor
+                    : const Color(0xFFF7F9FC),
+                appBar: AppBar(
+                  elevation: 0,
+                  backgroundColor: Get.isDarkMode
+                      ? AppColors.darkBgColor
+                      : const Color(0xFFF7F9FC),
+                  centerTitle: false,
+                  automaticallyImplyLeading: false,
+                  leading: widget.isFromHomePage == true
+                      ? IconButton(
+                          onPressed: () {
+                            if (widget.isIdentityVerification == true ||
+                                widget.isAddressVerification == true) {
+                              Get.offAllNamed(RoutesName.bottomNavBar);
+                            } else {
+                              Get.back();
+                            }
+                          },
+                          icon: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 20.sp,
+                            color: Get.isDarkMode
+                                ? AppColors.whiteColor
+                                : AppColors.blackColor,
+                          ),
+                        )
+                      : null,
+                  title: Text(
+                    storedLanguage['Profile'] ?? "Profile",
+                    style: TextStyle(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Get.isDarkMode
+                          ? AppColors.whiteColor
+                          : const Color(0xFF1E293B),
+                    ),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: Container(
+                        height: 38.h,
+                        width: 38.h,
+                        decoration: BoxDecoration(
+                          color: Get.isDarkMode
+                              ? AppColors.darkCardColor
+                              : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Get.isDarkMode
+                                ? AppColors.black70
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.settings_outlined,
+                          size: 20.sp,
+                          color: Get.isDarkMode
+                              ? AppColors.whiteColor
+                              : const Color(0xFF475569),
+                        ),
+                      ),
+                      onPressed: () => _showQuickSettingsSheet(context, appController, storedLanguage),
+                    ),
+                    SizedBox(width: 12.w),
+                  ],
                 ),
                 body: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 12.h,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Column(
                     children: [
-                      // ── Profile Hero Header ────────────────────────────────
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          vertical: 20.h,
-                          horizontal: 16.w,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppThemes.getFillColor(),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color:
-                                Get.isDarkMode
-                                    ? AppColors.black70
-                                    : AppColors.borderColor.withValues(
-                                      alpha: 0.5,
-                                    ),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                if (Get.find<ProfileController>().userPhoto !=
-                                    '') {
-                                  Get.to(
-                                    () => Scaffold(
-                                      appBar: const CustomAppBar(title: ""),
-                                      body: PhotoView(
-                                        imageProvider: NetworkImage(
-                                          Get.find<ProfileController>()
-                                              .userPhoto,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    height: 90.h,
-                                    width: 90.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.mainColor,
-                                        width: 3.h,
-                                      ),
-                                      color: AppColors.imageBgColor,
-                                      image:
-                                          Get.find<ProfileController>()
-                                                      .isLoading ||
-                                                  Get.find<ProfileController>()
-                                                          .userPhoto ==
-                                                      '' ||
-                                                  Get.find<ProfileController>()
-                                                      .userPhoto
-                                                      .endsWith(
-                                                        '/default.png',
-                                                      )
-                                              ? DecorationImage(
-                                                image: AssetImage(
-                                                  "$rootImageDir/avatar.webp",
-                                                ),
-                                                fit: BoxFit.cover,
-                                              )
-                                              : DecorationImage(
-                                                image:
-                                                    CachedNetworkImageProvider(
-                                                      Get.find<
-                                                            ProfileController
-                                                          >()
-                                                          .userPhoto,
-                                                    ),
-                                                fit: BoxFit.cover,
-                                              ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      padding: EdgeInsets.all(4.h),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.mainColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        size: 16.sp,
-                                        color: AppColors.blackColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            VSpace(12.h),
-                            Text(
-                              Get.find<ProfileController>().isLoading
-                                  ? ""
-                                  : Get.find<ProfileController>().userName,
-                              style: t.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18.sp,
-                              ),
-                            ),
-                            VSpace(4.h),
-                            Text(
-                              Get.find<ProfileController>().isLoading
-                                  ? ""
-                                  : (Get.find<ProfileController>().join_date !=
-                                          "null" &&
-                                      Get.find<ProfileController>()
-                                          .join_date
-                                          .isNotEmpty)
-                                  ? "Member since ${DateFormat('MMM yyyy').format(DateTime.parse(Get.find<ProfileController>().join_date))}"
-                                  : "Active Merchant Account",
-                              style: t.bodySmall?.copyWith(
-                                color: AppThemes.getBlack50Color(),
-                                fontSize: 12.sp,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // ── Store Header Card ─────────────────────────────────
+                      _buildStoreHeaderCard(context, profileController, t),
                       VSpace(16.h),
 
-                      // ── Shop & Business Profile Card ───────────────────────
-                      GetBuilder<ProfileController>(
-                        builder: (profileCtrl) {
-                          final String currentShopName = profileCtrl.displayShopName;
-                          final bool isOnline = profileCtrl.isShopOnline;
-                          final String timings = profileCtrl.shopTimingDisplay;
-                          final String closedDays = profileCtrl.shopClosedDaysEditingController.text.trim();
+                      // ── 6-Item Clean White Menu Card ──────────────────────
+                      _buildMenuCard(context, profileController, storedLanguage),
+                      VSpace(20.h),
 
-                          return Container(
-                            margin: EdgeInsets.only(bottom: 16.h),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 14.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppThemes.getFillColor(),
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(
-                                color: isOnline
-                                    ? const Color(0xFF10B981).withValues(alpha: 0.35)
-                                    : const Color(0xFFEF4444).withValues(alpha: 0.35),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      height: 44.h,
-                                      width: 44.h,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: (isOnline
-                                                ? const Color(0xFF10B981)
-                                                : const Color(0xFFEF4444))
-                                            .withValues(alpha: 0.12),
-                                      ),
-                                      child: Icon(
-                                        Icons.storefront_rounded,
-                                        color: isOnline
-                                            ? const Color(0xFF10B981)
-                                            : const Color(0xFFEF4444),
-                                        size: 24.sp,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            currentShopName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: t.titleMedium?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 15.sp,
-                                            ),
-                                          ),
-                                          SizedBox(height: 3.h),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 6.r,
-                                                height: 6.r,
-                                                decoration: BoxDecoration(
-                                                  color: isOnline
-                                                      ? const Color(0xFF10B981)
-                                                      : const Color(0xFFEF4444),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              SizedBox(width: 5.w),
-                                              Text(
-                                                isOnline
-                                                    ? "Dukan Khuli Hai (Online)"
-                                                    : "Dukan Band Hai (Offline)",
-                                                style: t.bodySmall?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 11.5.sp,
-                                                  color: isOnline
-                                                      ? const Color(0xFF10B981)
-                                                      : const Color(0xFFEF4444),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Instant Online/Offline Switch
-                                    Transform.scale(
-                                      scale: 0.85,
-                                      child: Switch.adaptive(
-                                        value: isOnline,
-                                        activeTrackColor: const Color(0xFF10B981),
-                                        onChanged: (val) =>
-                                            profileCtrl.toggleShopOnlineStatus(val),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 10.h),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12.w,
-                                    vertical: 8.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Get.isDarkMode
-                                        ? AppColors.darkBgColor
-                                        : AppColors.black10.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(10.r),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.access_time_rounded,
-                                        size: 15.sp,
-                                        color: AppColors.mainColor,
-                                      ),
-                                      SizedBox(width: 6.w),
-                                      Expanded(
-                                        child: Text(
-                                          "Timing: $timings${closedDays.isNotEmpty && closedDays != 'Open All Days' ? ' • $closedDays' : ''}",
-                                          style: t.bodySmall?.copyWith(
-                                            fontSize: 11.5.sp,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppThemes.getBlack50Color(),
-                                          ),
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () => Get.toNamed(
-                                          RoutesName.editProfileScreen,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              "Change",
-                                              style: TextStyle(
-                                                fontSize: 11.5.sp,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.mainColor,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.chevron_right_rounded,
-                                              size: 15.sp,
-                                              color: AppColors.mainColor,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-
-                      // ── My Subscription Card ──────────────────────────────
-                      GetBuilder<SubscriptionController>(
-                        init: SubscriptionController.to,
-                        builder: (subCtrl) {
-                          final sub = subCtrl.currentSubscription;
-                          final status = sub?['status']?.toString() ?? '';
-                          final isTrial = subCtrl.isTrialActive || status == 'trial';
-                          final isPaidActive = status == 'active' || status == 'grace_period';
-                          final hasSubscription = isPaidActive || isTrial;
-                          final planName = subCtrl.currentPlanName;
-
-                          String subtitleText;
-                          if (isTrial) {
-                            subtitleText = '$planName (${subCtrl.trialDaysRemaining}d trial left)';
-                          } else if (isPaidActive) {
-                            subtitleText = planName;
-                          } else {
-                            subtitleText = 'Upgrade to unlock more features';
-                          }
-
-                          return InkWell(
-                            onTap: () => Get.toNamed(
-                              RoutesName.subscriptionPlansScreen,
-                            ),
-                            borderRadius: BorderRadius.circular(16.r),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 16.w,
-                                vertical: 14.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.mainColor
-                                    .withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(16.r),
-                                border: Border.all(
-                                  color: AppColors.mainColor
-                                      .withValues(alpha: 0.22),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    height: 40.h,
-                                    width: 40.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.mainColor
-                                          .withValues(alpha: 0.12),
-                                    ),
-                                    child: Icon(
-                                      Icons.workspace_premium_rounded,
-                                      size: 20.sp,
-                                      color: AppColors.mainColor,
-                                    ),
-                                  ),
-                                  HSpace(14.w),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'My Subscription',
-                                          style: t.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14.sp,
-                                          ),
-                                        ),
-                                        VSpace(2.h),
-                                        Text(
-                                          subtitleText,
-                                          style: t.bodySmall?.copyWith(
-                                            color:
-                                                AppThemes.getBlack50Color(),
-                                            fontSize: 11.sp,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (hasSubscription)
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8.w,
-                                        vertical: 3.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: (isTrial ? const Color(0xFF2563EB) : AppColors.greenColor)
-                                            .withValues(alpha: 0.12),
-                                        borderRadius:
-                                            BorderRadius.circular(8.r),
-                                      ),
-                                      child: Text(
-                                        isTrial ? 'Trial' : 'Active',
-                                        style: TextStyle(
-                                          color: isTrial ? const Color(0xFF2563EB) : AppColors.greenColor,
-                                          fontSize: 10.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      size: 14.sp,
-                                      color: AppThemes.getBlack50Color(),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      VSpace(16.h),
-
-                      // ── Appearance / Theme Switcher Card ───────────────────
-                      Container(
-                        padding: EdgeInsets.all(16.h),
-                        decoration: BoxDecoration(
-                          color: AppThemes.getFillColor(),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color:
-                                Get.isDarkMode
-                                    ? AppColors.black70
-                                    : AppColors.borderColor.withValues(
-                                      alpha: 0.5,
-                                    ),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.brightness_6_outlined,
-                                  size: 18.sp,
-                                  color: AppColors.mainColor,
-                                ),
-                                HSpace(8.w),
-                                Text(
-                                  storedLanguage['Theme Mode'] ?? "Theme Mode",
-                                  style: t.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14.sp,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            VSpace(12.h),
-                            Container(
-                              height: 42.h,
-                              padding: EdgeInsets.all(4.h),
-                              decoration: BoxDecoration(
-                                color:
-                                    Get.isDarkMode
-                                        ? AppColors.darkBgColor
-                                        : AppColors.black10.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  _buildSegmentTab(
-                                    label: storedLanguage['Auto'] ?? "Auto",
-                                    isSelected:
-                                        appController.selectedIndex == 0,
-                                    onTap: () {
-                                      appController.selectedIndex = 0;
-                                      appController.onChanged(null);
-                                      appController.update();
-                                    },
-                                  ),
-                                  _buildSegmentTab(
-                                    label: storedLanguage['Dark'] ?? "Dark",
-                                    isSelected:
-                                        appController.selectedIndex == 1,
-                                    onTap: () {
-                                      appController.selectedIndex = 1;
-                                      appController.onChanged(true);
-                                      appController.update();
-                                    },
-                                  ),
-                                  _buildSegmentTab(
-                                    label: storedLanguage['Light'] ?? "Light",
-                                    isSelected:
-                                        appController.selectedIndex == 2,
-                                    onTap: () {
-                                      appController.selectedIndex = 2;
-                                      appController.onChanged(false);
-                                      appController.update();
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      VSpace(12.h),
-
-                      // ── App Language Switcher Card ───────────────────────────
-                      InkWell(
-                        onTap: () => LanguageSelectionSheet.show(context),
-                        borderRadius: BorderRadius.circular(16.r),
-                        child: Container(
-                          padding: EdgeInsets.all(16.h),
-                          decoration: BoxDecoration(
-                            color: AppThemes.getFillColor(),
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(
-                              color:
-                                  Get.isDarkMode
-                                      ? AppColors.black70
-                                      : AppColors.borderColor.withValues(
-                                        alpha: 0.5,
-                                      ),
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.translate_rounded,
-                                size: 20.sp,
-                                color: AppColors.mainColor,
-                              ),
-                              HSpace(12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      LanguageService.isHindi
-                                          ? "ऐप की भाषा (App Language)"
-                                          : "App Language",
-                                      style: t.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14.sp,
-                                      ),
-                                    ),
-                                    VSpace(2.h),
-                                    Text(
-                                      LanguageService.isHindi
-                                          ? "हिंदी (Hindi) 🇮🇳"
-                                          : "English 🇬🇧",
-                                      style: t.bodySmall?.copyWith(
-                                        color: AppColors.mainColor,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12.sp,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14.sp,
-                                color: AppThemes.getBlack50Color(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 1: Store & Payments ───────────────────────
-                      _buildGroupedSection(
-                        title:
-                            storedLanguage['Store & Payments'] ??
-                            "Store & Payments",
-                        items: [
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Edit Profile'] ??
-                                "Edit Profile",
-                            iconData: Icons.person_outline_rounded,
-                            onTap:
-                                () => Get.toNamed(RoutesName.editProfileScreen),
-                          ),
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Merchant UPI Address'] ??
-                                "Merchant UPI Address",
-                            iconData: Icons.account_balance_wallet_outlined,
-                            subtitle:
-                                profileController.merchantUpiId != null &&
-                                        profileController
-                                            .merchantUpiId!
-                                            .isNotEmpty
-                                    ? profileController.merchantUpiId
-                                    : "Add personal/shop UPI ID",
-                            onTap:
-                                () => _showUpiAddressBottomSheet(
-                                  context,
-                                  profileController,
-                                ),
-                          ),
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Upload Merchant QR'] ??
-                                "Upload Merchant QR",
-                            iconData: Icons.qr_code_scanner_rounded,
-                            subtitle:
-                                profileController.customQrCodePath != null
-                                    ? "Merchant QR Uploaded"
-                                    : "Upload your online payment QR image",
-                            onTap: () => Get.toNamed(RoutesName.qrCodeScreen),
-                          ),
-                        ],
-                        t: t,
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 2: Data & Backup ──────────────────────────
-                      GetBuilder<WorkListController>(
-                        builder: (workListController) {
-                          return _buildGroupedSection(
-                            title:
-                                storedLanguage['Data & Backup'] ??
-                                "Data & Backup",
-                            items: [
-                              _ProfileMenuItem(
-                                title:
-                                    storedLanguage['Export Ledger Backup'] ??
-                                    "Export Ledger Backup",
-                                iconData: Icons.upload_file_rounded,
-                                subtitle: "Save JSON backup to phone/share",
-                                onTap:
-                                    () =>
-                                        UdharController.to.exportLedgerBackup(),
-                              ),
-                              _ProfileMenuItem(
-                                title:
-                                    storedLanguage['Restore Backup'] ??
-                                    "Restore Backup",
-                                iconData: Icons.download_for_offline_rounded,
-                                subtitle:
-                                    "Restore customer ledgers from backup file",
-                                onTap:
-                                    () =>
-                                        UdharController.to.importLedgerBackup(),
-                              ),
-                              _ProfileMenuItem(
-                                title:
-                                    storedLanguage['Google Drive Backup'] ??
-                                    "Google Drive Backup",
-                                iconData: Icons.cloud_sync_rounded,
-                                badgeText: "Coming Soon",
-                                onTap:
-                                    () => _showGoogleDriveComingSoonSheet(
-                                      context,
-                                    ),
-                              ),
-                              _ProfileMenuItem(
-                                title:
-                                    storedLanguage['Today Work List'] ??
-                                    "Today Work List",
-                                iconData: Icons.event_note_rounded,
-                                subtitle:
-                                    workListController.pendingBadgeText == null
-                                        ? "Plan today, tomorrow, and follow-ups"
-                                        : workListController.pendingSummaryText,
-                                badgeText: workListController.pendingBadgeText,
-                                onTap:
-                                    () =>
-                                        Get.toNamed(RoutesName.workListScreen),
-                              ),
-                            ],
-                            t: t,
-                          );
-                        },
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 3: Security & Preferences ───────────────
-                      _buildGroupedSection(
-                        title:
-                            storedLanguage['Security & Preferences'] ??
-                            "Security & Preferences",
-                        items: [
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Notification'] ??
-                                "Notification",
-                            iconData: Icons.notifications_none_rounded,
-                            onTap:
-                                () => Get.toNamed(
-                                  RoutesName.notificationPermissionScreen,
-                                ),
-                          ),
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Identity Verification'] ??
-                                "Identity Verification",
-                            iconData: Icons.verified_user_outlined,
-                            onTap: () {
-                              Get.find<VerificationController>()
-                                  .getVerificationList();
-                              Get.toNamed(RoutesName.verificationListScreen);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['2FA Security'] ??
-                                "2FA Security",
-                            iconData: Icons.security_outlined,
-                            onTap: () {
-                              Get.find<VerificationController>().getTwoFa();
-                              Get.toNamed(RoutesName.twoFaVerificationScreen);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            title:
-                                storedLanguage['Delete Account'] ??
-                                "Delete Account",
-                            iconData: Icons.delete_outline_rounded,
-                            onTap:
-                                () =>
-                                    Get.toNamed(RoutesName.deleteAccountScreen),
-                          ),
-                        ],
-                        t: t,
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 3.5: App Security (Fingerprint, PIN, Pattern Lock)
-                      GetBuilder<AppLockController>(
-                        builder: (appLockCtrl) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppThemes.getFillColor(),
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(
-                                color:
-                                    Get.isDarkMode
-                                        ? AppColors.black70
-                                        : AppColors.borderColor.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Obx(() {
-                              return ListTile(
-                                leading: Container(
-                                  height: 36.h,
-                                  width: 36.h,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.mainColor.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.fingerprint_rounded,
-                                    color: AppColors.mainColor,
-                                    size: 20.sp,
-                                  ),
-                                ),
-                                title: Text(
-                                  storedLanguage['App Lock'] ?? "App Lock",
-                                  style: t.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  storedLanguage[
-                                        'Use fingerprint, PIN, or pattern lock'
-                                      ] ??
-                                      "Use fingerprint, PIN, or pattern lock",
-                                  style: t.bodySmall?.copyWith(
-                                    fontSize: 12.sp,
-                                    color: AppThemes.getParagraphColor(),
-                                  ),
-                                ),
-                                trailing: Switch.adaptive(
-                                  activeTrackColor: AppColors.mainColor,
-                                  value: appLockCtrl.isAppLockEnabled.value,
-                                  onChanged: (val) {
-                                    appLockCtrl.toggleAppLock(val);
-                                  },
-                                ),
-                              );
-                            }),
-                          );
-                        },
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 3.4: In-App Voice Soundbox Alerts ──────────────────
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppThemes.getFillColor(),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: AppColors.mainColor.withValues(alpha: 0.15),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Obx(() {
-                          final isEnabled = Get.isRegistered<VoiceSoundboxService>()
-                              ? VoiceSoundboxService.to.isSoundboxEnabled.value
-                              : true;
-                          return ListTile(
-                            leading: Container(
-                              height: 36.h,
-                              width: 36.h,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF00A86B).withValues(alpha: 0.1),
-                              ),
-                              child: const Icon(
-                                Icons.volume_up_rounded,
-                                color: Color(0xFF00A86B),
-                              ),
-                            ),
-                            title: Text(
-                              "Voice Soundbox Payment Alerts",
-                              style: t.titleMedium?.copyWith(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Text(
-                              "Speaks payment received aloud in Hindi/English",
-                              style: t.bodySmall?.copyWith(
-                                fontSize: 12.sp,
-                                color: AppThemes.getParagraphColor(),
-                              ),
-                            ),
-                            trailing: Switch.adaptive(
-                              activeTrackColor: const Color(0xFF00A86B),
-                              value: isEnabled,
-                              onChanged: (val) {
-                                if (Get.isRegistered<VoiceSoundboxService>()) {
-                                  VoiceSoundboxService.to.toggleSoundbox(val);
-                                }
-                              },
-                            ),
-                          );
-                        }),
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 3.5: App Version ───────────────────────────
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppThemes.getFillColor(),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: AppColors.mainColor.withValues(alpha: 0.15),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: FutureBuilder<PackageInfo>(
-                          future: PackageInfo.fromPlatform(),
-                          builder: (context, snapshot) {
-                            final version = snapshot.data?.version ?? '1.0.47';
-                            final buildNumber = snapshot.data?.buildNumber ?? '';
-                            final versionStr = buildNumber.isNotEmpty ? 'v$version ($buildNumber)' : 'v$version';
-                            return ListTile(
-                              leading: Container(
-                                height: 36.h,
-                                width: 36.h,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.mainColor.withValues(alpha: 0.1),
-                                ),
-                                child: Icon(
-                                  Icons.info_outline_rounded,
-                                  color: AppColors.mainColor,
-                                  size: 20.sp,
-                                ),
-                              ),
-                              title: Text(
-                                storedLanguage['App Version'] ?? "App Version",
-                                style: t.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'UdharCard Merchant App',
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              trailing: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: AppColors.mainColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(20.r),
-                                  border: Border.all(
-                                    color: AppColors.mainColor.withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  versionStr,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.mainColor,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      VSpace(16.h),
-
-                      // ── Section 4: Log Out ─────────────────────────────────
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppThemes.getFillColor(),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: AppColors.redColor.withValues(alpha: 0.3),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: ListTile(
-                          onTap:
-                              () =>
-                                  buildLogoutDialog(context, t, storedLanguage),
-                          leading: Container(
-                            height: 36.h,
-                            width: 36.h,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.redColor.withValues(alpha: 0.1),
-                            ),
-                            child: Icon(
-                              Icons.logout_rounded,
-                              color: AppColors.redColor,
-                              size: 20.sp,
-                            ),
-                          ),
-                          title: Text(
-                            storedLanguage['Log Out'] ?? "Log Out",
-                            style: t.bodyMedium?.copyWith(
-                              color: AppColors.redColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      VSpace(30.h),
+                      // ── Logout Pill Button ────────────────────────────────
+                      _buildLogoutButton(context, t, storedLanguage),
+                      VSpace(32.h),
                     ],
                   ),
                 ),
@@ -1074,6 +173,1396 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
           },
         );
       },
+    );
+  }
+
+  // ── Store Header Card ──────────────────────────────────────────────────────
+  Widget _buildStoreHeaderCard(
+    BuildContext context,
+    ProfileController profileCtrl,
+    TextTheme t,
+  ) {
+    final String currentShopName = profileCtrl.displayShopName.isNotEmpty
+        ? profileCtrl.displayShopName
+        : "Sharma General Store";
+    final bool isOnline = profileCtrl.isShopOnline;
+    final String timings = profileCtrl.shopTimingDisplay;
+
+    final String city = profileCtrl.cityEditingController.text.trim();
+    final String state = profileCtrl.stateEditingController.text.trim();
+    final String location = (city.isNotEmpty && state.isNotEmpty)
+        ? "$city, $state"
+        : (city.isNotEmpty ? city : "Hisar, Haryana");
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.r),
+      decoration: BoxDecoration(
+        color: Get.isDarkMode ? AppColors.darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: Get.isDarkMode
+              ? AppColors.black70
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Avatar
+              GestureDetector(
+                onTap: () {
+                  if (profileCtrl.userPhoto.isNotEmpty) {
+                    Get.to(
+                      () => Scaffold(
+                        appBar: const CustomAppBar(title: ""),
+                        body: PhotoView(
+                          imageProvider: NetworkImage(profileCtrl.userPhoto),
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  height: 54.h,
+                  width: 54.h,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFEBF3FF),
+                    border: Border.all(
+                      color: const Color(0xFF1A73E8).withValues(alpha: 0.3),
+                      width: 2,
+                    ),
+                    image: (profileCtrl.isLoading ||
+                            profileCtrl.userPhoto.isEmpty ||
+                            profileCtrl.userPhoto.endsWith('/default.png'))
+                        ? null
+                        : DecorationImage(
+                            image: CachedNetworkImageProvider(profileCtrl.userPhoto),
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  child: (profileCtrl.userPhoto.isEmpty ||
+                          profileCtrl.userPhoto.endsWith('/default.png'))
+                      ? Center(
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            size: 26.sp,
+                            color: const Color(0xFF1A73E8),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              SizedBox(width: 12.w),
+
+              // Store name & Location
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      currentShopName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Get.isDarkMode
+                            ? AppColors.whiteColor
+                            : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    SizedBox(height: 3.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 13.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        SizedBox(width: 3.w),
+                        Expanded(
+                          child: Text(
+                            location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: const Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Premium Pill
+              GetBuilder<SubscriptionController>(
+                init: SubscriptionController.to,
+                builder: (subCtrl) {
+                  final planName = subCtrl.currentPlanName.isNotEmpty
+                      ? subCtrl.currentPlanName
+                      : "Premium";
+                  return InkWell(
+                    onTap: () => Get.toNamed(RoutesName.subscriptionPlansScreen),
+                    borderRadius: BorderRadius.circular(20.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6F4EA),
+                        borderRadius: BorderRadius.circular(20.r),
+                        border: Border.all(
+                          color: const Color(0xFF34A853).withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 14.sp,
+                            color: const Color(0xFF137333),
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            planName,
+                            style: TextStyle(
+                              fontSize: 11.5.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF137333),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+
+          // Online / Offline & Timings Strip
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: Get.isDarkMode
+                  ? AppColors.darkBgColor
+                  : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: Get.isDarkMode
+                    ? AppColors.black70
+                    : const Color(0xFFEDF2F7),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 7.r,
+                  height: 7.r,
+                  decoration: BoxDecoration(
+                    color: isOnline
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  isOnline ? "Open" : "Closed",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w700,
+                    color: isOnline
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFEF4444),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Container(
+                  width: 1,
+                  height: 12.h,
+                  color: Colors.grey.withValues(alpha: 0.3),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    timings,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Transform.scale(
+                  scale: 0.75,
+                  child: Switch.adaptive(
+                    value: isOnline,
+                    activeTrackColor: const Color(0xFF10B981),
+                    onChanged: (val) => profileCtrl.toggleShopOnlineStatus(val),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 6-Item Clean White Menu Card ───────────────────────────────────────────
+  Widget _buildMenuCard(
+    BuildContext context,
+    ProfileController profileController,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Get.isDarkMode ? AppColors.darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: Get.isDarkMode
+              ? AppColors.black70
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 1. Business Profile
+          _buildMenuTile(
+            icon: Icons.storefront_outlined,
+            title: "Business Profile",
+            subtitle: "Shop details, timings & UPI",
+            isFirst: true,
+            onTap: () => _showBusinessProfileSheet(context, profileController, storedLanguage),
+          ),
+          _buildMenuDivider(),
+
+          // 2. Credit Settings
+          _buildMenuTile(
+            icon: Icons.credit_card_outlined,
+            title: "Credit Settings",
+            subtitle: "Plans, credit limits & work list",
+            onTap: () => _showCreditSettingsSheet(context, storedLanguage),
+          ),
+          _buildMenuDivider(),
+
+          // 3. Notifications
+          _buildMenuTile(
+            icon: Icons.notifications_none_rounded,
+            title: "Notifications",
+            subtitle: "Voice Soundbox, alerts & reminders",
+            onTap: () => _showNotificationSettingsSheet(context),
+          ),
+          _buildMenuDivider(),
+
+          // 4. Security
+          _buildMenuTile(
+            icon: Icons.security_outlined,
+            title: "Security",
+            subtitle: "App Lock, 2FA & biometric",
+            onTap: () => _showSecuritySheet(context, storedLanguage),
+          ),
+          _buildMenuDivider(),
+
+          // 5. Help & Support
+          _buildMenuTile(
+            icon: Icons.help_outline_rounded,
+            title: "Help & Support",
+            subtitle: "FAQs, WhatsApp & customer care",
+            onTap: () => _showHelpSupportSheet(context),
+          ),
+          _buildMenuDivider(),
+
+          // 6. About UdharCard
+          _buildMenuTile(
+            icon: Icons.info_outline_rounded,
+            title: "About UdharCard",
+            subtitle: "Version, cloud backup & terms",
+            isLast: true,
+            onTap: () => _showAboutSheet(context, storedLanguage),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.vertical(
+          top: isFirst ? Radius.circular(16.r) : Radius.zero,
+          bottom: isLast ? Radius.circular(16.r) : Radius.zero,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          child: Row(
+            children: [
+              Container(
+                height: 40.h,
+                width: 40.h,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFEBF3FF),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20.sp,
+                  color: const Color(0xFF1A73E8),
+                ),
+              ),
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14.5.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Get.isDarkMode
+                            ? AppColors.whiteColor
+                            : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11.5.sp,
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20.sp,
+                color: const Color(0xFF94A3B8),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuDivider() {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 70.w,
+      endIndent: 16.w,
+      color: Get.isDarkMode
+          ? AppColors.black70
+          : const Color(0xFFF1F5F9),
+    );
+  }
+
+  // ── Logout Pill Button ────────────────────────────────────────────────────
+  Widget _buildLogoutButton(
+    BuildContext context,
+    TextTheme t,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    return InkWell(
+      onTap: () => buildLogoutDialog(context, t, storedLanguage),
+      borderRadius: BorderRadius.circular(24.r),
+      child: Container(
+        height: 48.h,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(
+            color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.logout_rounded,
+              color: const Color(0xFFEF4444),
+              size: 18.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              storedLanguage['Log Out'] ?? "Logout",
+              style: TextStyle(
+                color: const Color(0xFFEF4444),
+                fontSize: 14.5.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 1. Business Profile Sheet ─────────────────────────────────────────────
+  void _showBusinessProfileSheet(
+    BuildContext context,
+    ProfileController profileController,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "Business Profile",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "Manage your shop details, operating hours, and payment IDs",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // Edit Profile & Timings
+                _buildSheetActionTile(
+                  icon: Icons.edit_note_rounded,
+                  title: "Edit Store & Owner Details",
+                  subtitle: "Name, address, shop timings & closed days",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.toNamed(RoutesName.editProfileScreen);
+                  },
+                ),
+
+                // Merchant UPI ID
+                _buildSheetActionTile(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: "Merchant UPI Address",
+                  subtitle: profileController.merchantUpiId != null &&
+                          profileController.merchantUpiId!.isNotEmpty
+                      ? profileController.merchantUpiId!
+                      : "Add personal/shop UPI ID for customer payments",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showUpiAddressBottomSheet(context, profileController);
+                  },
+                ),
+
+                // Merchant QR
+                _buildSheetActionTile(
+                  icon: Icons.qr_code_scanner_rounded,
+                  title: "Upload Merchant Payment QR",
+                  subtitle: profileController.customQrCodePath != null
+                      ? "Custom QR Code active"
+                      : "Upload QR image for receiving payments",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.toNamed(RoutesName.qrCodeScreen);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 2. Credit Settings Sheet ──────────────────────────────────────────────
+  void _showCreditSettingsSheet(
+    BuildContext context,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "Credit Settings & Data",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "Manage subscription plan, ledger exports and collection targets",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // Subscription Plans
+                _buildSheetActionTile(
+                  icon: Icons.workspace_premium_rounded,
+                  title: "My Subscription Plans",
+                  subtitle: "Upgrade or renew to unlock higher limits & features",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.toNamed(RoutesName.subscriptionPlansScreen);
+                  },
+                ),
+
+                // Today Work List
+                GetBuilder<WorkListController>(
+                  builder: (workListController) {
+                    return _buildSheetActionTile(
+                      icon: Icons.event_note_rounded,
+                      title: "Today Work List",
+                      subtitle: workListController.pendingBadgeText == null
+                          ? "Plan today, tomorrow, and follow-ups"
+                          : workListController.pendingSummaryText,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Get.toNamed(RoutesName.workListScreen);
+                      },
+                    );
+                  },
+                ),
+
+                // Export Ledger Backup
+                _buildSheetActionTile(
+                  icon: Icons.upload_file_rounded,
+                  title: "Export Ledger Backup",
+                  subtitle: "Download customer ledger data file (JSON) to phone",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    UdharController.to.exportLedgerBackup();
+                  },
+                ),
+
+                // Restore Ledger Backup
+                _buildSheetActionTile(
+                  icon: Icons.download_for_offline_rounded,
+                  title: "Restore Ledger Backup",
+                  subtitle: "Restore your ledger records from a backup file",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    UdharController.to.importLedgerBackup();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 3. Notification & Voice Soundbox Sheet ────────────────────────────────
+  void _showNotificationSettingsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "Notifications & Voice Alerts",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "Configure instant audio alerts and collection reminders",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // Voice Soundbox Toggle
+                Obx(() {
+                  final isEnabled = Get.isRegistered<VoiceSoundboxService>()
+                      ? VoiceSoundboxService.to.isSoundboxEnabled.value
+                      : true;
+                  return Container(
+                    padding: EdgeInsets.all(12.r),
+                    decoration: BoxDecoration(
+                      color: Get.isDarkMode
+                          ? AppColors.darkBgColor
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: const Color(0xFF00A86B).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 38.h,
+                          width: 38.h,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF00A86B).withValues(alpha: 0.12),
+                          ),
+                          child: const Icon(
+                            Icons.volume_up_rounded,
+                            color: Color(0xFF00A86B),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Voice Soundbox Payment Alerts",
+                                style: TextStyle(
+                                  fontSize: 13.5.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                "Speaks payments received aloud in Hindi/English",
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: AppThemes.getParagraphColor(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          activeTrackColor: const Color(0xFF00A86B),
+                          value: isEnabled,
+                          onChanged: (val) {
+                            if (Get.isRegistered<VoiceSoundboxService>()) {
+                              VoiceSoundboxService.to.toggleSoundbox(val);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                VSpace(12.h),
+
+                // Test Voice Soundbox Button
+                InkWell(
+                  onTap: () {
+                    if (Get.isRegistered<VoiceSoundboxService>()) {
+                      VoiceSoundboxService.to.announcePayment(
+                        amount: 500.0,
+                        customerName: "Ramesh Kumar",
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00A86B).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: const Color(0xFF00A86B).withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.play_circle_fill_rounded,
+                          size: 18.sp,
+                          color: const Color(0xFF00A86B),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          "Test Voice Soundbox (₹500 Received)",
+                          style: TextStyle(
+                            fontSize: 12.5.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF00A86B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                VSpace(12.h),
+
+                // Push Notifications Permission
+                _buildSheetActionTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: "Push Notification Permissions",
+                  subtitle: "Enable lockscreen & payment sound notifications",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.toNamed(RoutesName.notificationPermissionScreen);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 4. Security Sheet ─────────────────────────────────────────────────────
+  void _showSecuritySheet(
+    BuildContext context,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "Security & Privacy",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "Protect your business ledgers and customer transactions",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // App Lock Switch
+                GetBuilder<AppLockController>(
+                  builder: (appLockCtrl) {
+                    return Obx(() {
+                      return Container(
+                        padding: EdgeInsets.all(12.r),
+                        decoration: BoxDecoration(
+                          color: Get.isDarkMode
+                              ? AppColors.darkBgColor
+                              : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: const Color(0xFF1A73E8).withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              height: 38.h,
+                              width: 38.h,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFEBF3FF),
+                              ),
+                              child: Icon(
+                                Icons.fingerprint_rounded,
+                                color: const Color(0xFF1A73E8),
+                                size: 22.sp,
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "App Lock & Biometric",
+                                    style: TextStyle(
+                                      fontSize: 13.5.sp,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    "Require fingerprint / PIN when opening app",
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      color: AppThemes.getParagraphColor(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch.adaptive(
+                              activeTrackColor: const Color(0xFF1A73E8),
+                              value: appLockCtrl.isAppLockEnabled.value,
+                              onChanged: (val) => appLockCtrl.toggleAppLock(val),
+                            ),
+                          ],
+                        ),
+                      );
+                    });
+                  },
+                ),
+                VSpace(12.h),
+
+                // 2FA Security
+                _buildSheetActionTile(
+                  icon: Icons.lock_outline_rounded,
+                  title: "Two-Factor Authentication (2FA)",
+                  subtitle: "Add an extra layer of OTP security to logins",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.find<VerificationController>().getTwoFa();
+                    Get.toNamed(RoutesName.twoFaVerificationScreen);
+                  },
+                ),
+
+                // Identity Verification
+                _buildSheetActionTile(
+                  icon: Icons.verified_user_outlined,
+                  title: "Identity & KYC Verification",
+                  subtitle: "Verify merchant documents for higher limits",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.find<VerificationController>().getVerificationList();
+                    Get.toNamed(RoutesName.verificationListScreen);
+                  },
+                ),
+
+                // Delete Account
+                _buildSheetActionTile(
+                  icon: Icons.delete_outline_rounded,
+                  title: "Delete Account",
+                  subtitle: "Permanently delete your merchant profile and data",
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Get.toNamed(RoutesName.deleteAccountScreen);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 5. Help & Support Sheet ───────────────────────────────────────────────
+  void _showHelpSupportSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "Help & Support",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "We're here to help your store thrive with UdharCard",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // WhatsApp Support
+                _buildSheetActionTile(
+                  icon: Icons.chat_rounded,
+                  title: "WhatsApp Merchant Support",
+                  subtitle: "Chat directly with our merchant support team",
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final Uri waUri = Uri.parse(
+                      "https://wa.me/919999999999?text=Hi%20UdharCard%20Support,%20I%20need%20assistance.",
+                    );
+                    if (await canLaunchUrl(waUri)) {
+                      await launchUrl(waUri, mode: LaunchMode.externalApplication);
+                    } else {
+                      Helpers.showSnackBar(msg: "Could not open WhatsApp");
+                    }
+                  },
+                ),
+
+                // Call Helpline
+                _buildSheetActionTile(
+                  icon: Icons.phone_in_talk_rounded,
+                  title: "Merchant Helpline",
+                  subtitle: "Speak to a customer representative (Mon - Sat, 9am - 8pm)",
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final Uri telUri = Uri.parse("tel:1800123456");
+                    if (await canLaunchUrl(telUri)) {
+                      await launchUrl(telUri);
+                    }
+                  },
+                ),
+
+                // FAQs
+                _buildSheetActionTile(
+                  icon: Icons.quiz_outlined,
+                  title: "Frequently Asked Questions (FAQs)",
+                  subtitle: "How to record udhar, soundbox setup, QR & cloud backup",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showFaqDialog(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── 6. About UdharCard Sheet ──────────────────────────────────────────────
+  void _showAboutSheet(
+    BuildContext context,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "About UdharCard",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(4.h),
+                Text(
+                  "Smart Digital Khata & Credit Platform for Indian Merchants",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppThemes.getParagraphColor(),
+                  ),
+                ),
+                VSpace(16.h),
+
+                // App Version Info
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snapshot) {
+                    final version = snapshot.data?.version ?? '1.0.47';
+                    final buildNumber = snapshot.data?.buildNumber ?? '';
+                    final versionStr = buildNumber.isNotEmpty
+                        ? 'v$version ($buildNumber)'
+                        : 'v$version';
+                    return _buildSheetActionTile(
+                      icon: Icons.verified_rounded,
+                      title: "App Version",
+                      subtitle: "UdharCard Merchant App $versionStr",
+                      badge: versionStr,
+                      onTap: () {},
+                    );
+                  },
+                ),
+
+                // Google Drive Backup
+                _buildSheetActionTile(
+                  icon: Icons.cloud_sync_rounded,
+                  title: "Google Drive Cloud Backup",
+                  subtitle: "Automatic backup sync for customers & ledgers",
+                  badge: "Coming Soon",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showGoogleDriveComingSoonSheet(context);
+                  },
+                ),
+
+                // Made with Love
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    child: Text(
+                      "Made with ❤️ for Indian Merchants",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Quick Settings Sheet (Theme & Language) ───────────────────────────────
+  void _showQuickSettingsSheet(
+    BuildContext context,
+    AppController appController,
+    Map<dynamic, dynamic> storedLanguage,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppThemes.getDarkCardColor(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.black30,
+                      borderRadius: BorderRadius.circular(4.r),
+                    ),
+                  ),
+                ),
+                VSpace(14.h),
+                Text(
+                  "App Settings",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                VSpace(16.h),
+
+                // Theme Mode
+                Text(
+                  storedLanguage['Theme Mode'] ?? "Theme Mode",
+                  style: TextStyle(
+                    fontSize: 13.5.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                VSpace(8.h),
+                Container(
+                  height: 42.h,
+                  padding: EdgeInsets.all(4.h),
+                  decoration: BoxDecoration(
+                    color: Get.isDarkMode
+                        ? AppColors.darkBgColor
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildSegmentTab(
+                        label: storedLanguage['Auto'] ?? "Auto",
+                        isSelected: appController.selectedIndex == 0,
+                        onTap: () {
+                          appController.selectedIndex = 0;
+                          appController.onChanged(null);
+                          appController.update();
+                        },
+                      ),
+                      _buildSegmentTab(
+                        label: storedLanguage['Dark'] ?? "Dark",
+                        isSelected: appController.selectedIndex == 1,
+                        onTap: () {
+                          appController.selectedIndex = 1;
+                          appController.onChanged(true);
+                          appController.update();
+                        },
+                      ),
+                      _buildSegmentTab(
+                        label: storedLanguage['Light'] ?? "Light",
+                        isSelected: appController.selectedIndex == 2,
+                        onTap: () {
+                          appController.selectedIndex = 2;
+                          appController.onChanged(false);
+                          appController.update();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                VSpace(18.h),
+
+                // Language
+                _buildSheetActionTile(
+                  icon: Icons.translate_rounded,
+                  title: storedLanguage['App Language'] ?? "App Language",
+                  subtitle: LanguageService.isHindi ? "हिंदी (Hindi) 🇮🇳" : "English 🇬🇧",
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    LanguageSelectionSheet.show(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSheetActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    String? badge,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 10.h),
+      decoration: BoxDecoration(
+        color: Get.isDarkMode
+            ? AppColors.darkBgColor
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: isDestructive
+              ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+              : (Get.isDarkMode ? AppColors.black70 : const Color(0xFFEDF2F7)),
+        ),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
+        leading: Container(
+          height: 38.h,
+          width: 38.h,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDestructive
+                ? const Color(0xFFFEF2F2)
+                : const Color(0xFFEBF3FF),
+          ),
+          child: Icon(
+            icon,
+            size: 20.sp,
+            color: isDestructive
+                ? const Color(0xFFEF4444)
+                : const Color(0xFF1A73E8),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: isDestructive
+                      ? const Color(0xFFEF4444)
+                      : (Get.isDarkMode ? AppColors.whiteColor : const Color(0xFF1E293B)),
+                ),
+              ),
+            ),
+            if (badge != null) ...[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  badge,
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFB45309),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 11.5.sp,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          size: 18.sp,
+          color: const Color(0xFF94A3B8),
+        ),
+      ),
     );
   }
 
@@ -1087,23 +1576,19 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? (Get.isDarkMode
-                        ? AppColors.darkCardColor
-                        : AppColors.whiteColor)
-                    : Colors.transparent,
+            color: isSelected
+                ? (Get.isDarkMode ? AppColors.darkCardColor : Colors.white)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10.r),
-            boxShadow:
-                isSelected
-                    ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                    : [],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1111,12 +1596,9 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             style: TextStyle(
               fontSize: 13.sp,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color:
-                  isSelected
-                      ? (Get.isDarkMode
-                          ? AppColors.whiteColor
-                          : AppColors.blackColor)
-                      : AppColors.black50,
+              color: isSelected
+                  ? (Get.isDarkMode ? AppColors.whiteColor : Colors.black)
+                  : AppColors.black50,
             ),
           ),
         ),
@@ -1124,145 +1606,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     );
   }
 
-  Widget _buildGroupedSection({
-    required String title,
-    required List<_ProfileMenuItem> items,
-    required TextTheme t,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppThemes.getFillColor(),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color:
-              Get.isDarkMode
-                  ? AppColors.black70
-                  : AppColors.borderColor.withValues(alpha: 0.5),
-          width: 0.5,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              left: 16.w,
-              right: 16.w,
-              top: 14.h,
-              bottom: 6.h,
-            ),
-            child: Text(
-              title.toUpperCase(),
-              style: t.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 11.sp,
-                color: AppColors.mainColor,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder:
-                (_, __) => Divider(
-                  height: 1,
-                  indent: 52.w,
-                  endIndent: 16.w,
-                  color:
-                      Get.isDarkMode
-                          ? AppColors.black70
-                          : AppColors.borderColor.withValues(alpha: 0.3),
-                ),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 2.h,
-                ),
-                onTap: item.onTap,
-                leading: Container(
-                  height: 36.h,
-                  width: 36.h,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.mainColor.withValues(alpha: 0.12),
-                  ),
-                  child:
-                      item.iconData != null
-                          ? Icon(
-                            item.iconData,
-                            size: 20.sp,
-                            color: AppColors.blackColor,
-                          )
-                          : Icon(
-                            Icons.tune,
-                            size: 20.sp,
-                            color: AppColors.blackColor,
-                          ),
-                ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.title,
-                        style: t.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ),
-                    if (item.badgeText != null) ...[
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 2.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade700.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: Colors.amber.shade700,
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          item.badgeText!,
-                          style: TextStyle(
-                            fontSize: 9.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                subtitle:
-                    item.subtitle != null
-                        ? Text(
-                          item.subtitle!,
-                          style: t.bodySmall?.copyWith(
-                            color: AppThemes.getBlack50Color(),
-                            fontSize: 11.sp,
-                          ),
-                        )
-                        : null,
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20.sp,
-                  color: AppColors.black30,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
+  // ── UPI Bottom Sheet ──────────────────────────────────────────────────────
   void _showUpiAddressBottomSheet(
     BuildContext context,
     ProfileController profileController,
@@ -1277,15 +1621,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
-      builder: (context) {
+      builder: (ctx) {
         return SafeArea(
           bottom: true,
           child: Padding(
             padding: EdgeInsets.only(
-              bottom:
-                  MediaQuery.of(context).viewInsets.bottom +
-                  16.h +
-                  MediaQuery.of(context).padding.bottom,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16.h + MediaQuery.of(ctx).padding.bottom,
               left: 20.w,
               right: 20.w,
               top: 16.h,
@@ -1310,13 +1651,13 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                   children: [
                     Text(
                       "Merchant UPI Address",
-                      style: context.t.bodyLarge?.copyWith(
+                      style: ctx.t.bodyLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 18.sp,
                       ),
                     ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(ctx),
                       icon: Icon(Icons.close, size: 20.sp),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -1326,7 +1667,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 VSpace(10.h),
                 Text(
                   "Add your UPI ID (e.g., shop@upi or 9876543210@paytm) so customers can send payments directly to your UPI handle.",
-                  style: context.t.bodyMedium?.copyWith(
+                  style: ctx.t.bodyMedium?.copyWith(
                     color: AppThemes.getParagraphColor(),
                     fontSize: 13.sp,
                     height: 1.4,
@@ -1335,10 +1676,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 VSpace(18.h),
                 TextField(
                   controller: upiCtrl,
-                  style: context.t.bodyMedium?.copyWith(fontSize: 15.sp),
+                  style: ctx.t.bodyMedium?.copyWith(fontSize: 15.sp),
                   decoration: InputDecoration(
                     hintText: "Enter UPI ID (e.g. name@upi)",
-                    hintStyle: context.t.bodySmall?.copyWith(
+                    hintStyle: ctx.t.bodySmall?.copyWith(
                       color: AppColors.textFieldHintColor,
                       fontSize: 14.sp,
                     ),
@@ -1386,7 +1727,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           ),
                           onPressed: () {
                             profileController.removeMerchantUpiId();
-                            Navigator.pop(context);
+                            Navigator.pop(ctx);
                           },
                           child: Text(
                             "Remove",
@@ -1403,7 +1744,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.mainColor,
+                          backgroundColor: const Color(0xFF1A73E8),
                           padding: EdgeInsets.symmetric(vertical: 14.h),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -1420,12 +1761,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                           profileController.saveMerchantUpiId(
                             upiCtrl.text.trim(),
                           );
-                          Navigator.pop(context);
+                          Navigator.pop(ctx);
                         },
                         child: Text(
                           "Save UPI ID",
                           style: TextStyle(
-                            color: AppColors.blackColor,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 15.sp,
                           ),
@@ -1442,6 +1783,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     );
   }
 
+  // ── Google Drive Coming Soon Sheet ─────────────────────────────────────────
   void _showGoogleDriveComingSoonSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1449,7 +1791,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
-      builder: (context) {
+      builder: (ctx) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 24.w),
@@ -1459,28 +1801,25 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 Container(
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
-                    color: AppColors.mainColor.withValues(alpha: 0.15),
+                    color: const Color(0xFF1A73E8).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.cloud_sync_rounded,
                     size: 48.r,
-                    color: AppColors.mainColor,
+                    color: const Color(0xFF1A73E8),
                   ),
                 ),
                 VSpace(16.h),
                 Text(
                   "Google Drive Backup",
-                  style: context.t.headlineMedium?.copyWith(
+                  style: ctx.t.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 VSpace(8.h),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 4.h,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade700.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12.r),
@@ -1499,7 +1838,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 Text(
                   "Automated Google Drive cloud backup for your shop ledgers and customer transaction history will be available in the upcoming release!",
                   textAlign: TextAlign.center,
-                  style: context.t.displayMedium?.copyWith(
+                  style: ctx.t.displayMedium?.copyWith(
                     color: AppThemes.getParagraphColor(),
                   ),
                 ),
@@ -1508,17 +1847,17 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.mainColor,
+                      backgroundColor: const Color(0xFF1A73E8),
                       padding: EdgeInsets.symmetric(vertical: 14.h),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(ctx),
                     child: Text(
                       "Got It",
                       style: TextStyle(
-                        color: AppColors.blackColor,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 14.sp,
                       ),
@@ -1533,30 +1872,51 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     );
   }
 
+  void _showFaqDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("FAQs & Guides"),
+        content: const SingleChildScrollView(
+          child: Text(
+            "1. How to give Udhar?\nTap '+ New Udhar' on Home or Customers screen, enter amount & customer details.\n\n"
+            "2. How to collect payment?\nOpen customer ledger, tap 'Collect', enter amount received.\n\n"
+            "3. What is Voice Soundbox?\nWhen turned on, your phone speaks payment received aloud automatically!\n\n"
+            "4. How to take backup?\nGo to Credit Settings -> Export Ledger Backup to save your data file.",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Logout Dialog ──────────────────────────────────────────────────────────
   Future<dynamic> buildLogoutDialog(
     BuildContext context,
     TextTheme t,
-    storedLanguage,
+    Map<dynamic, dynamic> storedLanguage,
   ) {
     return showDialog(
       barrierDismissible: false,
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return CupertinoAlertDialog(
           title: Text(
             storedLanguage['Log Out'] ?? "Log Out",
             style: t.bodyLarge?.copyWith(fontSize: 20.sp),
           ),
           content: Text(
-            storedLanguage['Do you want to Log Out?'] ??
-                "Do you want to Log Out?",
+            storedLanguage['Do you want to Log Out?'] ?? "Do you want to Log Out?",
             style: t.bodyMedium,
           ),
           actions: [
             MaterialButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(storedLanguage['No'] ?? "No", style: t.bodyLarge),
             ),
             MaterialButton(
@@ -1568,27 +1928,14 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                 } catch (_) {}
                 Get.offAllNamed(RoutesName.loginScreen);
               },
-              child: Text(storedLanguage['Yes'] ?? "Yes", style: t.bodyLarge),
+              child: Text(
+                storedLanguage['Yes'] ?? "Yes",
+                style: t.bodyLarge?.copyWith(color: AppColors.redColor),
+              ),
             ),
           ],
         );
       },
     );
   }
-}
-
-class _ProfileMenuItem {
-  final String title;
-  final IconData? iconData;
-  final String? subtitle;
-  final String? badgeText;
-  final VoidCallback onTap;
-
-  _ProfileMenuItem({
-    required this.title,
-    this.iconData,
-    this.subtitle,
-    this.badgeText,
-    required this.onTap,
-  });
 }
