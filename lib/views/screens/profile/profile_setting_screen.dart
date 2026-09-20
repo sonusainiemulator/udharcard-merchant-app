@@ -184,15 +184,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   ) {
     final String currentShopName = profileCtrl.displayShopName.isNotEmpty
         ? profileCtrl.displayShopName
-        : "Sharma General Store";
+        : "UdharCard Merchant";
     final bool isOnline = profileCtrl.isShopOnline;
     final String timings = profileCtrl.shopTimingDisplay;
-
-    final String city = profileCtrl.cityEditingController.text.trim();
-    final String state = profileCtrl.stateEditingController.text.trim();
-    final String location = (city.isNotEmpty && state.isNotEmpty)
-        ? "$city, $state"
-        : (city.isNotEmpty ? city : "Hisar, Haryana");
+    final String location = profileCtrl.displayLocation;
 
     return Container(
       width: double.infinity,

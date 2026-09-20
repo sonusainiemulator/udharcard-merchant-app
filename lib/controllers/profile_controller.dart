@@ -51,9 +51,21 @@ class ProfileController extends GetxController {
   String get displayShopName {
     final name = shopNameEditingController.text.trim();
     if (name.isNotEmpty) return name;
-    final cached = HiveHelp.read(Keys.shopName)?.toString().trim() ?? '';
+    final cached = (HiveHelp.read(Keys.shopName) ??
+            HiveHelp.read('shop_name') ??
+            HiveHelp.read('business_name') ??
+            HiveHelp.read(Keys.businessType) ??
+            '')
+        .toString()
+        .trim();
     if (cached.isNotEmpty) return cached;
-    return userName.isNotEmpty ? userName : 'UdharCard Merchant';
+    final fullName = (HiveHelp.read(Keys.userFullName) ?? '').toString().trim();
+    if (fullName.isNotEmpty) return fullName;
+    final user = (userName.isNotEmpty
+            ? userName
+            : (HiveHelp.read(Keys.userName) ?? '').toString())
+        .trim();
+    return user.isNotEmpty ? user : 'UdharCard Merchant';
   }
 
   String get shopTimingDisplay {
@@ -63,6 +75,42 @@ class ProfileController extends GetxController {
       return "$open - $close";
     }
     return "09:00 AM - 09:30 PM";
+  }
+
+  String get displayLocation {
+    final city = (cityEditingController.text.trim().isNotEmpty
+            ? cityEditingController.text.trim()
+            : (HiveHelp.read(Keys.city) ?? HiveHelp.read('city') ?? '').toString())
+        .trim();
+    final state = (stateEditingController.text.trim().isNotEmpty
+            ? stateEditingController.text.trim()
+            : (HiveHelp.read(Keys.state) ?? HiveHelp.read('state') ?? '').toString())
+        .trim();
+    final landmark = (landmarkEditingController.text.trim().isNotEmpty
+            ? landmarkEditingController.text.trim()
+            : (HiveHelp.read(Keys.landmark) ?? HiveHelp.read('landmark') ?? '').toString())
+        .trim();
+    final addr = (addrEditingController.text.trim().isNotEmpty
+            ? addrEditingController.text.trim()
+            : (HiveHelp.read(Keys.address) ??
+                HiveHelp.read('address') ??
+                HiveHelp.read('address_one') ??
+                '')
+                .toString())
+        .trim();
+
+    if (city.isNotEmpty && state.isNotEmpty) {
+      return "$city, $state";
+    } else if (city.isNotEmpty) {
+      return city;
+    } else if (landmark.isNotEmpty) {
+      return landmark;
+    } else if (addr.isNotEmpty) {
+      return addr;
+    } else if (state.isNotEmpty) {
+      return state;
+    }
+    return "India";
   }
 
   Future<void> toggleShopOnlineStatus([bool? targetStatus]) async {
@@ -622,51 +670,56 @@ class ProfileController extends GetxController {
       userNameEditingController.text = (HiveHelp.read(Keys.userName) ?? hiveName).toString().trim();
     }
 
-    final cachedShop = (HiveHelp.read(Keys.shopName) ?? HiveHelp.read('shop_name') ?? '').toString().trim();
+    final cachedShop = (HiveHelp.read(Keys.shopName) ??
+            HiveHelp.read('shop_name') ??
+            HiveHelp.read('business_name') ??
+            '')
+        .toString()
+        .trim();
     if (cachedShop.isNotEmpty && shopNameEditingController.text.trim().isEmpty) {
       shopNameEditingController.text = cachedShop;
     }
-    final cachedOnline = HiveHelp.read(Keys.isShopOnline);
+    final cachedOnline = HiveHelp.read(Keys.isShopOnline) ?? HiveHelp.read('is_shop_online');
     if (cachedOnline != null) {
       isShopOnline = cachedOnline == true || cachedOnline.toString() == '1' || cachedOnline.toString().toLowerCase() == 'true';
     }
-    final cachedOpen = (HiveHelp.read(Keys.shopOpeningTime) ?? '').toString().trim();
+    final cachedOpen = (HiveHelp.read(Keys.shopOpeningTime) ?? HiveHelp.read('shop_opening_time') ?? '').toString().trim();
     if (cachedOpen.isNotEmpty) {
       shopOpeningTimeEditingController.text = cachedOpen;
     }
-    final cachedClose = (HiveHelp.read(Keys.shopClosingTime) ?? '').toString().trim();
+    final cachedClose = (HiveHelp.read(Keys.shopClosingTime) ?? HiveHelp.read('shop_closing_time') ?? '').toString().trim();
     if (cachedClose.isNotEmpty) {
       shopClosingTimeEditingController.text = cachedClose;
     }
-    final cachedDays = (HiveHelp.read(Keys.shopClosedDays) ?? '').toString().trim();
+    final cachedDays = (HiveHelp.read(Keys.shopClosedDays) ?? HiveHelp.read('shop_closed_days') ?? '').toString().trim();
     if (cachedDays.isNotEmpty) {
       shopClosedDaysEditingController.text = cachedDays;
     }
-    final cachedBiz = (HiveHelp.read(Keys.businessType) ?? '').toString().trim();
+    final cachedBiz = (HiveHelp.read(Keys.businessType) ?? HiveHelp.read('business_type') ?? '').toString().trim();
     if (cachedBiz.isNotEmpty && businessTypeEditingController.text.trim().isEmpty) {
       businessTypeEditingController.text = cachedBiz;
     }
-    final cachedLandmark = (HiveHelp.read(Keys.landmark) ?? '').toString().trim();
+    final cachedLandmark = (HiveHelp.read(Keys.landmark) ?? HiveHelp.read('landmark') ?? '').toString().trim();
     if (cachedLandmark.isNotEmpty && landmarkEditingController.text.trim().isEmpty) {
       landmarkEditingController.text = cachedLandmark;
     }
-    final cachedWhatsapp = (HiveHelp.read(Keys.whatsappNumber) ?? '').toString().trim();
+    final cachedWhatsapp = (HiveHelp.read(Keys.whatsappNumber) ?? HiveHelp.read('whatsapp_number') ?? '').toString().trim();
     if (cachedWhatsapp.isNotEmpty && whatsappEditingController.text.trim().isEmpty) {
       whatsappEditingController.text = cachedWhatsapp;
     }
-    final cachedDesc = (HiveHelp.read(Keys.shopDescription) ?? '').toString().trim();
+    final cachedDesc = (HiveHelp.read(Keys.shopDescription) ?? HiveHelp.read('shop_description') ?? '').toString().trim();
     if (cachedDesc.isNotEmpty && shopDescEditingController.text.trim().isEmpty) {
       shopDescEditingController.text = cachedDesc;
     }
-    final cachedAddr = (HiveHelp.read(Keys.address) ?? '').toString().trim();
+    final cachedAddr = (HiveHelp.read(Keys.address) ?? HiveHelp.read('address') ?? HiveHelp.read('address_one') ?? '').toString().trim();
     if (cachedAddr.isNotEmpty && addrEditingController.text.trim().isEmpty) {
       addrEditingController.text = cachedAddr;
     }
-    final cachedCity = (HiveHelp.read(Keys.city) ?? '').toString().trim();
+    final cachedCity = (HiveHelp.read(Keys.city) ?? HiveHelp.read('city') ?? '').toString().trim();
     if (cachedCity.isNotEmpty && cityEditingController.text.trim().isEmpty) {
       cityEditingController.text = cachedCity;
     }
-    final cachedState = (HiveHelp.read(Keys.state) ?? '').toString().trim();
+    final cachedState = (HiveHelp.read(Keys.state) ?? HiveHelp.read('state') ?? '').toString().trim();
     if (cachedState.isNotEmpty && stateEditingController.text.trim().isEmpty) {
       stateEditingController.text = cachedState;
     }

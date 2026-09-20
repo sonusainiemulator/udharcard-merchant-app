@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -36,6 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().getProfile(isFromRefreshIndicator: true);
+      } else {
+        Get.put(ProfileController()).getProfile();
+      }
       if (Get.isRegistered<UdharController>()) {
         Get.find<UdharController>().fetchUsers();
         Get.find<UdharController>().fetchReports(silent: true);
@@ -83,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (HiveHelp.read(Keys.userName) ?? '').toString().trim();
     final String merchantDisplayName = fullName.isNotEmpty
         ? fullName
-        : (userName.isNotEmpty ? userName : 'Sharma General Store');
+        : (userName.isNotEmpty ? userName : 'UdharCard Merchant');
 
     return Scaffold(
       key: _scaffoldKey,
@@ -93,6 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         color: const Color(0xFF0284C7),
         onRefresh: () async {
+          if (Get.isRegistered<ProfileController>()) {
+            await Get.find<ProfileController>().getProfile(isFromRefreshIndicator: true);
+          }
           if (Get.isRegistered<UdharController>()) {
             await Get.find<UdharController>().fetchUsers();
             await Get.find<UdharController>().fetchReports(silent: true);
@@ -233,98 +242,172 @@ class _HomeScreenState extends State<HomeScreen> {
                           final String currentShopName =
                               profileCtrl.displayShopName.isNotEmpty
                                   ? profileCtrl.displayShopName
-                                  : "Sharma General Store";
-                          final city = profileCtrl.cityEditingController.text.trim();
-                          final state = profileCtrl.stateEditingController.text.trim();
-                          final String location = (city.isNotEmpty || state.isNotEmpty)
-                              ? "${city.isNotEmpty ? city : 'Hisar'}, ${state.isNotEmpty ? state : 'Haryana'}"
-                              : "Hisar, Haryana";
+                                  : "UdharCard Merchant";
+                          final String location = profileCtrl.displayLocation;
                           final String plan = SubscriptionGateService.currentPlanName();
 
-                          return Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 14.w, vertical: 12.h),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF334155)
-                                    : const Color(0xFFE2E8F0),
+                          return GestureDetector(
+                            onTap: () {
+                              Get.toNamed(RoutesName.profileSettingScreen);
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w, vertical: 12.h),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(
+                                  color: isDark
+                                      ? const Color(0xFF334155)
+                                      : const Color(0xFFE2E8F0),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44.w,
-                                  height: 44.w,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
-                                    borderRadius: BorderRadius.circular(12.r),
-                                  ),
-                                  child: Icon(
-                                    Icons.storefront_rounded,
-                                    color: const Color(0xFF2563EB),
-                                    size: 24.sp,
-                                  ),
-                                ),
-                                SizedBox(width: 12.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        currentShopName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 14.5.sp,
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark
-                                              ? Colors.white
-                                              : const Color(0xFF0F172A),
-                                        ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 44.w,
+                                    height: 44.w,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(
+                                        color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                        width: 1,
                                       ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        location,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFF64748B),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: (profileCtrl.userPhoto.isNotEmpty &&
+                                            !profileCtrl.userPhoto.endsWith('/default.png'))
+                                        ? CachedNetworkImage(
+                                            imageUrl: profileCtrl.userPhoto,
+                                            fit: BoxFit.cover,
+                                            errorWidget: (_, __, ___) => Icon(
+                                              Icons.storefront_rounded,
+                                              color: const Color(0xFF2563EB),
+                                              size: 24.sp,
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.storefront_rounded,
+                                            color: const Color(0xFF2563EB),
+                                            size: 24.sp,
+                                          ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          currentShopName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 14.5.sp,
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark
+                                                ? Colors.white
+                                                : const Color(0xFF0F172A),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 10.w, vertical: 4.h),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
-                                    borderRadius: BorderRadius.circular(20.r),
-                                  ),
-                                  child: Text(
-                                    plan,
-                                    style: TextStyle(
-                                      fontSize: 11.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF16A34A),
+                                        SizedBox(height: 3.h),
+                                        Row(
+                                          children: [
+                                            // Online / Offline live status indicator
+                                            GestureDetector(
+                                              onTap: () => profileCtrl.toggleShopOnlineStatus(),
+                                              behavior: HitTestBehavior.opaque,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 7.w,
+                                                    height: 7.w,
+                                                    decoration: BoxDecoration(
+                                                      color: profileCtrl.isShopOnline
+                                                          ? const Color(0xFF10B981)
+                                                          : const Color(0xFFEF4444),
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: (profileCtrl.isShopOnline
+                                                                  ? const Color(0xFF10B981)
+                                                                  : const Color(0xFFEF4444))
+                                                              .withValues(alpha: 0.45),
+                                                          blurRadius: 4,
+                                                          spreadRadius: 1,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 4.w),
+                                                  Text(
+                                                    profileCtrl.isShopOnline ? "Online" : "Offline",
+                                                    style: TextStyle(
+                                                      fontSize: 11.sp,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: profileCtrl.isShopOnline
+                                                          ? const Color(0xFF10B981)
+                                                          : const Color(0xFFEF4444),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(width: 5.w),
+                                            Text(
+                                              "•",
+                                              style: TextStyle(
+                                                fontSize: 10.sp,
+                                                color: const Color(0xFF94A3B8),
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            SizedBox(width: 5.w),
+                                            Expanded(
+                                              child: Text(
+                                                location,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 11.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ],
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10.w, vertical: 4.h),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    child: Text(
+                                      plan,
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF16A34A),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -334,9 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // ── 3. 3 Metrics Cards Row matching Screen 1 ────────────
                     GetBuilder<UdharController>(
                       builder: (udharCtrl) {
-                        final int customerCount = udharCtrl.usersList.length > 0
-                            ? udharCtrl.usersList.length
-                            : 28;
+                        final int customerCount = udharCtrl.usersList.length;
                         int debtorsCount = 0;
                         double totalDueAmount = 0.0;
                         for (var u in udharCtrl.usersList) {
@@ -351,17 +432,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             totalDueAmount += bal;
                           }
                         }
-                        if (debtorsCount == 0) debtorsCount = 5;
-                        if (totalDueAmount == 0.0) totalDueAmount = 8760.0;
 
-                        double todayColl = 4230.0;
+                        double todayColl = 0.0;
                         if (udharCtrl.reportsSummary['total_debit_received'] !=
                             null) {
                           final d = double.tryParse(udharCtrl
                                   .reportsSummary['total_debit_received']
                                   .toString()) ??
                               0.0;
-                          if (d > 0) todayColl = d;
+                          todayColl = d;
                         }
 
                         return Row(
@@ -375,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 iconBg: const Color(0xFFDCFCE7),
                                 title: "Today's Collection",
                                 value: "₹ ${todayColl.toStringAsFixed(0)}",
-                                badgeText: "+ ₹1,250 vs yesterday",
+                                badgeText: todayColl > 0 ? "Received" : "No collection",
                                 badgeColor: const Color(0xFF16A34A),
                                 isDark: isDark,
                               ),
@@ -390,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 iconBg: const Color(0xFFDBEAFE),
                                 title: "Total Customers",
                                 value: "$customerCount",
-                                badgeText: "+2 new",
+                                badgeText: customerCount == 1 ? "1 active" : "$customerCount active",
                                 badgeColor: const Color(0xFF2563EB),
                                 isDark: isDark,
                               ),
@@ -405,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 iconBg: const Color(0xFFFEE2E2),
                                 title: "Due Today",
                                 value: "₹ ${totalDueAmount.toStringAsFixed(0)}",
-                                badgeText: "$debtorsCount customers",
+                                badgeText: debtorsCount == 1 ? "1 customer" : "$debtorsCount customers",
                                 badgeColor: const Color(0xFFEF4444),
                                 isDark: isDark,
                               ),
@@ -589,38 +668,53 @@ class _HomeScreenState extends State<HomeScreen> {
                           return bal > 0;
                         }).toList();
 
-                        // If no live due customers yet, provide standard demo items matching screenshot
                         if (dueList.isEmpty) {
-                          dueList = [
-                            {
-                              'id': '1',
-                              'name': 'Rajesh Kumar',
-                              'phone': '+91 98765 43210',
-                              'outstanding_balance': 2450.0,
-                              'days_due': 3,
-                            },
-                            {
-                              'id': '2',
-                              'name': 'Suresh Yadav',
-                              'phone': '+91 98765 43211',
-                              'outstanding_balance': 1280.0,
-                              'days_due': 5,
-                            },
-                            {
-                              'id': '3',
-                              'name': 'Pooja Sharma',
-                              'phone': '+91 98765 43212',
-                              'outstanding_balance': 980.0,
-                              'days_due': 7,
-                            },
-                            {
-                              'id': '4',
-                              'name': 'Amit Singh',
-                              'phone': '+91 98765 43213',
-                              'outstanding_balance': 2150.0,
-                              'days_due': 10,
-                            },
-                          ];
+                          return Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 24.h),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(14.r),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: const Color(0xFF10B981),
+                                  size: 36.sp,
+                                ),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  "No Outstanding Dues",
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  "All customer payments are settled and up to date.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11.5.sp,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
                         }
 
                         return ListView.separated(
@@ -641,8 +735,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                         0)
                                     .toString()) ??
                                 0.0;
-                            final int days = customer['days_due'] ??
-                                (3 + (index * 2));
+                            final daysDueVal = customer['days_due'];
+                            final String daysText = daysDueVal != null
+                                ? "$daysDueVal days due"
+                                : (customer['due_date'] != null
+                                    ? "Due by ${customer['due_date']}"
+                                    : "Active udhar");
 
                             return InkWell(
                               onTap: () => _navigateToLedger(
@@ -708,7 +806,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           SizedBox(height: 2.h),
                                           Text(
-                                            "$days days due",
+                                            daysText,
                                             style: TextStyle(
                                               fontSize: 11.sp,
                                               fontWeight: FontWeight.w600,
@@ -909,45 +1007,70 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── Drawer Header ────────────────────────────────────────────
-            Container(
-              padding: EdgeInsets.all(20.r),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0857E6), // solid brand blue
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 28.r,
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    child: Icon(
-                      Icons.storefront_rounded,
-                      color: Colors.white,
-                      size: 28.sp,
-                    ),
+            GetBuilder<ProfileController>(
+              builder: (profileCtrl) {
+                final String displayName = profileCtrl.displayShopName;
+                final String livePhone = profileCtrl.phoneNumberEditingController.text.trim().isNotEmpty
+                    ? profileCtrl.phoneNumberEditingController.text.trim()
+                    : phone;
+
+                return Container(
+                  padding: EdgeInsets.all(20.r),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0857E6), // solid brand blue
                   ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    merchantDisplayName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  if (phone.isNotEmpty) ...[
-                    SizedBox(height: 4.h),
-                    Text(
-                      phone,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 56.r,
+                        height: 56.r,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: (profileCtrl.userPhoto.isNotEmpty &&
+                                !profileCtrl.userPhoto.endsWith('/default.png'))
+                            ? CachedNetworkImage(
+                                imageUrl: profileCtrl.userPhoto,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Icon(
+                                  Icons.storefront_rounded,
+                                  color: Colors.white,
+                                  size: 28.sp,
+                                ),
+                              )
+                            : Icon(
+                                Icons.storefront_rounded,
+                                color: Colors.white,
+                                size: 28.sp,
+                              ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                      SizedBox(height: 12.h),
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (livePhone.isNotEmpty) ...[
+                        SizedBox(height: 4.h),
+                        Text(
+                          livePhone,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ),
             // ── Nav Items ────────────────────────────────────────────────
             Expanded(

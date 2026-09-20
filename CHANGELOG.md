@@ -5,7 +5,50 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.74] - 2026-09-21 01:01:00 IST
+## [1.0.75] - 2026-09-21 01:18:00 IST
+
+### 🏪 Dynamic Home Screen, Live Online/Offline Status Indicator & Real-Time Merchant Data Sync
+
+#### Summary
+Bumped version to `1.0.75+76`. Replaced static "Hisar, Haryana" store location text and static fallback store name with completely dynamic merchant profile values. Added an interactive real-time **Online / Offline Status Indicator** (dot + label with tap-to-toggle capability), made all three home dashboard metrics 100% dynamic, and removed fake placeholder data from the Due Customers section in favor of real customer accounts and a clean empty-state widget.
+
+#### 📍 Dynamic Location & Store Card (`home_screen.dart`, `profile_controller.dart`, `profile_setting_screen.dart`)
+- **Resolved Static "Hisar, Haryana"**:
+  - Replaced hardcoded fallback in `home_screen.dart` and `profile_setting_screen.dart` with `profileCtrl.displayLocation`.
+  - Intelligently aggregates saved city, state, landmark, or address from active controller fields and local Hive cache (`city, state` > `city` > `landmark` > `address` > `India`).
+- **Dynamic Store Name (`displayShopName`)**:
+  - Replaced hardcoded "Sharma General Store" with `profileCtrl.displayShopName`, checking active controller values, `Keys.shopName`, `'shop_name'`, `'business_name'`, `Keys.userFullName`, and `Keys.userName`.
+- **Live Online / Offline Status Indicator**:
+  - Embedded a live status indicator into the floating store card:
+    - Glowing status dot: `#10B981` (Emerald Green) for **Online** / `#EF4444` (Crimson Red) for **Offline**.
+    - Bold status text: `"Online"` / `"Offline"`.
+    - Integrated with `GestureDetector` so merchants can tap the indicator directly to toggle their store's open/closed state with instant toast notification and server synchronization.
+- **Dynamic Store Avatar**:
+  - Store card and navigation drawer now display the merchant's uploaded profile picture (`profileCtrl.userPhoto`) using `CachedNetworkImage`, smoothly falling back to the branded storefront icon if none is set.
+
+#### 📊 100% Dynamic Home Dashboard Metrics
+- **Today's Collection**:
+  - Connected directly to `udharCtrl.reportsSummary['total_debit_received']`, displaying `₹ 0` with `"No collection"` or `"Received"` badge instead of hardcoded demo values.
+- **Total Customers**:
+  - Reflects exact active user list size (`udharCtrl.usersList.length`) with dynamic `"$customerCount active"` badge instead of hardcoded `28` and `+2 new`.
+- **Due Today**:
+  - Accurately sums real outstanding balances from `udharCtrl.usersList` with dynamic `"$debtorsCount customers"` badge instead of fake demo totals.
+
+#### 👥 Dynamic Due Customers Section
+- **Removed Fake Rajesh Kumar Demo Items**:
+  - Eliminated mock fallback list. If no customers currently have dues, displays a clean, reassuring `"No Outstanding Dues"` status card ("All customer payments are settled and up to date.").
+- **Dynamic Due Days & Navigation**:
+  - Uses real `days_due` or calculates due status from `due_date`, linking directly to the customer's ledger screen.
+
+#### 🔄 Automatic Profile Fetch & Local Cache Hardening
+- **InitState & Pull-to-Refresh Sync**:
+  - `HomeScreen` now triggers `ProfileController.getProfile(isFromRefreshIndicator: true)` in `initState` and `onRefresh` alongside `UdharController` and `AppController`.
+- **Cross-Key Hive Compatibility**:
+  - Enhanced `loadLocalProfileInfo()` in `ProfileController` to read both camelCase `Keys.*` and snake_case backend keys for shop name, address, city, state, and online status.
+
+---
+
+
 
 ### 🛠️ Edit Profile Infinite Loading Fix & End-to-End Merchant Profile Synchronization
 
