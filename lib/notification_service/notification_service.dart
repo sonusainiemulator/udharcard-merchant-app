@@ -31,22 +31,40 @@ class LocalNotificationService {
           ?.createNotificationChannel(channel);
     }
 
-    var initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+    var initializationSettingsIOS = const DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     var initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid, iOS: initializationSettingsIOS);
-    await notificationsPlugin.initialize(initializationSettings,
-        onDidReceiveNotificationResponse:
-            (NotificationResponse notificationResponse) async {
-      HiveHelp.write(Keys.isNotificationSeen, true);
-      Get.put(PushNotificationController()).isSeen.value =
-          HiveHelp.read(Keys.isNotificationSeen);
-      Get.toNamed(RoutesName.notificationScreen);
-    });
+    try {
+      await notificationsPlugin.initialize(initializationSettings,
+          onDidReceiveNotificationResponse:
+              (NotificationResponse notificationResponse) async {
+        HiveHelp.write(Keys.isNotificationSeen, true);
+        Get.put(PushNotificationController()).isSeen.value =
+            HiveHelp.read(Keys.isNotificationSeen);
+        Get.toNamed(RoutesName.notificationScreen);
+      });
+    } catch (e) {
+      debugPrint("LocalNotificationService initialize error: $e");
+    }
+  }
+
+  Future<bool?> requestPermissions() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      return await notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+    }
+    return null;
   }
 
   notificationDetails() => const NotificationDetails(

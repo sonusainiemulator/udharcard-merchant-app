@@ -6,7 +6,8 @@ import 'localstorage/hive.dart';
 class VoiceSoundboxService extends GetxService {
   static VoiceSoundboxService get to => Get.find<VoiceSoundboxService>();
 
-  final FlutterTts _tts = FlutterTts();
+  FlutterTts? _ttsInstance;
+  FlutterTts get _tts => _ttsInstance ??= FlutterTts();
   final RxBool isSoundboxEnabled = true.obs;
   bool _isInitialized = false;
 
@@ -15,9 +16,8 @@ class VoiceSoundboxService extends GetxService {
     super.onInit();
     final dynamic stored = HiveHelp.read('soundbox_voice_alerts');
     isSoundboxEnabled.value = stored == null ? true : (stored == true);
-    // Do not initialize TTS synchronously during onInit / app startup.
-    // Querying speech voices synchronously during iOS launch blocks the main thread
-    // and causes iOS watchdog termination (crash 0x8badf00d).
+    // TTS is lazily instantiated on first announcement to prevent audio session
+    // initialization and watchdog termination (0x8badf00d) on iOS launch.
   }
 
   Future<void> _initTts() async {

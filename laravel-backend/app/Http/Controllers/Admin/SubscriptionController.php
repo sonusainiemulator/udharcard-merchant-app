@@ -369,7 +369,19 @@ class SubscriptionController extends Controller
 
         $requests = $query->paginate(20)->withQueryString();
 
-        return view('admin.subscriptions.requests', compact('requests', 'status'));
+        $pendingCount = SubscriptionRequest::where('status', 'pending')->count();
+        $approvedCount = SubscriptionRequest::where('status', 'approved')->count();
+        $rejectedCount = SubscriptionRequest::where('status', 'rejected')->count();
+        $allCount = SubscriptionRequest::count();
+
+        return view('admin.subscriptions.requests', compact(
+            'requests',
+            'status',
+            'pendingCount',
+            'approvedCount',
+            'rejectedCount',
+            'allCount'
+        ));
     }
 
     /**

@@ -5,6 +5,82 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.69] - 2026-09-20 14:10:00 IST
+
+### 🛠️ Fix Undefined Variable `$pendingCount` on Admin Subscription Requests Page (`/admin/subscriptions/requests`)
+
+#### Root Cause Analysis
+1. **Missing View Variable in Controller (`SubscriptionController@requests`)**:
+   - The web admin route `/admin/subscriptions/requests` maps to `SubscriptionController@requests`.
+   - The blade view `resources/views/admin/subscriptions/requests.blade.php` renders status filter tabs and conditionally displays a badge with count on the "Pending" tab using `{{ $pendingCount }}`.
+   - The controller method `SubscriptionController@requests` was only compacting and returning `['requests', 'status']`, causing an `ErrorException: Undefined variable $pendingCount` in PHP 8.4 on line 49 of `requests.blade.php`.
+
+#### Key Changes & Fixes
+- **Backend Controller (`laravel-backend/app/Http/Controllers/Admin/SubscriptionController.php`)**:
+   - Updated `requests()` method to query and provide `$pendingCount`, `$approvedCount`, `$rejectedCount`, and `$allCount` using `SubscriptionRequest` counts.
+   - Passed all count variables to `resources/views/admin/subscriptions/requests.blade.php`.
+- **Blade Template Hardening (`laravel-backend/resources/views/admin/subscriptions/requests.blade.php`)**:
+   - Added null-coalescing fallback `{{ $pendingCount ?? 0 }}` so the template is fully defensive and never throws an undefined variable error.
+   - Added count badges for `approved`, `rejected`, and `all` filter tabs when counts are greater than 0.
+- **Repository Sync**:
+   - Tracked `SubscriptionRequest.php`, `plans.blade.php`, `requests.blade.php`, and `trials.blade.php` in `laravel-backend/` to ensure all admin subscription views and models are version controlled.
+- **Production Server Deployment & Verification**:
+   - Deployed updated `SubscriptionController.php` and `requests.blade.php` to the live server at `pay.udharcard.shop` (`/www/wwwroot/pay.udharcard.shop`).
+   - Cleared compiled view cache and route cache with PHP 8.4 (`/www/server/php/84/bin/php artisan view:clear` & `route:clear`).
+   - Verified end-to-end rendering via `artisan tinker` simulating admin session: view compiles and renders successfully (`Rendered length: 104667`) with zero errors.
+
+## [1.0.69] - 2026-09-20 14:05:00 IST
+
+### 🍏 iOS 18+ / iOS 27 Launch Crash Fix on iPhone 16e & Package Upgrades
+
+#### Root Cause Analysis
+1. **Watchdog Deadlock & Early Platform Channels in `main()`**:
+   - In `lib/main.dart`, `main()` was awaiting `_initializeApp()`, which synchronously invoked `GoogleSignIn.instance.initialize` and `LocalNotificationService().initNotification()` prior to `runApp(const MyApp())`.
+   - On iOS 18+ and iOS 27 (tested on real iPhone 16e `iPhone17,5`), invoking platform channel operations that request authorization or touch the window hierarchy before `FlutterViewController` is attached causes SpringBoard watchdog termination (`0x8badf00d`), an unhandled platform exception, or an authorization modal crash.
+2. **Synchronous Notification Permission Prompts**:
+   - `DarwinInitializationSettings` had `requestAlertPermission: true`, `requestBadgePermission: true`, and `requestSoundPermission: true` during notification initialization on startup.
+   - On modern iOS, requesting notification permissions before the application scene/window is active violates Apple HIG and triggers immediate termination.
+3. **`AppDelegate.swift` SetPluginRegistrantCallback**:
+   - `FlutterLocalNotificationsPlugin.setPluginRegistrantCallback` was invoked in `AppDelegate.swift` without any background action isolate callback registered in Dart. Modern iOS throws fatal assertion failures when an unconfigured background registrant is invoked.
+4. **Immediate TTS / Audio Session Instantiation**:
+   - `VoiceSoundboxService` eagerly instantiated `FlutterTts()` on launch (`Get.put(VoiceSoundboxService(), permanent: true)`), initializing `AVSpeechSynthesizer` / `AVAudioSession` during startup.
+5. **Outdated Darwin Platform Adapters**:
+   - Outdated packages lacked updated iOS 18/27 symbol and lifecycle adjustments (`google_sign_in_ios`, `firebase_core`, `path_provider_foundation`, `local_auth_darwin`, `webview_flutter_wkwebview`).
+
+#### Key Changes & Fixes
+- **Ultra-Fast & Resilient Startup (`lib/main.dart`)**:
+   - Added global `FlutterError.onError` handler.
+   - Streamlined `main()`: initializes `WidgetsFlutterBinding`, safe fallback `Firebase.initializeApp`, safe `initHive`, `dotenv.load`, and `AppController`, then immediately invokes `runApp(const MyApp())` in <100ms.
+   - Removed blocking `GoogleSignIn.instance.initialize` from `main()` (`AuthController` initializes lazily on demand when user taps Google Sign-In).
+   - Moved `LocalNotificationService().initNotification()` to `addPostFrameCallback` so it executes non-blockingly after the first frame paints.
+   - Removed deprecated `useInheritedMediaQuery: true` from `ScreenUtilInit`.
+   - Protected `ErrorWidget.builder` from depending on ScreenUtil `.h` during early initialization errors.
+- **Notification Service Hardening (`lib/notification_service/notification_service.dart`)**:
+   - Configured `DarwinInitializationSettings` with `requestAlertPermission: false`, `requestBadgePermission: false`, `requestSoundPermission: false` on startup.
+   - Added `requestPermissions()` method to prompt for permissions only when appropriate (e.g., settings screen or dedicated permission flow).
+   - Wrapped `notificationsPlugin.initialize` in a safe try-catch.
+- **Lazy Text-To-Speech (`lib/utils/services/voice_soundbox_service.dart`)**:
+   - Made `FlutterTts` lazily initialized (`_ttsInstance ??= FlutterTts()`), preventing any audio session interaction during startup.
+- **Native iOS AppDelegate Streamlining (`ios/Runner/AppDelegate.swift`)**:
+   - Removed redundant `setPluginRegistrantCallback`.
+   - Safely set `UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate`.
+   - Cleanly registered plugins with `GeneratedPluginRegistrant.register(with: self)`.
+- **Deployment Target Enforcement (`ios/Podfile`)**:
+   - Enforced `IPHONEOS_DEPLOYMENT_TARGET = '15.0'` across all CocoaPods targets in `post_install`.
+- **Controller Safety (`lib/controllers/app_controller.dart`)**:
+   - Protected `getBasicCtrl()` from attempting to display toasts or snackbars during splash screen if the network returns non-200.
+- **Dependency Upgrades (`pubspec.yaml` & CocoaPods)**:
+   - Upgraded 77 Dart/Flutter dependencies via `flutter pub upgrade`.
+   - Updated native CocoaPods specs: `GoogleSignIn 9.2.0`, `Firebase 11.15.0`, `AppAuth 2.1.0`, `SDWebImage 5.21.7`, `local_auth_darwin`, `image_picker_ios`, `shared_preferences_foundation`, `sqflite_darwin`, `url_launcher_ios`, `webview_flutter_wkwebview`.
+- **TestFlight Deployment (v1.0.69+70)**:
+   - Successfully archived release bundle `Runner.xcarchive` (281.7MB).
+   - Exported production IPA `Udharcard Merchant.ipa` (37.5MB).
+   - Uploaded to Apple App Store Connect TestFlight (`Delivery UUID: 6c461bcd-e720-45aa-aeb3-e097d0c24a2b`).
+- **Android APK Build & GitHub Release (v1.0.69)**:
+   - Built production signed release APK (`udharcard-merchant-app-v1.0.69-release.apk`).
+   - Built debug APK (`udharcard-merchant-app-v1.0.69-debug.apk` and `app-debug.apk`).
+   - Published GitHub Release `v1.0.69` with all APK binaries attached.
+
 ## [1.0.68] - 2026-09-20 13:14:00 IST
 
 ### 🔒 Block Administrator Mobile Numbers from Logging In or Registering in Merchant App

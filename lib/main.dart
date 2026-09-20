@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:paysecure/firebase_options.dart';
 import 'package:paysecure/utils/services/custom_error.dart';
 import 'controllers/app_controller.dart';
@@ -19,6 +18,14 @@ import 'utils/services/localstorage/init_hive.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Protect against unhandled Flutter framework errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint("FlutterError caught: ${details.exceptionAsString()}");
+  };
+
+  // Safe Firebase Initialization
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -33,10 +40,43 @@ void main() async {
       debugPrint("Firebase init fallback error: $err");
     }
   }
-  await initHive();
-  await _initializeApp();
-  Get.put(AppController(), permanent: true);
+
+  // Safe local storage initialization
+  try {
+    await initHive();
+  } catch (e) {
+    debugPrint("Hive init error in main: $e");
+  }
+
+  // Safe environment variables loading
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("dotenv load warning (using defaults): $e");
+  }
+
+  // Register AppController
+  try {
+    Get.put(AppController(), permanent: true);
+  } catch (e) {
+    debugPrint("AppController put error: $e");
+  }
+
+  // Immediately launch the UI so iOS watchdog never terminates app
   runApp(const MyApp());
+
+  // Non-blocking background service initialization post-frame
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initBackgroundServices();
+  });
+}
+
+void _initBackgroundServices() async {
+  try {
+    await LocalNotificationService().initNotification();
+  } catch (e) {
+    debugPrint("LocalNotificationService init error: $e");
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -77,7 +117,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             : Center(
               child: Image.asset(
                 '$rootImageDir/404.png',
-                height: 120.h,
+                height: 120.0,
                 width: double.maxFinite,
                 fit: BoxFit.cover,
               ),
@@ -89,7 +129,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       designSize: const Size(430, 932),
       minTextAdapt: true,
       splitScreenMode: true,
-      useInheritedMediaQuery: true,
       builder: (context, child) {
         return GetMaterialApp(
           title: AppConstants.appName,
@@ -103,38 +142,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           transitionDuration: const Duration(milliseconds: 220),
           getPages: RouteHelper.routes(),
           builder: (BuildContext context, Widget? widget) {
-            return widget ?? Container(child: Text("Widget is null"));
+            return widget ?? const SizedBox.shrink();
           },
         );
       },
     );
-  }
-}
-
-_initializeApp() async {
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("dotenv load warning (using defaults): $e");
-  }
-  try {
-    final serverClientId = (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '').trim().isNotEmpty
-        ? dotenv.env['GOOGLE_SERVER_CLIENT_ID']!.trim()
-        : AppConstants.googleServerClientId;
-    final iosClientId = defaultTargetPlatform == TargetPlatform.iOS
-        ? DefaultFirebaseOptions.ios.iosClientId
-        : null;
-    await GoogleSignIn.instance.initialize(
-      serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
-      clientId: iosClientId,
-    );
-  } catch (e) {
-    debugPrint("GoogleSignIn init attempt error: $e");
-  }
-  try {
-    await LocalNotificationService().initNotification();
-  } catch (e) {
-    debugPrint("LocalNotificationService init error: $e");
   }
 }
 

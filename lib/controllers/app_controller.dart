@@ -156,11 +156,13 @@ class AppController extends GetxController {
           ApiStatus.checkStatus(data['status'], data['message']);
         }
       } else {
-        var data = jsonDecode(response.body);
-        Helpers.showSnackBar(msg: '${data['message']}');
+        try {
+          var data = jsonDecode(response.body);
+          debugPrint("getBasicCtrl non-200: ${data['message']}");
+        } catch (_) {}
       }
-    } catch (_) {
-      // Keep existing basicCtrlList or handle error
+    } catch (e) {
+      debugPrint("getBasicCtrl error: $e");
     } finally {
       isGettingBasicCtrl = false;
       update();
