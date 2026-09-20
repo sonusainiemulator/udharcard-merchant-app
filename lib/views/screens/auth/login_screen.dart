@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -97,6 +98,20 @@ class LoginScreen extends StatelessWidget {
                         final checkRes = await AuthRepo.checkMerchantExist(
                           data: {"phone": phone},
                         );
+                        if (checkRes.statusCode == 403) {
+                          controller.isLoading = false;
+                          String errorMsg =
+                              'This mobile number belongs to an Administrator. Admin accounts cannot log in to the Merchant app. Please use the Admin Portal.';
+                          try {
+                            final data = jsonDecode(checkRes.body);
+                            if (data['message'] != null) {
+                              errorMsg = data['message'].toString();
+                            }
+                          } catch (_) {}
+                          controller.loginErrorMessage = errorMsg;
+                          controller.update([AuthController.authSubmissionUpdateId]);
+                          return;
+                        }
                         if (checkRes.statusCode == 404) {
                           controller.isLoading = false;
                           controller.loginErrorMessage =

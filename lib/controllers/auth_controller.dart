@@ -665,6 +665,13 @@ class AuthController extends GetxController {
         'type': 'merchant',
       });
 
+      if (response.statusCode == 403) {
+        debugPrint("ensureSanctumToken: Admin number blocked ($cleanPhone)");
+        HiveHelp.remove(Keys.token);
+        HiveHelp.remove(Keys.userId);
+        return false;
+      }
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success' && data['token'] != null) {
@@ -709,6 +716,27 @@ class AuthController extends GetxController {
           "username": cleanPhone,
           "type": "merchant",
         });
+
+        if (otpResponse.statusCode == 403) {
+          String errorMsg =
+              'This mobile number belongs to an Administrator. Admin accounts cannot log in to the Merchant app. Please use the Admin Portal.';
+          try {
+            final data = jsonDecode(otpResponse.body);
+            if (data['message'] != null) {
+              errorMsg = data['message'].toString();
+            }
+          } catch (_) {}
+          loginErrorMessage = errorMsg;
+          isLoading = false;
+          _isOtpRequestInProgress = false;
+          _notifyAuthSubmission();
+          Helpers.showSnackBar(
+            title: 'Access Restricted',
+            msg: errorMsg,
+          );
+          return;
+        }
+
         if (otpResponse.statusCode == 200) {
           final data = jsonDecode(otpResponse.body);
           if (data['status'] == 'success') {
@@ -763,6 +791,26 @@ class AuthController extends GetxController {
           }
 
           final response = await AuthRepo.login(data: loginPayload);
+          if (response.statusCode == 403) {
+            String errorMsg =
+                'This mobile number belongs to an Administrator. Admin accounts cannot log in to the Merchant app. Please use the Admin Portal.';
+            try {
+              final data = jsonDecode(response.body);
+              if (data['message'] != null) {
+                errorMsg = data['message'].toString();
+              }
+            } catch (_) {}
+            loginErrorMessage = errorMsg;
+            isLoading = false;
+            _isOtpRequestInProgress = false;
+            _notifyAuthSubmission();
+            Helpers.showSnackBar(
+              title: 'Access Restricted',
+              msg: errorMsg,
+            );
+            return;
+          }
+
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
             if (data['status'] == 'success') {

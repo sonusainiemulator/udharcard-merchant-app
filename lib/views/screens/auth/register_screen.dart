@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/auth_controller.dart';
+import '../../../data/repositories/auth_repo.dart';
 import '../../../utils/services/helpers.dart';
 import '../../widgets/fintech_auth_widgets.dart';
 
@@ -151,6 +153,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return;
                           }
 
+                          controller.isLoading = true;
+                          controller.loginErrorMessage = null;
+                          controller.update([AuthController.authSubmissionUpdateId]);
+
+                          try {
+                            final checkRes = await AuthRepo.checkMerchantExist(
+                              data: {"phone": phone},
+                            );
+                            if (checkRes.statusCode == 403) {
+                              controller.isLoading = false;
+                              String errorMsg =
+                                  'This mobile number belongs to an Administrator and cannot be registered as a Merchant. Please use the Admin Portal.';
+                              try {
+                                final data = jsonDecode(checkRes.body);
+                                if (data['message'] != null) {
+                                  errorMsg = data['message'].toString();
+                                }
+                              } catch (_) {}
+                              controller.loginErrorMessage = errorMsg;
+                              controller.update([AuthController.authSubmissionUpdateId]);
+                              return;
+                            }
+                          } catch (_) {}
+
+                          controller.isLoading = false;
                           controller.firebasePhoneController.text = phone;
                           await controller.sendFirebaseOtp(phone, isLogin: false);
                         },

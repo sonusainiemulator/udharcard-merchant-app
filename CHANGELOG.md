@@ -5,6 +5,42 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.68] - 2026-09-20 13:14:00 IST
+
+### 🔒 Block Administrator Mobile Numbers from Logging In or Registering in Merchant App
+
+#### Root Cause Analysis
+1. **Unrestricted Authentication Endpoints**:
+   - The backend authentication endpoints (`checkMerchantExist`, `otpLogin`, `loginUser`, `registerUser`, `getEmailForRecoverPass`) did not verify whether the provided phone number, email, or username belonged to an Administrator in the `admins` table.
+   - Admin account #1 (`Admin User`, `admin@udharcard.shop`) is registered with phone `+919992433121`.
+   - A duplicate user row (User #213) had previously been created in the `users` table with phone `9992433121`, allowing the administrator number to receive OTP and log in to the merchant mobile application.
+2. **Missing Client-Side & Middleware Gating**:
+   - The Flutter mobile application (`login_screen.dart`, `register_screen.dart`, `auth_controller.dart`) did not inspect HTTP 403 Forbidden responses from `checkMerchantExist` and `otpLogin`, allowing OTP requests to proceed.
+
+#### Key Changes
+- **Backend API (`AuthController.php`)**:
+   - Added `isAdminIdentifier(?string $identifier): bool` to query the `admins` table by matching the raw string, stripped digits, last 10 digits, email, and username.
+   - Gated `checkMerchantExist`, `otpLogin`, `loginUser`, `registerUser`, and `getEmailForRecoverPass` to strictly reject any administrator identifier with HTTP 403 Forbidden and error message:
+     `"This mobile number belongs to an Administrator. Admin accounts cannot log in to the Merchant app. Please use the Admin Portal."`
+- **Backend Middleware (`VerifyUserApi.php`)**:
+   - Added real-time check inside `VerifyUserApi` middleware: If an authenticated request originates from a user whose phone matches any administrator in `admins`, immediately revoke all tokens and return HTTP 403 Forbidden.
+- **Database & Session Security**:
+   - Revoked all 22 active personal access tokens for User #213.
+   - Set User #213 `status = 0` (blocked/suspended) to eliminate legacy sessions.
+- **Flutter Mobile App (`login_screen.dart`, `register_screen.dart`, `auth_controller.dart`)**:
+   - `login_screen.dart`: Intercepts HTTP 403 from `checkMerchantExist`, displays administrator restriction error message, and stops OTP transmission.
+   - `register_screen.dart`: Verifies mobile number with `checkMerchantExist` prior to OTP generation; stops registration if HTTP 403 is received.
+   - `auth_controller.dart`: Handles HTTP 403 in `otpLogin` and fallback password logins, cleans local session keys, and displays clear warning toast/snackbar.
+- **Verification & Testing**:
+   - Verified live on `https://pay.udharcard.shop`:
+     - `POST /api/merchant/check-exist` with `phone=9992433121` -> **HTTP 403 Forbidden** (`is_admin: true`).
+     - `POST /api/merchant/otp-login` with `phone=9992433121` -> **HTTP 403 Forbidden**.
+     - `POST /api/register` with `phone=9992433121` -> **HTTP 403 Forbidden**.
+     - Normal non-admin merchant (`8221825824`) -> **HTTP 200 OK** (`exists: true`).
+     - Non-existent merchant (`9999999999`) -> **HTTP 404 Not Found**.
+   - `flutter analyze`: **0 issues found**.
+   - `flutter test test/subscription_system_test.dart`: **4/4 passed**.
+
 ## [1.0.68] - 2026-09-20 13:06:00 IST
 
 ### 🛠️ Fix Premium Free Trial Displaying Gold Plan in Admin Panel & App Gating
