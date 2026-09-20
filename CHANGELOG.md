@@ -5,6 +5,34 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.69] - 2026-09-20 14:38:00 IST
+
+### 🔒 Fix Storage Cache Permission Denied & Admin Passkey Login (`Unexpected token '<', "<!DOCTYPE "... is not valid JSON`)
+
+#### Root Cause Analysis
+1. **Cache & Session Directory Permission Denied**:
+   - Running CLI maintenance tasks as `root` generated file-based cache artifacts under `/www/wwwroot/pay.udharcard.shop/storage/framework/cache/data/` owned by `root:root` with 0644/0755 permissions.
+   - When web requests processed by PHP-FPM (running as user `www`) attempted to write cache and session data (e.g. rate limiters, session challenges, views), PHP threw `ErrorException: file_put_contents(...): Failed to open stream: Permission denied`, causing HTTP 500 errors across admin pages.
+2. **Passkey Guest Middleware Redirection & HTML Response Crash**:
+   - `/passkey/login-options` and `/passkey/login-verify` were nested inside `Route::group(['middleware' => ['guest']], ...)`.
+   - In `RedirectIfAuthenticated`, any user with an existing `web` session was immediately redirected to `user.dashboard` with an HTML response rather than JSON.
+   - In `public/assets/global/js/passkey-client.js`, `fetch` responses were directly passed to `response.json()` without checking `response.ok` or content-type headers. When an HTML error or redirect response was returned, V8 threw `SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON`.
+
+#### Key Changes & Fixes
+- **Production Server Permissions & Cache**:
+   - Re-established `www:www` ownership across `/www/wwwroot/pay.udharcard.shop/storage` and `/www/wwwroot/pay.udharcard.shop/bootstrap/cache` with `777` permissions.
+   - Cleared application, view, and route caches under user `www`.
+- **Passkey Routing Architecture (`laravel-backend/routes/web.php`)**:
+   - Moved `/passkey/login-options` and `/passkey/login-verify` outside the `guest` middleware group to prevent `RedirectIfAuthenticated` from hijacking admin passkey authentication requests.
+- **CSRF Whitelisting (`laravel-backend/app/Http/Middleware/VerifyCsrfToken.php`)**:
+   - Added `*passkey/login-verify*` to `$except` in `VerifyCsrfToken` middleware; WebAuthn assertion verification is inherently protected by origin binding and cryptographic session challenges.
+- **Client-Side Robustness (`laravel-backend/public/assets/global/js/passkey-client.js`)**:
+   - Added `parseResponse` helper with HTTP status validation and safe JSON parsing to eliminate unhandled syntax errors when encountering error pages.
+   - Explicitly configured `credentials: 'same-origin'` on all `fetch` requests (`login`, `register`, `initAutofill`) for reliable session cookie transmission.
+- **Verification**:
+   - Tested `/passkey/login-options?guard=admin` -> HTTP 200 JSON with challenge payload.
+   - Tested `/admin/subscriptions/requests` under user `www` in `artisan tinker` -> renders cleanly (`Rendered length: 104667`).
+
 ## [1.0.69] - 2026-09-20 14:10:00 IST
 
 ### 🛠️ Fix Undefined Variable `$pendingCount` on Admin Subscription Requests Page (`/admin/subscriptions/requests`)
