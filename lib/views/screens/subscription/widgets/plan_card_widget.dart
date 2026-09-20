@@ -22,6 +22,19 @@ class PlanCardWidget extends StatelessWidget {
   final String activePlanCode;
   final bool isLoading;
 
+  static Color? _parseHexColor(String? hex) {
+    if (hex == null || hex.trim().isEmpty) return null;
+    try {
+      final clean = hex.replaceAll('#', '').trim();
+      if (clean.length == 6) {
+        return Color(int.parse('0xFF$clean'));
+      } else if (clean.length == 8) {
+        return Color(int.parse('0x$clean'));
+      }
+    } catch (_) {}
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final code = plan['code']?.toString().toLowerCase() ?? 'basic';
@@ -67,12 +80,20 @@ class PlanCardWidget extends StatelessWidget {
         : [];
 
     // Distinct Theme Colors based on plan
+    final rawTagColor = plan['tag_color']?.toString();
+    final Color? apiThemeColor = _parseHexColor(rawTagColor);
+
     Color borderColor;
     Color buttonColor;
     Color badgeBg;
     Color ribbonColor;
 
-    if (code == 'premium') {
+    if (apiThemeColor != null && code != 'basic') {
+      borderColor = apiThemeColor;
+      buttonColor = apiThemeColor;
+      badgeBg = apiThemeColor;
+      ribbonColor = apiThemeColor;
+    } else if (code == 'premium') {
       borderColor = const Color(0xFF1D4ED8); // Deep royal blue
       buttonColor = const Color(0xFF0F4DB8);
       badgeBg = const Color(0xFF0F3B82);
@@ -103,12 +124,12 @@ class PlanCardWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: borderColor,
-              width: (code == 'premium' || code == 'gold' || isCurrent) ? 2.0 : 1.2,
+              width: (code != 'basic' || isCurrent) ? 2.0 : 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: (code == 'premium' ? const Color(0xFF1D4ED8) : Colors.black)
-                    .withValues(alpha: code == 'premium' ? 0.08 : 0.04),
+                color: (code == 'premium' ? const Color(0xFF1D4ED8) : borderColor)
+                    .withValues(alpha: (code != 'basic' || isCurrent) ? 0.08 : 0.04),
                 blurRadius: 18,
                 offset: const Offset(0, 6),
               ),

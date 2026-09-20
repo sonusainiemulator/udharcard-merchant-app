@@ -14,11 +14,18 @@ class SubscriptionPlansScreen extends StatefulWidget {
 }
 
 class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
-  int _currentPageIndex = 1; // Default highlight Premium Plan in the middle!
-  final PageController _pageController = PageController(
-    initialPage: 1,
-    viewportFraction: 0.88,
-  );
+  int _currentPageIndex = 1;
+  late final PageController _pageController;
+  bool _initializedPage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(
+      initialPage: 1,
+      viewportFraction: 0.88,
+    );
+  }
 
   @override
   void dispose() {
@@ -34,6 +41,26 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         final activeCode = controller.activePlanCode.toLowerCase();
         final isTrial = controller.isTrialActive;
         final trialDays = controller.trialDaysRemaining;
+
+        if (!_initializedPage && controller.plans.isNotEmpty) {
+          _initializedPage = true;
+          final targetIndex = controller.plans.indexWhere((p) {
+            final code = p['code']?.toString().toLowerCase();
+            if (controller.isTrialActive || controller.activePlanCode.isNotEmpty) {
+              return code == controller.activePlanCode.toLowerCase();
+            }
+            return (p['tag']?.toString().toUpperCase().contains('POPULAR') ?? false) ||
+                ((p['trial_days'] as num? ?? 0) > 0);
+          });
+          if (targetIndex >= 0 && targetIndex < controller.plans.length) {
+            _currentPageIndex = targetIndex;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(targetIndex);
+              }
+            });
+          }
+        }
 
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
@@ -81,16 +108,16 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '🎉 Premium Free Trial Active!',
-                                    style: TextStyle(
+                                  Text(
+                                    '🎉 ${controller.currentPlanName} Free Trial Active!',
+                                    style: const TextStyle(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w800,
                                       color: Color(0xFF1E3A8A),
                                     ),
                                   ),
                                   Text(
-                                    '$trialDays ${trialDays == 1 ? "day" : "days"} remaining. Enjoy full AI Voice Khata access.',
+                                    '$trialDays ${trialDays == 1 ? "day" : "days"} remaining. Enjoy full AI Voice Khata & features.',
                                     style: const TextStyle(
                                       fontSize: 12.5,
                                       color: Color(0xFF1E40AF),
@@ -117,7 +144,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Your current plan: ${controller.activePlanCode.toUpperCase()}',
+                                'Your current plan: ${controller.currentPlanName}',
                                 style: const TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w800,
@@ -131,7 +158,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
 
                     // --- Pending Offline Request Banner ---
                     if (controller.pendingOfflineRequest != null)
-                      _buildPendingRequestBanner(controller.pendingOfflineRequest!),
+                      _buildPendingRequestBanner(controller, controller.pendingOfflineRequest!),
 
                     // --- Billing Cycle Switcher ---
                     Center(
@@ -267,30 +294,37 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                     const SizedBox(height: 18),
 
                     // Trust Badge Footer
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 20),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Zero Risk. You can cancel or switch plans anytime. Free Basic Plan remains available forever.',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: Color(0xFF64748B),
-                                height: 1.3,
+                    Builder(builder: (context) {
+                      final basicPlan = controller.plans.cast<dynamic>().firstWhere(
+                        (p) => p is Map && ((p['monthly_price'] as num?)?.toDouble() ?? 0) == 0,
+                        orElse: () => null,
+                      );
+                      final basicName = (basicPlan is Map ? basicPlan['name']?.toString() : null) ?? 'Basic Plan';
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Zero Risk. You can cancel or switch plans anytime. Free $basicName remains available forever.',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF64748B),
+                                  height: 1.3,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
         );
@@ -356,8 +390,25 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     );
   }
 
-  Widget _buildPendingRequestBanner(Map<String, dynamic> req) {
-    final code = req['requested_plan_code']?.toString() ?? 'Plan';
+  Widget _buildPendingRequestBanner(
+    SubscriptionController controller,
+    Map<String, dynamic> req,
+  ) {
+    final code = req['requested_plan_code']?.toString().toLowerCase() ?? '';
+    final planFromReq = req['plan'];
+    String planName = (planFromReq is Map ? planFromReq['name']?.toString() : null) ?? '';
+    if (planName.isEmpty) {
+      for (final p in controller.plans) {
+        if (p is Map && p['code']?.toString().toLowerCase() == code) {
+          planName = p['name']?.toString() ?? '';
+          break;
+        }
+      }
+    }
+    if (planName.isEmpty) {
+      planName = code.isNotEmpty ? '${code[0].toUpperCase()}${code.substring(1)} Plan' : 'Plan';
+    }
+
     final when = req['created_at']?.toString().split('T').first ?? '';
 
     return Container(
@@ -374,7 +425,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Offline upgrade request for "$code" submitted on $when. Admin will verify and activate your plan.',
+              'Offline upgrade request for "$planName" submitted on $when. Admin will verify and activate your plan.',
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E)),
             ),
           ),
@@ -391,6 +442,18 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     final planName = plan['name']?.toString() ?? 'Premium Plan';
     final trialDays = (plan['trial_days'] as num?)?.toInt() ?? 7;
 
+    final rawFeatures = plan['features'];
+    final List<String> features = rawFeatures is List
+        ? rawFeatures.map((e) => e.toString()).take(3).toList()
+        : [
+            'Full access to AI Voice Khata',
+            'Voice credit entry & balance queries',
+          ];
+
+    final featuresListText = features.isNotEmpty
+        ? features.map((f) => '• $f').join('\n')
+        : '• Full access to $planName features';
+
     final confirm = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -403,8 +466,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         ),
         content: Text(
           'Activate your $trialDays-Day Free Trial of $planName?\n\n'
-          '• Full access to AI Voice Khata\n'
-          '• Voice credit entry & balance queries\n'
+          '$featuresListText\n'
           '• No payment required upfront',
           style: const TextStyle(height: 1.4, fontSize: 13.5),
         ),

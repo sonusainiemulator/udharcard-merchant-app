@@ -92,6 +92,20 @@
                                     {{ trim(($merchant->firstname ?? '') . ' ' . ($merchant->lastname ?? '')) ?: $merchant->username }}
                                 </span>
                                 <small class="text-muted">{{ $merchant->phone }}</small>
+                                <div class="mt-1">
+                                    <span class="text-muted" style="font-size: 0.75rem;">Current:</span>
+                                    @php
+                                        $currentPlanCode = strtolower($merchant->current_plan_code ?? 'basic');
+                                        $currentStatus = $merchant->subscription_status ?? 'none';
+                                    @endphp
+                                    @if($currentStatus === 'trial')
+                                        <span class="badge bg-info text-white" style="font-size: 0.7rem;">{{ ucfirst($currentPlanCode) }} (Trial)</span>
+                                    @elseif($currentStatus === 'active')
+                                        <span class="badge bg-success text-white" style="font-size: 0.7rem;">{{ ucfirst($currentPlanCode) }} (Active)</span>
+                                    @else
+                                        <span class="badge bg-secondary text-white" style="font-size: 0.7rem;">{{ ucfirst($currentPlanCode) }}</span>
+                                    @endif
+                                </div>
                             </div>
                             @else
                                 <span class="text-muted">Unknown</span>

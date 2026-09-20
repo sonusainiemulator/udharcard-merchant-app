@@ -24,6 +24,7 @@ class Keys {
   static String workListLastSyncAt = "workListLastSyncAt";
   static String subscriptionPlanSelected = "subscriptionPlanSelected";
   static String subscriptionPlanCode = "subscriptionPlanCode";
+  static String subscriptionPlanName = "subscriptionPlanName";
   static String subscriptionBillingCycle = "subscriptionBillingCycle";
   static String subscriptionEnrollmentRequired = "subscriptionEnrollmentRequired";
   static String subscriptionSoftRolloutEnabled = "subscriptionSoftRolloutEnabled";

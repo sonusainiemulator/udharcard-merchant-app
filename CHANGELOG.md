@@ -5,7 +5,45 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.69] - 2026-09-20 14:38:00 IST
+## [1.0.69] - 2026-09-20 14:53:00 IST
+
+### ⚡ Dynamic Subscription Plans, Trial Banners, and Admin Upgrade Requests Clarification
+
+#### Context & Issue Resolution
+- **Issue**:
+  - In Admin Portal under **Offline Upgrade Requests** (`/admin/subscriptions/requests`), the admin noticed `Sharma kiryana (9992433121)` showing `Requested Plan: Gold Plan` (₹129), while in the merchant mobile app the user was showing `Premium Plan` (active 7-day free trial).
+  - Additionally, plan texts, trial banners, feature lists, and color themes across the mobile app were hardcoded rather than dynamically consuming API payloads from `GET /api/subscription/plans` and `GET /api/subscription/current`.
+- **Root Cause**:
+  1. The user had previously submitted an offline upgrade request for `Gold Plan` (₹129), which was rejected by admin. Subsequently, the user started an active 7-day free trial for `Premium Plan`. The admin table only showed the requested plan without indicating the merchant's current active plan, causing confusion.
+  2. In the mobile app, several banners, sheets, and widgets (`subscription_plans_screen.dart`, `plan_card_widget.dart`, `upgrade_feature_sheet.dart`, `home_screen.dart`, `profile_setting_screen.dart`) contained hardcoded strings such as `'🎉 Premium Free Trial Active!'`, `'Start 7-Day Free Trial'`, and static color mappings.
+
+#### Key Changes & Improvements
+- **Mobile App - Persistence & State Management**:
+  - `Keys.subscriptionPlanName` added to [keys.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/utils/services/localstorage/keys.dart) for local caching.
+  - Added `currentPlanName()` and dynamic `voiceEntrySoftNudge()` in [subscription_gate_service.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/utils/services/subscription_gate_service.dart).
+  - Added `currentPlanName` and `trialPlan` getters in [subscription_controller.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/controllers/subscription_controller.dart), persisting plan name on subscription sync and supporting dynamic trial activation.
+- **Mobile App - Dynamic UI Experience**:
+  - **Plans Screen ([subscription_plans_screen.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/views/screens/subscription/subscription_plans_screen.dart))**:
+    - Trial banner dynamically renders `${controller.currentPlanName} Free Trial Active!`.
+    - Current plan banner dynamically renders `${controller.currentPlanName}`.
+    - Pending offline request banner resolves friendly plan names (e.g. `Gold Plan`) rather than raw codes.
+    - Trial confirmation dialog bullet points dynamically populate from `plan['features']`.
+    - Trust badge dynamically mentions the free basic plan name.
+    - Initial page index dynamically focuses on the merchant's active plan or recommended trial plan.
+  - **Plan Card Widget ([plan_card_widget.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/views/screens/subscription/widgets/plan_card_widget.dart))**:
+    - Added `_parseHexColor()` to dynamically theme borders, buttons, badges, and ribbons using `plan['tag_color']` directly from the backend API.
+  - **Upgrade Feature Sheet ([upgrade_feature_sheet.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/views/screens/subscription/widgets/upgrade_feature_sheet.dart))**:
+    - Dynamically detects the available trial plan and days (`controller.trialPlan`), rendering `'Start $trialDays-Day Free Trial'`.
+  - **Home & Profile Screens ([home_screen.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/views/screens/home/home_screen.dart), [profile_setting_screen.dart](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/lib/views/screens/profile/profile_setting_screen.dart))**:
+    - Replaced hardcoded "Premium" labels with dynamic `SubscriptionGateService.currentPlanName()`.
+    - My Subscription card in Profile Settings now displays active trial state and days remaining.
+- **Admin Portal - Clarified Merchant Plan Status**:
+  - Updated [requests.blade.php](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/laravel-backend/resources/views/admin/subscriptions/requests.blade.php) to display the merchant's **Current Plan** alongside the **Requested Plan** in the Offline Upgrade Requests table.
+  - Deployed to live production server (`ttstaffpro-production`) and cleared view caches.
+
+---
+
+
 
 ### 🔒 Fix Storage Cache Permission Denied & Admin Passkey Login (`Unexpected token '<', "<!DOCTYPE "... is not valid JSON`)
 

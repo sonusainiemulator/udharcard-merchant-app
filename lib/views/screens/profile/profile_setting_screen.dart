@@ -254,13 +254,20 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                         builder: (subCtrl) {
                           final sub = subCtrl.currentSubscription;
                           final status = sub?['status']?.toString() ?? '';
-                          final plan = sub?['plan'];
-                          final planName = (plan is Map
-                                  ? plan['name']?.toString()
-                                  : null) ??
-                              'No active plan';
-                          final isActive = status == 'active' ||
-                              status == 'grace_period';
+                          final isTrial = subCtrl.isTrialActive || status == 'trial';
+                          final isPaidActive = status == 'active' || status == 'grace_period';
+                          final hasSubscription = isPaidActive || isTrial;
+                          final planName = subCtrl.currentPlanName;
+
+                          String subtitleText;
+                          if (isTrial) {
+                            subtitleText = '$planName (${subCtrl.trialDaysRemaining}d trial left)';
+                          } else if (isPaidActive) {
+                            subtitleText = planName;
+                          } else {
+                            subtitleText = 'Upgrade to unlock more features';
+                          }
+
                           return InkWell(
                             onTap: () => Get.toNamed(
                               RoutesName.subscriptionPlansScreen,
@@ -312,9 +319,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                         ),
                                         VSpace(2.h),
                                         Text(
-                                          isActive
-                                              ? planName
-                                              : 'Upgrade to unlock more features',
+                                          subtitleText,
                                           style: t.bodySmall?.copyWith(
                                             color:
                                                 AppThemes.getBlack50Color(),
@@ -324,22 +329,22 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                                       ],
                                     ),
                                   ),
-                                  if (isActive)
+                                  if (hasSubscription)
                                     Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal: 8.w,
                                         vertical: 3.h,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.greenColor
+                                        color: (isTrial ? const Color(0xFF2563EB) : AppColors.greenColor)
                                             .withValues(alpha: 0.12),
                                         borderRadius:
                                             BorderRadius.circular(8.r),
                                       ),
                                       child: Text(
-                                        'Active',
+                                        isTrial ? 'Trial' : 'Active',
                                         style: TextStyle(
-                                          color: AppColors.greenColor,
+                                          color: isTrial ? const Color(0xFF2563EB) : AppColors.greenColor,
                                           fontSize: 10.sp,
                                           fontWeight: FontWeight.bold,
                                         ),

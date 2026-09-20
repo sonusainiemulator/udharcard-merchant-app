@@ -66,6 +66,15 @@ class SubscriptionGateService {
     return 'basic';
   }
 
+  static String currentPlanName() {
+    final dynamic cached = HiveHelp.read(Keys.subscriptionPlanName);
+    if (cached != null && cached.toString().trim().isNotEmpty) {
+      return cached.toString().trim();
+    }
+    final code = currentPlanCode();
+    return CustomerLimitState._titleCase(code) + ' Plan';
+  }
+
   static bool isTrialActive() {
     final dynamic isTrial = HiveHelp.read(Keys.subscriptionIsTrial);
     if (isTrial != true) return false;
@@ -182,15 +191,16 @@ class SubscriptionGateService {
   }
 
   static String voiceEntrySoftNudge() {
+    final planName = currentPlanName();
     if (isTrialActive()) {
       final days = trialDaysRemaining();
-      return 'AI Voice Khata is active on your Free Trial ($days ${days == 1 ? "day" : "days"} remaining).';
+      return 'AI Voice Khata is active on your $planName Free Trial ($days ${days == 1 ? "day" : "days"} remaining).';
     }
 
     if (isVoiceEntryIncluded()) {
-      return 'AI Voice Khata is included in your active plan.';
+      return 'AI Voice Khata is included in your active $planName.';
     }
 
-    return 'AI Voice Khata is a Premium feature. Tap to start your 7-day Free Trial or upgrade.';
+    return 'AI Voice Khata is available on Premium & Gold plans. Tap to start your Free Trial or upgrade.';
   }
 }

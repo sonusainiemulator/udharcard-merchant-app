@@ -892,7 +892,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(width: 10.w),
                           Expanded(
                             child: Text(
-                              '✨ Premium Trial: ${SubscriptionGateService.trialDaysRemaining()} days left • AI Voice Khata unlocked',
+                              '✨ ${SubscriptionGateService.currentPlanName()} Trial: ${SubscriptionGateService.trialDaysRemaining()} days left • AI Voice Khata unlocked',
                               style: GoogleFonts.outfit(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,

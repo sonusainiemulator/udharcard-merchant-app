@@ -41,6 +41,36 @@ class SubscriptionController extends GetxController {
   int trialDaysRemaining = 0;
   String? trialEndsAt;
   String activePlanCode = 'basic';
+
+  String get currentPlanName {
+    if (currentPlanData != null && currentPlanData!['name'] != null) {
+      return currentPlanData!['name'].toString();
+    }
+    final dynamic cachedName = HiveHelp.read(Keys.subscriptionPlanName);
+    if (cachedName != null && cachedName.toString().trim().isNotEmpty) {
+      return cachedName.toString().trim();
+    }
+    for (final p in plans) {
+      if (p is Map && p['code']?.toString().toLowerCase() == activePlanCode.toLowerCase()) {
+        if (p['name'] != null && p['name'].toString().isNotEmpty) {
+          return p['name'].toString();
+        }
+      }
+    }
+    if (activePlanCode.isEmpty || activePlanCode.toLowerCase() == 'basic') {
+      return 'Basic Plan';
+    }
+    return '${activePlanCode[0].toUpperCase()}${activePlanCode.substring(1)} Plan';
+  }
+
+  Map<String, dynamic>? get trialPlan {
+    for (final p in plans) {
+      if (p is Map && (p['trial_days'] as num? ?? 0) > 0) {
+        return Map<String, dynamic>.from(p);
+      }
+    }
+    return null;
+  }
   Map<String, dynamic> activeFeatureFlags = {
     'has_voice_entry': false,
     'has_soundbox': false,
@@ -240,6 +270,13 @@ class SubscriptionController extends GetxController {
 
           final billingCycle = currentSubscription?['billing_cycle']?.toString();
 
+          final resolvedPlanName = resData?['plan_name']?.toString() ??
+              currentPlanData?['name']?.toString() ??
+              '';
+          if (resolvedPlanName.isNotEmpty) {
+            HiveHelp.write(Keys.subscriptionPlanName, resolvedPlanName);
+          }
+
           HiveHelp.write(Keys.subscriptionPlanSelected, true);
           HiveHelp.write(Keys.subscriptionPlanCode, activePlanCode);
           HiveHelp.write(Keys.subscriptionIsTrial, isTrialActive);
@@ -257,17 +294,24 @@ class SubscriptionController extends GetxController {
     update();
   }
 
-  /// Start 7-Day Free Trial for a plan (e.g. Premium Plan).
+  /// Start Free Trial for a plan (dynamically resolved from plan or trialPlan).
   Future<bool> startTrial({
-    required String planCode,
-    required String planName,
+    String? planCode,
+    String? planName,
   }) async {
+    final code = (planCode != null && planCode.isNotEmpty)
+        ? planCode
+        : (trialPlan?['code']?.toString() ?? 'premium');
+    final name = (planName != null && planName.isNotEmpty)
+        ? planName
+        : (trialPlan?['name']?.toString() ?? 'Premium Plan');
+
     if (_isStartingTrial) return false;
     _isStartingTrial = true;
     update();
 
     try {
-      final response = await SubscriptionRepo.startTrial(planCode: planCode);
+      final response = await SubscriptionRepo.startTrial(planCode: code);
       final data = _decode(response.body);
       _isStartingTrial = false;
 
@@ -278,10 +322,11 @@ class SubscriptionController extends GetxController {
 
         isTrialActive = true;
         trialDaysRemaining = trialDays;
-        activePlanCode = planCode;
+        activePlanCode = code;
 
         HiveHelp.write(Keys.subscriptionPlanSelected, true);
-        HiveHelp.write(Keys.subscriptionPlanCode, planCode);
+        HiveHelp.write(Keys.subscriptionPlanCode, code);
+        HiveHelp.write(Keys.subscriptionPlanName, name);
         HiveHelp.write(Keys.subscriptionIsTrial, true);
         if (endsAt != null) {
           HiveHelp.write(Keys.subscriptionTrialEndsAt, endsAt);

@@ -135,54 +135,61 @@ class UpgradeFeatureSheet extends StatelessWidget {
 
               // 1-Tap Free Trial Button
               if (!isTrialActive)
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: controller.isStartingTrial
-                        ? null
-                        : () async {
-                            final success = await controller.startTrial(
-                              planCode: 'premium',
-                              planName: 'Premium Plan',
-                            );
-                            if (success) {
-                              Get.back();
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1D4ED8),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Builder(builder: (context) {
+                  final trialPlan = controller.trialPlan;
+                  final trialCode = trialPlan?['code']?.toString() ?? 'premium';
+                  final trialName = trialPlan?['name']?.toString() ?? 'Premium Plan';
+                  final trialDays = (trialPlan?['trial_days'] as num?)?.toInt() ?? 7;
+
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: controller.isStartingTrial
+                          ? null
+                          : () async {
+                              final success = await controller.startTrial(
+                                planCode: trialCode,
+                                planName: trialName,
+                              );
+                              if (success) {
+                                Get.back();
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1D4ED8),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    child: controller.isStartingTrial
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.flash_on_rounded, size: 18, color: Colors.amberAccent),
-                              SizedBox(width: 8),
-                              Text(
-                                'Start 7-Day Free Trial',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                      child: controller.isStartingTrial
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
                               ),
-                            ],
-                          ),
-                  ),
-                ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.flash_on_rounded, size: 18, color: Colors.amberAccent),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Start $trialDays-Day Free Trial',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  );
+                }),
 
               const SizedBox(height: 10),
 
