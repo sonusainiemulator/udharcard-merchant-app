@@ -5,12 +5,18 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.70] - 2026-09-20 22:55:00 IST
+## [1.0.71] - 2026-09-20 23:07:00 IST
 
-### 🏪 Shop Timings, Live Online/Offline Status & Comprehensive Merchant Profile
+### 🏪 Shop Timings, Live Online/Offline Status & Comprehensive Merchant Profile Release
 
 #### Summary
-Implemented end-to-end support for merchant shop opening/closing timings, 1-tap live online/offline store status toggle, shop branding in app headers, and a complete professional business profile across both the Laravel backend (`pay.udharcard.shop`) and the Merchant mobile app.
+Bumped version from `1.0.70+71` → `1.0.71+72`. Implemented end-to-end support for merchant shop opening/closing timings, 1-tap live online/offline store status toggle, shop branding in app headers, and a complete professional business profile across both the Laravel backend (`pay.udharcard.shop`) and the Merchant mobile app.
+
+#### Build Artifacts
+- `udharcard-merchant-app-v1.0.71-release.apk` (77 MB)
+- `udharcard-merchant-app-v1.0.71-debug.apk` (175 MB)
+- Both APKs signed with production upload keystore SHA-1: `F4:1A:FB:14:ED:0B:D1:05:21:3F:1B:31:7B:AE:09:B5:CB:53:5B:6C`
+
 
 #### 1. Backend Enhancements (Laravel `pay.udharcard.shop`)
 - **Database Migration**: Created and executed `2026_09_20_000002_add_shop_timings_and_status_to_users_table.php` on live production server. Added fields:
