@@ -31,6 +31,8 @@ Bumped version to `1.0.76+77`. Fixed an urgent build-phase state update crash (`
 - Executed `flutter test` (all 56 unit/widget tests passing).
 - Executed `flutter analyze` with 0 errors and 0 warnings.
 - Successfully built `udharcard-merchant-app-v1.0.76-debug.apk` and `udharcard-merchant-app-v1.0.76-release.apk`.
+- Built iOS release archive `Runner.xcarchive` (281.8MB) and exported `Udharcard Merchant.ipa` (38.5MB).
+- Uploaded to Apple App Store Connect TestFlight (`Delivery UUID: 3b6b1673-d35a-45a4-9167-13a06d44d0ef`). Transferred 37582619 bytes in 17.186 seconds.
 
 ## [1.0.75] - 2026-09-21 01:18:00 IST
 
