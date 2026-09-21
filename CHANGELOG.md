@@ -5,6 +5,30 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.76-web] - 2026-09-21 23:40:00 IST
+
+### 🌐 Merchant Web Profile Full Parity with Mobile App (`pay.udharcard.shop`)
+
+#### Summary
+Synchronized all merchant profile fields, business settings, validation, and real-time state management between the Merchant Mobile App and the Merchant Web Profile (`https://pay.udharcard.shop/merchant/profile`). Implemented instant AJAX store open/close toggling, category mapping for 13 retail verticals, store timings, weekly off choices, WhatsApp customer messaging routing, address landmarks, and GST/PAN legal identification.
+
+#### 🚀 Web Backend & Frontend Sync (`pay.udharcard.shop`)
+- **Web Profile Controller (`ProfileController.php`)**:
+  - Expanded `index()` POST validation and persistence to handle: `shop_name`, `business_name`, `business_type`, `shop_description`, `is_shop_online`, `shop_opening_time`, `shop_closing_time`, `shop_closed_days`, `landmark`, `whatsapp_number`, `gst_number`, `pan_number`.
+  - Added robust defaults for GET requests (`is_shop_online` default true, `shop_opening_time` default '09:00 AM', `shop_closing_time` default '09:30 PM', `shop_closed_days` default 'Open All Days').
+- **Real-Time AJAX Store Status Route (`MerchantController.php` & `routes/web.php`)**:
+  - Added `POST /merchant/shop-status` (`merchant.shop.status`) endpoint enabling 1-click async toggle of store online/offline status with instant visual badge transitions and Notiflix notifications.
+- **Merchant Web Profile UI (`show.blade.php`)**:
+  - Reconstructed the profile into 6 high-fidelity card modules matching the mobile app:
+    1. *Shop Status & Timings*: Real-time online/offline switch (`🟢 Dukan Khuli Hai` / `🔴 Dukan Band Hai`), opening & closing time inputs, and weekly off dropdown (8 choices).
+    2. *Shop & Business Details*: Store name, business category dropdown (13 retail categories), and shop tagline/description textarea.
+    3. *Owner & Contact Information*: Owner name, username, email, primary mobile (+91), and dedicated customer WhatsApp contact number.
+    4. *Shop Address & Location*: Address Line 1 & Line 2, nearby landmark, city, state, postal PIN code, and country.
+    5. *Tax & Legal Verification*: Optional 15-digit GSTIN and 10-digit PAN card fields.
+    6. *Preferences*: Preferred language and timezone.
+- **Navigation Sidebar (`profileNav.blade.php`)**:
+  - Added live store status badge in sidebar navigation with quick-anchor links for fast scrolling to each section.
+
 ## [1.0.76] - 2026-09-21 13:56:00 IST
 
 ### 🛠️ Edit Profile Lifecycle Fix & Safe Reactive State Updates
