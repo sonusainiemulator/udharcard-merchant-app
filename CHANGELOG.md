@@ -41,6 +41,9 @@ Bumped version to `1.0.79+80`. Performed deep analysis of all mobile app workflo
 - **Automated Test Coverage Expansion**:
   - Added comprehensive test suite `test/market_gap_features_test.dart` covering reminder generation, UPI deep links, customer sorting algorithms, and indexed ledger balance mapping.
   - Verified all 72 unit & widget tests pass cleanly.
+- **TestFlight Deployment (2026-09-22 00:36:13 IST)**:
+  - Built iOS release archive `Runner.xcarchive` (281.8 MB) and exported `Udharcard Merchant.ipa` (38.5 MB).
+  - Uploaded to Apple App Store Connect TestFlight (`Delivery UUID: 84f8c7cb-8887-4ae5-bad1-79552324d1e2`). Transferred 37,613,353 bytes in 7.006 seconds (5.4 MB/s, 42.9 Mbps).
 
 ## [1.0.78] - 2026-09-22 00:10:15 IST
 
