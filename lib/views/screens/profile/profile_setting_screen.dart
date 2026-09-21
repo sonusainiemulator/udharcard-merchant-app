@@ -49,13 +49,6 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   @override
   void initState() {
     super.initState();
-    if (controller.profileList.isEmpty) {
-      controller.getProfile();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     if (HiveHelp.read(Keys.isDark) == null) {
       Get.find<AppController>().selectedIndex = 0;
     } else if (HiveHelp.read(Keys.isDark) == true) {
@@ -63,6 +56,15 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
     } else if (HiveHelp.read(Keys.isDark) == false) {
       Get.find<AppController>().selectedIndex = 2;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.profileList.isEmpty) {
+        controller.getProfile();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final TextTheme t = Theme.of(context).textTheme;
 
     return GetBuilder<AppController>(

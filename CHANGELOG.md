@@ -5,6 +5,33 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.76] - 2026-09-21 13:56:00 IST
+
+### 🛠️ Edit Profile Lifecycle Fix & Safe Reactive State Updates
+
+#### Summary
+Bumped version to `1.0.76+77`. Fixed an urgent build-phase state update crash (`AssertionError: setState() or markNeedsBuild() called during build`) that occurred when opening the Edit Profile screen from the Profile Settings tab. Replaced synchronous GetX `update()` invocations with a thread-safe `safeUpdate()` mechanism, deferred non-lifecycle state mutations out of `initState` and `build` methods, guarded custom dropdown value validations, and added a widget test suite ensuring clean navigation.
+
+#### 🔧 Root Cause & State Mutation Fixes
+- **ProfileController `safeUpdate()` Pattern (`profile_controller.dart`)**:
+  - Implemented `safeUpdate([List<Object>? ids, bool condition = true])` utilizing `WidgetsBinding.instance.addPostFrameCallback` when the widget tree is actively in the build/mount phase (`WidgetsBinding.instance.buildOwner?.debugBuilding == true`).
+  - Updated `loadLocalProfileInfo({bool notify = false})`, `loadCustomQrCode({bool notify = false})`, and `loadMerchantUpiId({bool notify = false})` to accept an optional `notify` flag defaulting to `false` during synchronous initializations (such as `onInit`), preventing spurious rebuild requests during route pushes.
+  - Replaced synchronous `update()` calls in `getProfile()` with `safeUpdate()`.
+- **EditProfileScreen Lifecycle Safety (`edit_profile_screen.dart`)**:
+  - Moved `profileController.getProfile()` in `initState` into `WidgetsBinding.instance.addPostFrameCallback` to avoid triggering rebuilds on ancestor `GetBuilder<ProfileController>` widgets while route transitions are mounting.
+  - Removed state mutation (`isLanguageSelected = false`) and synchronized profile text field updates from the widget's `build()` tree, deferring any missing name syncing safely to post-frame callbacks.
+- **ProfileSettingScreen Lifecycle Safety (`profile_setting_screen.dart`)**:
+  - Moved `AppController.selectedIndex` theme state assignment from `build()` into `initState()`.
+  - Deferred initial profile fetching (`controller.getProfile()`) to `WidgetsBinding.instance.addPostFrameCallback`.
+- **AppCustomDropDown Crash Prevention (`app_custom_dropdown.dart`)**:
+  - Guarded `DropdownButtonFormField`'s `selectedValue` to ensure it exists in `items` before binding, preventing Flutter assertion errors when items list updates dynamically.
+
+#### 🧪 Testing & Verification
+- Created comprehensive widget test [`test/edit_profile_screen_test.dart`](file:///Volumes/1TBNVME/udharcard-ios-apps/udharcard-merchant-ios-app/test/edit_profile_screen_test.dart) testing both standalone mounting of `EditProfileScreen` and simulated push navigation from `ProfileSettingScreen`.
+- Executed `flutter test` (all 56 unit/widget tests passing).
+- Executed `flutter analyze` with 0 errors and 0 warnings.
+- Successfully built `udharcard-merchant-app-v1.0.76-debug.apk` and `udharcard-merchant-app-v1.0.76-release.apk`.
+
 ## [1.0.75] - 2026-09-21 01:18:00 IST
 
 ### 🏪 Dynamic Home Screen, Live Online/Offline Status Indicator & Real-Time Merchant Data Sync

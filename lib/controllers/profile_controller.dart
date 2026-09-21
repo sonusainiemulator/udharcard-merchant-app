@@ -19,6 +19,16 @@ class ProfileController extends GetxController {
 
   bool isLoading = false;
 
+  /// Safe update that defers notification to post-frame if called during widget build/mount phases
+  void safeUpdate([List<Object>? ids, bool condition = true]) {
+    if (!condition) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isClosed) {
+        update(ids, condition);
+      }
+    });
+  }
+
   // -----------------------edit profile--------------------------
   TextEditingController fNameEditingController = TextEditingController();
   TextEditingController lNameEditingController = TextEditingController();
@@ -197,7 +207,7 @@ class ProfileController extends GetxController {
 
     if (profileList.isEmpty && isFromRefreshIndicator == false) {
       isLoading = true;
-      update();
+      safeUpdate();
     }
 
     try {
@@ -250,8 +260,8 @@ class ProfileController extends GetxController {
       debugPrint("Error fetching profile: $e");
     } finally {
       isLoading = false;
-      loadLocalProfileInfo();
-      update();
+      loadLocalProfileInfo(notify: false);
+      safeUpdate();
     }
   }
 
@@ -638,12 +648,12 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadLocalProfileInfo();
-    loadCustomQrCode();
-    loadMerchantUpiId();
+    loadLocalProfileInfo(notify: false);
+    loadCustomQrCode(notify: false);
+    loadMerchantUpiId(notify: false);
   }
 
-  void loadLocalProfileInfo() {
+  void loadLocalProfileInfo({bool notify = false}) {
     String hiveName = (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim();
     if (hiveName.isNotEmpty) {
       userName = hiveName;
@@ -735,18 +745,24 @@ class ProfileController extends GetxController {
     if (cachedZip.isNotEmpty && zipCodeEditingController.text.trim().isEmpty) {
       zipCodeEditingController.text = cachedZip;
     }
-    update();
+    if (notify) {
+      safeUpdate();
+    }
   }
 
-  void loadCustomQrCode() {
+  void loadCustomQrCode({bool notify = false}) {
     customQrCodePath = HiveHelp.read(Keys.customQrCodePath);
-    update();
+    if (notify) {
+      safeUpdate();
+    }
   }
 
-  void loadMerchantUpiId() {
+  void loadMerchantUpiId({bool notify = false}) {
     merchantUpiId = HiveHelp.read(Keys.merchantUpiId);
     upiIdEditingController.text = merchantUpiId ?? '';
-    update();
+    if (notify) {
+      safeUpdate();
+    }
   }
 
   Future<void> saveMerchantUpiId(String upiId) async {

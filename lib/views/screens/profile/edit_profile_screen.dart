@@ -152,10 +152,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     final profileController = Get.find<ProfileController>();
-    profileController.loadLocalProfileInfo();
-    if (profileController.profileList.isEmpty) {
-      profileController.getProfile();
-    }
+    profileController.loadLocalProfileInfo(notify: false);
     final initialName = "${profileController.fNameEditingController.text} ${profileController.lNameEditingController.text}".trim();
     final resolvedName = initialName.isNotEmpty
         ? initialName
@@ -166,6 +163,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (resolvedName.isNotEmpty) {
       _syncNames(resolvedName, profileController);
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      profileController.isLanguageSelected = false;
+      if (profileController.profileList.isEmpty) {
+        profileController.getProfile();
+      }
+    });
   }
 
   @override
@@ -192,7 +195,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     TextTheme t = Theme.of(context).textTheme;
-    Get.find<ProfileController>().isLanguageSelected = false;
     return GetBuilder<ProfileController>(
       builder: (profileController) {
         if (_fullNameCtrl.text.trim().isEmpty) {
@@ -205,8 +207,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ? profileController.userName
                   : (HiveHelp.read(Keys.userFullName) ?? HiveHelp.read(Keys.userName) ?? '').toString().trim());
           if (resolved.isNotEmpty) {
-            _fullNameCtrl.text = resolved;
-            _syncNames(resolved, profileController);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _fullNameCtrl.text.trim().isEmpty) {
+                _fullNameCtrl.text = resolved;
+                _syncNames(resolved, profileController);
+              }
+            });
           }
         }
         return GetBuilder<AppController>(

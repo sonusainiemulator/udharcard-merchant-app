@@ -173,7 +173,9 @@ class AppCustomDropDown extends StatelessWidget {
       items: _addDividersAfterItems(items),
       menuItemStyleData: MenuItemStyleData(
           customHeights: _getCustomItemsHeights(), height: itemHeight ?? 60),
-      value: selectedValue,
+      value: (selectedValue != null && items.contains(selectedValue))
+          ? selectedValue
+          : null,
       onChanged: onChanged,
     ));
   }
