@@ -698,6 +698,64 @@ class _VoiceEntryScreenState extends State<VoiceEntryScreen>
                                     ],
                                   ),
                                 ],
+
+                                // Direct 1-Tap Save to Ledger Button
+                                VSpace(14.h),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: controller.isSubmittingEntry
+                                        ? null
+                                        : () async {
+                                            if (parsed?.isPurchaseOrder == true) {
+                                              controller.sharePurchaseOrderWhatsApp('');
+                                            } else {
+                                              await controller.saveParsedEntryDirectly();
+                                            }
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: emerald,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    child: controller.isSubmittingEntry
+                                        ? SizedBox(
+                                            width: 20.w,
+                                            height: 20.w,
+                                            child: const CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                parsed?.isPurchaseOrder == true
+                                                    ? Icons.shopping_bag_outlined
+                                                    : Icons.check_circle_outline,
+                                                size: 18.sp,
+                                              ),
+                                              HSpace(8.w),
+                                              Text(
+                                                parsed?.isPurchaseOrder == true
+                                                    ? "Share Purchase Order on WhatsApp"
+                                                    : (parsed?.matchedCustomer != null
+                                                        ? "खाते में सेव करें (Save to Ledger)"
+                                                        : "नया ग्राहक सेव करें (Save to Ledger)"),
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),

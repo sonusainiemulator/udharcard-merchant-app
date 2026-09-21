@@ -273,6 +273,49 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                       ),
                     ),
 
+                    // Speech Language Toggle (hi_IN / en_IN)
+                    GestureDetector(
+                      onTap: () {
+                        controller.toggleSpeechLocale();
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(
+                            color: controller.selectedSpeechLocale.startsWith('hi')
+                                ? emerald
+                                : const Color(0xFF3B82F6),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.language,
+                              size: 13.sp,
+                              color: controller.selectedSpeechLocale.startsWith('hi')
+                                  ? emerald
+                                  : const Color(0xFF3B82F6),
+                            ),
+                            HSpace(4.w),
+                            Text(
+                              controller.selectedSpeechLocale.startsWith('hi') ? "हिन्दी" : "English",
+                              style: GoogleFonts.outfit(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w700,
+                                color: controller.selectedSpeechLocale.startsWith('hi')
+                                    ? emerald
+                                    : const Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     // Category Pill Indicator
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
@@ -686,6 +729,68 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                             ],
                           ),
                         ],
+
+                        // Direct 1-Tap Save to Ledger Button
+                        VSpace(14.h),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: controller.isSubmittingEntry
+                                ? null
+                                : () async {
+                                    if (parsed?.isPurchaseOrder == true) {
+                                      controller.sharePurchaseOrderWhatsApp('');
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      await controller.saveParsedEntryDirectly();
+                                      if (context.mounted && !controller.isSubmittingEntry) {
+                                        Navigator.of(context).pop();
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: emerald,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: controller.isSubmittingEntry
+                                ? SizedBox(
+                                    width: 20.w,
+                                    height: 20.w,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        parsed?.isPurchaseOrder == true
+                                            ? Icons.shopping_bag_outlined
+                                            : Icons.check_circle_outline,
+                                        size: 18.sp,
+                                      ),
+                                      HSpace(8.w),
+                                      Text(
+                                        parsed?.isPurchaseOrder == true
+                                            ? "Share Purchase Order on WhatsApp"
+                                            : (parsed?.matchedCustomer != null
+                                                ? "खाते में सेव करें (Save to Ledger)"
+                                                : "नया ग्राहक सेव करें (Save to Ledger)"),
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
                       ],
                     ),
                   ),

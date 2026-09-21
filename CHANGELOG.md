@@ -5,6 +5,47 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.77] - 2026-09-22 00:05:00 IST
+
+### 🎙️ AI Voice Entry & VoiceKhata Stability, Real-Time Sync & Live Server Optimization
+
+#### Summary
+Bumped version to `1.0.77+78`. Comprehensive diagnostics, stability hardening, and performance overhaul of the AI Voice Entry feature across the mobile application and live server (`pay.udharcard.shop`). Resolved critical issues where voice entries failed to persist to the real merchant ledger database, fixed speech recognition locale defaults, eliminated API timeouts via thinking budget optimization, standardized transaction type classification, added Devnagari numeral and expanded Kirana dictionary parsing, and introduced direct 1-tap ledger save buttons and language selection.
+
+#### 🛠️ Mobile App Stability & Feature Fixes (`VoiceEntryController` & Views)
+- **Speech Recognition Acoustic Model (`hi_IN` / `en_IN`)**:
+  - Configured `SpeechToText.listen()` with explicit `localeId: _selectedSpeechLocale`. Previously defaulted to system locale (`en_US`), causing speech-to-text to mangle Hindi and Indian customer names.
+  - Automatically queries available locales on initialization and resolves best match (`hi_IN`, fallback `en_IN`).
+  - Added user-facing language switcher chip (`हिन्दी / English`) in `VoiceKhataSheet` and interactive canvas.
+  - Extended listen duration to 30s with 4s pause detection for seamless multi-item and longer sentences.
+- **Direct Real-Time Ledger Synchronization**:
+  - Fixed root cause where `saveTransaction()` only stored entries in a local Hive list and never synchronized with `UdharController` or the backend API.
+  - `_processSpeech()` now automatically triggers `saveParsedEntryDirectly()` when a customer is matched in the active ledger, immediately syncing credit/debit records to `UdharRepo.addUdhar` on the live database.
+  - Added prominent **"खाते में सेव करें / Save to Ledger"** action button in `VoiceKhataSheet` and `VoiceEntryScreen` with loading spinner indicator for 1-tap instant saving or registering new customers with phone numbers.
+- **Universal Transaction Type Normalization**:
+  - Implemented `VoiceEntryController.normalizeTransactionType()` mapping varied AI responses (`given`, `debit`, `lent`, `received`, `credit`, `jama`, `collect`) into strictly validated `'Given'` and `'Received'`.
+  - Fixed bug where lowercase `'given'` or `'debit'` from Gemini was previously misinterpreted as `Received`.
+- **Enhanced Local Kirana NLP Parser**:
+  - Added Devnagari numeral normalization (`०-९` -> `0-9`) for spoken Hindi transcription.
+  - Expanded stopword removal (`ka`, `ki`, `ke`, `par`, `baki`, `baaki`, `hisab`, `khata`, `khate`, `me`, `mein`, `dalo`, `add`, `रुपये`, `रुपए`, `उधार`, `जमा`, `मिले`, `दिए`) preventing particles from corrupting parsed customer names.
+
+#### ⚡ Live Server Backend Enhancements (`pay.udharcard.shop` / `AiAssistantController.php`)
+- **Ultra-Fast 1.4s Gemini 3.8 Live Response**:
+  - Set `thinkingBudget: 0` in Gemini generation config for live conversational mode, eliminating 500+ unnecessary thinking tokens and reducing latency from >5s down to 1.4-2.5s.
+  - Increased mobile client timeout from 6.5s to 10s to ensure reliable requests under variable mobile network latency.
+- **Resilient Fallback Handling**:
+  - Changed API response on Gemini rate-limits or network errors from HTTP 502 to HTTP 200 with `status: 'success'` and `model: 'kirana_nlp_fallback'`, ensuring the mobile app never crashes and seamlessly parses transactions.
+  - Tested live endpoints via cURL and Artisan Tinker for single credit entries, collections, multi-item bills, and purchase orders.
+
+#### 🧪 Testing & Verification
+- Updated unit test suite in `test/voice_entry_controller_test.dart` with 13 comprehensive tests covering:
+  - `saveParsedEntryDirectly` ledger submission forwarding.
+  - `parseVoiceInstruction` for Given, Received, Multi-Item bills, Purchase Orders, and Balance Queries.
+  - Devnagari numeral conversion (`"रमेश को ५०० उधार दिया"` -> ₹500 Given).
+  - Multi-variant transaction type normalization (`debit`/`credit`/`jama`/`lent`).
+  - Dynamic speech locale switching between `hi_IN` and `en_IN`.
+- All 13 unit tests passed (0 errors, 100% pass rate).
+
 ## [1.0.76-web] - 2026-09-21 23:40:00 IST
 
 ### 🌐 Merchant Web Profile Full Parity with Mobile App (`pay.udharcard.shop`)

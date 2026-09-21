@@ -166,4 +166,34 @@ void main() {
     final result = controller.parseVoiceInstruction("   ");
     expect(result.reply, contains('saaf'));
   });
+
+  test('parseVoiceInstruction handles Devnagari numerals correctly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction("रमेश को ५०० उधार दिया");
+    expect(result.amount, 500.0);
+    expect(result.type, 'Given');
+    expect(result.category, 'UDHAR');
+  });
+
+  test('normalizeTransactionType accurately normalizes varied speech & accounting terms', () {
+    expect(VoiceEntryController.normalizeTransactionType('given', 'transaction'), 'Given');
+    expect(VoiceEntryController.normalizeTransactionType('debit', 'transaction'), 'Given');
+    expect(VoiceEntryController.normalizeTransactionType('lent', 'transaction'), 'Given');
+    expect(VoiceEntryController.normalizeTransactionType('received', 'transaction'), 'Received');
+    expect(VoiceEntryController.normalizeTransactionType('credit', 'transaction'), 'Received');
+    expect(VoiceEntryController.normalizeTransactionType('jama', 'transaction'), 'Received');
+    expect(VoiceEntryController.normalizeTransactionType('got', 'collection'), 'Received');
+  });
+
+  test('speech locale toggle switches between hi_IN and en_IN', () {
+    final controller = VoiceEntryController();
+    controller.setSpeechLocale('hi_IN');
+    expect(controller.selectedSpeechLocale, 'hi_IN');
+
+    controller.toggleSpeechLocale();
+    expect(controller.selectedSpeechLocale, 'en_IN');
+
+    controller.toggleSpeechLocale();
+    expect(controller.selectedSpeechLocale, 'hi_IN');
+  });
 }

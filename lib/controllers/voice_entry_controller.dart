@@ -114,6 +114,64 @@ class VoiceEntryController extends GetxController {
   String _talkBackLanguage = "hi-IN";
   String get talkBackLanguage => _talkBackLanguage;
 
+  String _selectedSpeechLocale = "hi_IN";
+  String get selectedSpeechLocale => _selectedSpeechLocale;
+  List<LocaleName> availableSpeechLocales = [];
+
+  void setSpeechLocale(String localeId) {
+    _selectedSpeechLocale = localeId;
+    HiveHelp.write('voice_speech_locale', localeId);
+    update();
+  }
+
+  void toggleSpeechLocale() {
+    if (_selectedSpeechLocale.toLowerCase().startsWith('hi')) {
+      setSpeechLocale('en_IN');
+    } else {
+      setSpeechLocale('hi_IN');
+    }
+  }
+
+  String _resolveSpeechLocale() {
+    final saved = HiveHelp.read('voice_speech_locale')?.toString();
+    if (saved != null && saved.isNotEmpty) {
+      return saved;
+    }
+    final prefersHindi = _talkBackLanguage.startsWith('hi');
+    final targetCandidates = prefersHindi
+        ? ['hi_IN', 'hi-IN', 'en_IN', 'en-IN']
+        : ['en_IN', 'en-IN', 'hi_IN', 'hi-IN'];
+
+    for (final cand in targetCandidates) {
+      for (final loc in availableSpeechLocales) {
+        if (loc.localeId.toLowerCase().replaceAll('-', '_') ==
+            cand.toLowerCase().replaceAll('-', '_')) {
+          return loc.localeId;
+        }
+      }
+    }
+    return availableSpeechLocales.isNotEmpty
+        ? availableSpeechLocales.first.localeId
+        : 'hi_IN';
+  }
+
+  static String normalizeTransactionType(dynamic rawType, dynamic rawAction) {
+    final t = (rawType ?? '').toString().toLowerCase().trim();
+    final a = (rawAction ?? '').toString().toLowerCase().trim();
+    if (t == 'received' ||
+        t == 'jama' ||
+        t == 'mila' ||
+        t == 'mile' ||
+        t == 'credit' ||
+        t.contains('receiv') ||
+        t.contains('collect') ||
+        a.contains('receiv') ||
+        a.contains('collect')) {
+      return 'Received';
+    }
+    return 'Given';
+  }
+
   String _transcribedText = "";
   String get transcribedText => _transcribedText;
 
@@ -258,6 +316,12 @@ class VoiceEntryController extends GetxController {
           }
         },
       );
+      if (_isSpeechInitialized) {
+        try {
+          availableSpeechLocales = await _speechToText.locales();
+          _selectedSpeechLocale = _resolveSpeechLocale();
+        } catch (_) {}
+      }
     } catch (e) {
       if (kDebugMode) print('Failed to init speech: $e');
       _isSpeechInitialized = false;
@@ -318,6 +382,7 @@ class VoiceEntryController extends GetxController {
       _changeState(VoiceAssistantState.listening);
 
       await _speechToText.listen(
+        localeId: _selectedSpeechLocale,
         onResult: (val) {
           _transcribedText = val.recognizedWords;
           if (_transcribedText.trim().isNotEmpty) {
@@ -333,8 +398,8 @@ class VoiceEntryController extends GetxController {
           update();
         },
         listenOptions: SpeechListenOptions(
-          listenFor: const Duration(seconds: 15),
-          pauseFor: const Duration(seconds: 3),
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 4),
           partialResults: true,
         ),
       );
@@ -509,8 +574,8 @@ Merchant speech: "$speechText"
       final action = (data['action'] ?? '').toString().toLowerCase();
       final name = (data['name'] ?? '').toString().trim();
       final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-      final type = (data['type'] ?? 'Given').toString();
-      final category = (data['category'] ?? 'UDHAR').toString();
+      final type = normalizeTransactionType(data['type'], action);
+      final category = (data['category'] ?? (type == 'Received' ? 'COLLECTION' : 'UDHAR')).toString();
       final reply = (data['reply'] ?? '').toString();
       final remarks = (data['remarks'] ?? '').toString();
 
@@ -538,7 +603,7 @@ Merchant speech: "$speechText"
 
       // Link with existing customer ledger if found
       final matchedCustomer = findMatchingCustomer(name, '');
-      final displayName = matchedCustomer != null ? matchedCustomer['name'] : name;
+      final displayName = matchedCustomer != null ? (matchedCustomer['name'] ?? name) : name;
 
       isUsingGeminiAi = true;
       return VoiceParseResult(
@@ -578,17 +643,17 @@ Merchant speech: "$speechText"
           'speech_text': speechText,
           'mode': useThinking ? 'extended_thinking' : 'live',
         }),
-      ).timeout(const Duration(milliseconds: 6500));
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success' && body['data'] is Map) {
+        if ((body['status'] == 'success' || body['status'] == 'fallback') && body['data'] is Map) {
           final data = body['data'];
           final action = (data['action'] ?? '').toString().toLowerCase();
           final name = (data['name'] ?? '').toString().trim();
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          final type = (data['type'] ?? 'Given').toString();
-          final category = (data['category'] ?? 'UDHAR').toString();
+          final type = normalizeTransactionType(data['type'], action);
+          final category = (data['category'] ?? (type == 'Received' ? 'COLLECTION' : 'UDHAR')).toString();
           final reply = (data['reply'] ?? '').toString();
           final remarks = (data['remarks'] ?? '').toString();
 
@@ -615,7 +680,7 @@ Merchant speech: "$speechText"
           }
 
           final matchedCustomer = findMatchingCustomer(name, '');
-          final displayName = matchedCustomer != null ? matchedCustomer['name'] : name;
+          final displayName = matchedCustomer != null ? (matchedCustomer['name'] ?? name) : name;
 
           isUsingGeminiAi = true;
           return VoiceParseResult(
@@ -704,7 +769,16 @@ Merchant speech: "$speechText"
       parsedType = parsed.type;
       parsedRemarks = parsed.remarks;
       _aiReply = parsed.reply;
-      saveTransaction();
+
+      // Automatically sync to Udhar ledger if customer is matched
+      final matched = findMatchingCustomer(parsed.name, parsed.phone);
+      if (matched != null) {
+        await saveParsedEntryDirectly();
+      } else {
+        saveTransaction();
+        await speakReply(_aiReply);
+      }
+      return;
     } else {
       _aiReply = parsed.reply;
     }
@@ -712,9 +786,18 @@ Merchant speech: "$speechText"
     await speakReply(_aiReply);
   }
 
+  String _normalizeDevnagariNumbers(String input) {
+    const devnagariDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+    var result = input;
+    for (int i = 0; i < devnagariDigits.length; i++) {
+      result = result.replaceAll(devnagariDigits[i], i.toString());
+    }
+    return result;
+  }
+
   /// Comprehensive NLP Voice Parser specifically tuned for Indian small businesses & Kirana shops.
   VoiceParseResult parseVoiceInstruction(String text) {
-    final normalized = text.trim();
+    final normalized = _normalizeDevnagariNumbers(text.trim());
     if (normalized.isEmpty) {
       return const VoiceParseResult(
         reply: 'Kripya naam aur amount saaf bolen.',
@@ -781,7 +864,7 @@ Merchant speech: "$speechText"
         !lower.contains('diye')) {
       String cleaned = lower
           .replaceAll(
-            RegExp(r'\b(kitna|balance|total|baki|baaki|hisab|hisaab|summary|paisa|paise|lene|kiska|kaun|hai|hain|ka|ki|ko|se|ne|what|is|my|amount|tell|me|how|much)\b'),
+            RegExp(r'\b(kitna|balance|total|baki|baaki|hisab|hisaab|summary|paisa|paise|lene|kiska|kaun|hai|hain|ka|ki|ke|ko|se|ne|what|is|my|amount|tell|me|how|much)\b'),
             '',
           )
           .trim();
@@ -870,7 +953,7 @@ Merchant speech: "$speechText"
         .replaceAll(RegExp(r'\d+(?:\.\d+)?'), '')
         .replaceAll(
           RegExp(
-            r'\b(rupaye|rupees|rs|udhar|udhaar|ko|se|ne|diya|diye|mila|mile|jama|liya|paid|unpaid|received|gave|given|hai|hain|aaya|aaye|de|maal|saman|each|kilo|kg|packet|soap|piece|pc|darjan)\b',
+            r'\b(rupaye|rupees|rupee|rs|inr|udhar|udhaar|ko|se|ne|ka|ki|ke|par|diya|diye|mila|mile|jama|liya|paid|unpaid|received|gave|given|hai|hain|aaya|aaye|de|maal|saman|each|kilo|kg|packet|soap|piece|pc|darjan|baki|baaki|hisab|khata|khate|me|mein|dalo|add|karo|kar|रुपये|रुपए|रु|उधार|जमा|मिले|दिए|दिया|लिया|को|से|ने|का|की|के|है|हैं|खाते|में|डालो)\b',
           ),
           '',
         )
