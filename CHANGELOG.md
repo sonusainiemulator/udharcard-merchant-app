@@ -5,6 +5,32 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.78] - 2026-09-22 00:10:15 IST
+
+### 🧠 Deep Voice Entry Stabilization, Spoken Hindi Numbers, Honorific Stripping & Idempotency Hardening
+
+#### Summary
+Bumped version to `1.0.78+79`. In-depth stabilization and intelligence hardening of the AI Voice Entry feature. Solved speech recognition drops on shop noise timeouts, implemented spoken Hindi word number parsing without digits (*"pandrah sau"* -> ₹1500, *"dhai sau"* -> ₹250), added Unicode/Devnagari honorific stripping (*"ji"*, *"bhai"*, *"bhaiya"*, *"uncle"*, *"sethji"*) for 100% accurate contact linkage, implemented transaction idempotency keys to eliminate double-posting on weak networks, and added quick amount adjustment chips (+₹50, +₹100, +₹500, +₹1000) and inline phone input for new customers directly in `VoiceKhataSheet`.
+
+#### 🚀 Enhancements & Fixes
+- **Spoken Hindi/Hinglish Word Numbers (`parseHindiNumberWords`)**:
+  - Implemented offline word-to-number parser supporting compound expressions (*"dedh hazaar"* -> 1500, *"dhai hazaar"* -> 2500, *"dedh sau"* -> 150, *"dhai sau"* -> 250) and multiplier combinations (*"do hazaar paanch sau"* -> 2500, *"pandrah sau"* -> 1500, *"teen sau pachaas"* -> 350).
+  - Handles numbers in Romanized Hindi, Hinglish, and Devnagari script seamlessly when speech recognizers transcribe word numbers rather than digits.
+- **Universal Indian Honorific Stripping (`stripHonorifics`)**:
+  - Automatically strips respectful titles (`ji`, `bhai`, `bhaiya`, `bhaya`, `uncle`, `sethji`, `sahab`, `saab`, `aunty`, `didi`, `sir`, `panditji`, `babu`, `chacha`, `mama`, `जी`, `भाई`, `भैया`, `अंकल`, `सेठजी`, `साहब`, etc.) in party name extraction and customer ledger matching.
+  - Spoken phrases like *"Ramesh ji ko 500 udhar diya"* now immediately link to ledger contact *"Ramesh Kumar"* or *"Ramesh"*.
+- **Speech Engine Resilience & Race Condition Lock**:
+  - Added `_isProcessingSpeech` lock to eliminate concurrent executions between `onStatus: 'done'`, `stopListening()`, and `onError`.
+  - Added graceful recovery on speech timeout/error so recognized partial words are not lost if speech recognizer closes due to ambient shop pauses.
+- **Idempotency Protection on Flaky Networks**:
+  - Generated deterministic idempotency key (`voice_{cleanName}_{amount}_{minuteBucket}`) passed to `UdharController.submitUdhar()`.
+  - Guarantees that mobile network retries and duplicate taps never result in double ledger entries.
+- **Interactive In-Sheet Controls (`VoiceKhataSheet`)**:
+  - Added quick amount adjustment chips (`+₹50`, `+₹100`, `+₹500`, `+₹1000`, `-₹50`) directly under Total Amount for 1-tap correction without re-speaking.
+  - Added inline 10-digit customer mobile input field when a new customer is spoken, allowing merchants to save directly to ledger without leaving the sheet.
+- **Unit Test Suite Expansion**:
+  - Expanded `test/voice_entry_controller_test.dart` to 19 tests, verifying honorific stripping, Hindi word number conversion, contact matching with titles, amount adjustment chips, and idempotency key forwarding.
+
 ## [1.0.77] - 2026-09-22 00:05:00 IST
 
 ### 🎙️ AI Voice Entry & VoiceKhata Stability, Real-Time Sync & Live Server Optimization

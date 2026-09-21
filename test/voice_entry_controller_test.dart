@@ -19,6 +19,7 @@ class TestUdharController extends UdharController {
   String? lastName;
   double? lastAmount;
   String? lastType;
+  String? lastIdempotencyKey;
 
   @override
   void onInit() {
@@ -42,6 +43,7 @@ class TestUdharController extends UdharController {
     String? idempotencyKey,
   }) async {
     submitCalled = true;
+    lastIdempotencyKey = idempotencyKey;
     return true;
   }
 }
@@ -195,5 +197,83 @@ void main() {
 
     controller.toggleSpeechLocale();
     expect(controller.selectedSpeechLocale, 'hi_IN');
+  });
+
+  test('stripHonorifics removes common Indian honorifics cleanly', () {
+    expect(VoiceEntryController.stripHonorifics('Ramesh ji'), 'Ramesh');
+    expect(VoiceEntryController.stripHonorifics('Gupta ji'), 'Gupta');
+    expect(VoiceEntryController.stripHonorifics('Suresh bhaiya'), 'Suresh');
+    expect(VoiceEntryController.stripHonorifics('Sharma sahab'), 'Sharma');
+    expect(VoiceEntryController.stripHonorifics('Sharma saab'), 'Sharma');
+    expect(VoiceEntryController.stripHonorifics('Sunita aunty'), 'Sunita');
+    expect(VoiceEntryController.stripHonorifics('रमेश जी'), 'रमेश');
+  });
+
+  test('parseHindiNumberWords converts spoken Hindi/Hinglish words to numeric amounts', () {
+    expect(VoiceEntryController.parseHindiNumberWords('pandrah sau'), 1500.0);
+    expect(VoiceEntryController.parseHindiNumberWords('dhai sau'), 250.0);
+    expect(VoiceEntryController.parseHindiNumberWords('dedh sau'), 150.0);
+    expect(VoiceEntryController.parseHindiNumberWords('do hazaar'), 2000.0);
+    expect(VoiceEntryController.parseHindiNumberWords('paanch sau'), 500.0);
+    expect(VoiceEntryController.parseHindiNumberWords('teen sau pachaas'), 350.0);
+    expect(VoiceEntryController.parseHindiNumberWords('dedh hazaar'), 1500.0);
+    expect(VoiceEntryController.parseHindiNumberWords('dhai hazaar'), 2500.0);
+  });
+
+  test('parseVoiceInstruction handles spoken Hindi number words and honorifics seamlessly', () {
+    final controller = VoiceEntryController();
+    final result = controller.parseVoiceInstruction('Ramesh ji ko pandrah sau udhar diya');
+    expect(result.amount, 1500.0);
+    expect(result.type, 'Given');
+    expect(result.name, 'Ramesh');
+    expect(result.category, 'UDHAR');
+  });
+
+  test('findMatchingCustomer links honorific-prefixed speech to existing ledger contact', () {
+    final controller = VoiceEntryController();
+    final udharController = TestUdharController();
+    udharController.usersList = [
+      {'id': '201', 'name': 'Ramesh Kumar', 'phone': '9876543210'},
+      {'id': '202', 'name': 'Suresh Verma', 'phone': '9123456780'},
+    ];
+    Get.put<VoiceEntryController>(controller);
+    Get.put<UdharController>(udharController);
+
+    final matched = controller.findMatchingCustomer('Ramesh ji');
+    expect(matched, isNotNull);
+    expect(matched?['id'], '201');
+    expect(matched?['name'], 'Ramesh Kumar');
+  });
+
+  test('adjustParsedAmount and setParsedAmount modify parsed values correctly', () {
+    final controller = VoiceEntryController();
+    controller.setParsedAmount(500);
+    expect(controller.parsedAmount, 500.0);
+
+    controller.adjustParsedAmount(50);
+    expect(controller.parsedAmount, 550.0);
+
+    controller.adjustParsedAmount(-100);
+    expect(controller.parsedAmount, 450.0);
+  });
+
+  test('saveParsedEntryDirectly forwards idempotencyKey to prevent duplicate ledger records', () async {
+    final controller = VoiceEntryController();
+    final udharController = TestUdharController();
+    udharController.usersList = [
+      {'id': '301', 'name': 'Ramesh', 'phone': '9876543210'},
+    ];
+    Get.put<VoiceEntryController>(controller);
+    Get.put<UdharController>(udharController);
+
+    controller.parsedName = 'Ramesh';
+    controller.parsedAmount = 1500;
+    controller.parsedType = 'Given';
+
+    await controller.saveParsedEntryDirectly();
+
+    expect(udharController.submitCalled, isTrue);
+    expect(udharController.lastIdempotencyKey, isNotNull);
+    expect(udharController.lastIdempotencyKey, startsWith('voice_Ramesh_1500_'));
   });
 }

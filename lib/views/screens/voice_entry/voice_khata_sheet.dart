@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,6 +29,7 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
     with SingleTickerProviderStateMixin {
   late final VoiceEntryController _controller;
   late AnimationController _waveController;
+  late final TextEditingController _phoneInputCtrl;
   bool _showKeyboard = false;
   int _exampleIndex = 0;
 
@@ -47,6 +49,8 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
         ? Get.find<VoiceEntryController>()
         : Get.put(VoiceEntryController());
 
+    _phoneInputCtrl = TextEditingController(text: _controller.parsedPhone);
+
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -63,7 +67,34 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
   @override
   void dispose() {
     _waveController.dispose();
+    _phoneInputCtrl.dispose();
     super.dispose();
+  }
+
+  Widget _buildAmountAdjustChip(String label, VoidCallback onTap, Color color) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(8.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ),
+    );
   }
 
   void _nextExample() {
@@ -694,6 +725,87 @@ class _VoiceKhataSheetState extends State<VoiceKhataSheet>
                                 ),
                               ),
                             ],
+                          ),
+                          VSpace(8.h),
+                          // Quick Amount Adjuster Chips
+                          Row(
+                            children: [
+                              Text(
+                                "Adjust:",
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: subtleText,
+                                ),
+                              ),
+                              HSpace(8.w),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      _buildAmountAdjustChip("+₹50", () => controller.adjustParsedAmount(50), emerald),
+                                      HSpace(6.w),
+                                      _buildAmountAdjustChip("+₹100", () => controller.adjustParsedAmount(100), emerald),
+                                      HSpace(6.w),
+                                      _buildAmountAdjustChip("+₹500", () => controller.adjustParsedAmount(500), emerald),
+                                      HSpace(6.w),
+                                      _buildAmountAdjustChip("+₹1000", () => controller.adjustParsedAmount(1000), emerald),
+                                      if (controller.parsedAmount >= 50) ...[
+                                        HSpace(6.w),
+                                        _buildAmountAdjustChip("-₹50", () => controller.adjustParsedAmount(-50), AppColors.redColor),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        // Inline Phone Number for New Customer
+                        if (parsed?.matchedCustomer == null &&
+                            controller.parsedAmount > 0 &&
+                            parsed?.isPurchaseOrder != true) ...[
+                          VSpace(10.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.phone_android, size: 16.sp, color: emerald),
+                                HSpace(8.w),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _phoneInputCtrl,
+                                    keyboardType: TextInputType.phone,
+                                    maxLength: 10,
+                                    onChanged: (val) => controller.setParsedPhone(val),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      counterText: '',
+                                      border: InputBorder.none,
+                                      hintText: "ग्राहक का 10-digit मोबाइल (Optional)",
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 11.sp,
+                                        color: subtleText,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
 

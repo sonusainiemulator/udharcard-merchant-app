@@ -191,9 +191,26 @@ class VoiceEntryController extends GetxController {
   double parsedAmount = 0.0;
   String parsedType = "Given"; // "Given" or "Received"
   String parsedRemarks = "";
+  String parsedPhone = "";
   VoiceParseResult? latestParsedResult;
   XFile? attachedBillImage;
   bool isSubmittingEntry = false;
+  bool _isProcessingSpeech = false;
+
+  void adjustParsedAmount(double delta) {
+    parsedAmount = (parsedAmount + delta).clamp(0.0, 9999999.0);
+    update();
+  }
+
+  void setParsedAmount(double newAmount) {
+    parsedAmount = newAmount.clamp(0.0, 9999999.0);
+    update();
+  }
+
+  void setParsedPhone(String phone) {
+    parsedPhone = phone.trim();
+    update();
+  }
 
   bool get hasQuickEntry =>
       (parsedName.isNotEmpty && parsedAmount > 0) ||
@@ -305,12 +322,16 @@ class VoiceEntryController extends GetxController {
       _isSpeechInitialized = await _speechToText.initialize(
         onError: (val) {
           if (kDebugMode) print('Speech to text error: $val');
-          _changeState(VoiceAssistantState.idle);
+          if (_transcribedText.trim().isNotEmpty && !_isProcessingSpeech) {
+            _processSpeech();
+          } else {
+            _changeState(VoiceAssistantState.idle);
+          }
         },
         onStatus: (val) {
           if (kDebugMode) print('Speech to text status: $val');
           if (val == 'done' || val == 'notListening') {
-            if (_assistantState == VoiceAssistantState.listening) {
+            if (_assistantState == VoiceAssistantState.listening && !_isProcessingSpeech) {
               _processSpeech();
             }
           }
@@ -711,79 +732,213 @@ Merchant speech: "$speechText"
   }
 
   Future<void> _processSpeech() async {
-    if (_transcribedText.trim().isEmpty) {
-      _changeState(VoiceAssistantState.idle);
-      return;
-    }
+    if (_isProcessingSpeech) return;
+    _isProcessingSpeech = true;
 
-    final cleanSpeech = _transcribedText.toLowerCase().trim();
-    if (cleanSpeech == 'band karo' ||
-        cleanSpeech == 'stop' ||
-        cleanSpeech == 'ruk jao' ||
-        cleanSpeech == 'cancel' ||
-        cleanSpeech == 'exit') {
-      isLiveMode = false;
-      _changeState(VoiceAssistantState.idle);
-      HapticFeedback.mediumImpact();
-      await speakReply("Gemini 3.8 Live session band kar diya gaya.");
-      update();
-      return;
-    }
-
-    _changeState(VoiceAssistantState.thinking);
-    HapticFeedback.lightImpact();
-
-    // 1. Try Direct Google Gemini 3.8 Live / Extended Thinking AI
-    VoiceParseResult? parsed;
     try {
-      parsed = await _parseWithGemini(_transcribedText);
-    } catch (_) {}
-
-    // 2. Try Live Server Gemini 3.8 Backend Endpoint (pay.udharcard.shop)
-    if (parsed == null) {
-      try {
-        parsed = await _parseWithLiveServer(_transcribedText, isExtendedThinking);
-      } catch (_) {}
-    }
-
-    // 3. Seamless Instant Fallback to Local Smart NLP (0ms, Offline Kirana dictionary)
-    if (parsed == null) {
-      isUsingGeminiAi = false;
-      parsed = parseVoiceInstruction(_transcribedText);
-    }
-
-    latestParsedResult = parsed;
-
-    if (parsed.isQuery) {
-      _aiReply = _calculateBalanceReply(
-        parsed.name.isNotEmpty ? parsed.name : null,
-      );
-    } else if (parsed.isHelp) {
-      _aiReply = parsed.reply;
-    } else if (parsed.isPurchaseOrder) {
-      _aiReply = parsed.reply;
-      savePurchaseOrder(parsed.purchaseItems);
-    } else if (parsed.amount > 0) {
-      parsedName = parsed.name;
-      parsedAmount = parsed.amount;
-      parsedType = parsed.type;
-      parsedRemarks = parsed.remarks;
-      _aiReply = parsed.reply;
-
-      // Automatically sync to Udhar ledger if customer is matched
-      final matched = findMatchingCustomer(parsed.name, parsed.phone);
-      if (matched != null) {
-        await saveParsedEntryDirectly();
-      } else {
-        saveTransaction();
-        await speakReply(_aiReply);
+      if (_transcribedText.trim().isEmpty) {
+        _changeState(VoiceAssistantState.idle);
+        return;
       }
-      return;
-    } else {
-      _aiReply = parsed.reply;
+
+      final cleanSpeech = _transcribedText.toLowerCase().trim();
+      if (cleanSpeech == 'band karo' ||
+          cleanSpeech == 'stop' ||
+          cleanSpeech == 'ruk jao' ||
+          cleanSpeech == 'cancel' ||
+          cleanSpeech == 'exit') {
+        isLiveMode = false;
+        _changeState(VoiceAssistantState.idle);
+        HapticFeedback.mediumImpact();
+        await speakReply("Gemini 3.8 Live session band kar diya gaya.");
+        update();
+        return;
+      }
+
+      _changeState(VoiceAssistantState.thinking);
+      HapticFeedback.lightImpact();
+
+      // 1. Try Direct Google Gemini 3.8 Live / Extended Thinking AI
+      VoiceParseResult? parsed;
+      try {
+        parsed = await _parseWithGemini(_transcribedText);
+      } catch (_) {}
+
+      // 2. Try Live Server Gemini 3.8 Backend Endpoint (pay.udharcard.shop)
+      if (parsed == null) {
+        try {
+          parsed = await _parseWithLiveServer(_transcribedText, isExtendedThinking);
+        } catch (_) {}
+      }
+
+      // 3. Seamless Instant Fallback to Local Smart NLP (0ms, Offline Kirana dictionary)
+      if (parsed == null) {
+        isUsingGeminiAi = false;
+        parsed = parseVoiceInstruction(_transcribedText);
+      }
+
+      latestParsedResult = parsed;
+
+      if (parsed.isQuery) {
+        _aiReply = _calculateBalanceReply(
+          parsed.name.isNotEmpty ? parsed.name : null,
+        );
+      } else if (parsed.isHelp) {
+        _aiReply = parsed.reply;
+      } else if (parsed.isPurchaseOrder) {
+        _aiReply = parsed.reply;
+        savePurchaseOrder(parsed.purchaseItems);
+      } else if (parsed.amount > 0) {
+        parsedName = parsed.name;
+        parsedAmount = parsed.amount;
+        parsedType = parsed.type;
+        parsedRemarks = parsed.remarks;
+        _aiReply = parsed.reply;
+
+        // Automatically sync to Udhar ledger if customer is matched
+        final matched = findMatchingCustomer(parsed.name, parsed.phone);
+        if (matched != null) {
+          await saveParsedEntryDirectly();
+        } else {
+          saveTransaction();
+          await speakReply(_aiReply);
+        }
+        return;
+      } else {
+        _aiReply = parsed.reply;
+      }
+
+      await speakReply(_aiReply);
+    } finally {
+      _isProcessingSpeech = false;
+    }
+  }
+
+  /// Strips Indian/Hindi honorifics (ji, bhai, bhaiya, uncle, sethji, etc.) from party names
+  static String stripHonorifics(String raw) {
+    if (raw.trim().isEmpty) return raw;
+    var cleaned = raw.trim();
+    final pattern = RegExp(
+      r'(?:(?<=^|\s)(?:ji|bhai|bhaiya|bhaya|uncle|sethji|seth\s+ji|sahab|saab|aunty|anti|didi|sir|panditji|babu|chacha|chachaji|mama|mamaji|kaka|kakaji|जी|भाई|भैया|अंकल|सेठजी|साहब|आंटी|दीदी|सर|पंडितजी|बाबू|चाचा|मामा|काका)(?=$|\s))',
+      caseSensitive: false,
+    );
+    cleaned = cleaned.replaceAll(pattern, '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return cleaned.isEmpty ? raw.trim() : cleaned;
+  }
+
+  static final Map<String, double> _hindiWordToNumber = {
+    'ek': 1, 'एक': 1,
+    'do': 2, 'दो': 2,
+    'teen': 3, 'tin': 3, 'तीन': 3,
+    'chaar': 4, 'char': 4, 'चार': 4,
+    'paanch': 5, 'panch': 5, 'पांच': 5, 'पाँच': 5,
+    'che': 6, 'chhe': 6, 'chheh': 6, 'छह': 6,
+    'saat': 7, 'सात': 7,
+    'aath': 8, 'ath': 8, 'आठ': 8,
+    'nau': 9, 'नौ': 9,
+    'das': 10, 'दस': 10,
+    'gyarah': 11, 'ग्यारह': 11,
+    'barah': 12, 'बारह': 12,
+    'terah': 13, 'तेरह': 13,
+    'chaudah': 14, 'चौदह': 14,
+    'pandrah': 15, 'pandra': 15, 'पंद्रह': 15,
+    'solah': 16, 'sola': 16, 'सोलह': 16,
+    'satrah': 17, 'satra': 17, 'सत्रह': 17,
+    'atharah': 18, 'athara': 18, 'अठारह': 18,
+    'unnees': 19, 'unnis': 19, 'उन्नीस': 19,
+    'bees': 20, 'bis': 20, 'बीस': 20,
+    'ikkees': 21, 'ikkis': 21, 'इक्कीस': 21,
+    'baees': 22, 'baais': 22, 'बाईस': 22,
+    'teees': 23, 'teis': 23, 'तेईस': 23,
+    'chaubees': 24, 'chaubis': 24, 'चौबीस': 24,
+    'pachees': 25, 'pachis': 25, 'पच्चीस': 25,
+    'chhabbees': 26, 'chhabis': 26, 'छब्बीस': 26,
+    'sattaees': 27, 'satais': 27, 'सत्ताईस': 27,
+    'atthaees': 28, 'athais': 28, 'अट्ठाईस': 28,
+    'untees': 29, 'untis': 29, 'उनतीस': 29,
+    'tees': 30, 'tis': 30, 'तीस': 30,
+    'iktees': 31, 'iktis': 31, 'इकतीस': 31,
+    'battees': 32, 'battis': 32, 'बत्तीस': 32,
+    'taitees': 33, 'tentis': 33, 'तैंतीस': 33,
+    'chautees': 34, 'chautis': 34, 'चौंतीस': 34,
+    'paintees': 35, 'paintis': 35, 'पैंतीस': 35,
+    'chhatees': 36, 'chhattis': 36, 'छत्तीस': 36,
+    'saintees': 37, 'saintis': 37, 'सैंतीस': 37,
+    'adtees': 38, 'artis': 38, 'अड़तीस': 38,
+    'untalees': 39, 'untalis': 39, 'उनतालीस': 39,
+    'chaalis': 40, 'chalis': 40, 'चालीस': 40,
+    'iktalees': 41, 'iktalis': 41, 'इकतालीस': 41,
+    'bayalees': 42, 'bayalis': 42, 'बयालीस': 42,
+    'tetalees': 43, 'tetalis': 43, 'तैंतालीस': 43,
+    'chauwalees': 44, 'chauwalis': 44, 'चवालीस': 44,
+    'paintalees': 45, 'paintalis': 45, 'पैंतालीस': 45,
+    'chhiyalees': 46, 'chhiyalis': 46, 'छियालीस': 46,
+    'saintalees': 47, 'saintalis': 47, 'सैंतालीस': 47,
+    'adtalees': 48, 'adtalis': 48, 'अड़तालीस': 48,
+    'unchaas': 49, 'unchas': 49, 'उनचास': 49,
+    'pachaas': 50, 'pachas': 50, 'पचास': 50,
+    'pachpan': 55, 'पचपन': 55,
+    'saath': 60, 'sath': 60, 'साठ': 60,
+    'painsath': 65, 'paintst': 65, 'पैंसठ': 65,
+    'sattar': 70, 'सत्तर': 70,
+    'pachhattar': 75, 'पचहत्तर': 75,
+    'assi': 80, 'अस्सी': 80,
+    'pachasi': 85, 'पचासी': 85,
+    'nabbe': 90, 'nabbey': 90, 'नब्बे': 90,
+    'pachanve': 95, 'पंचानवे': 95,
+    'sau': 100, 'so': 100, 'सौ': 100,
+  };
+
+  /// Parses spoken Hindi/Hinglish words into double amount (e.g. "pandrah sau" -> 1500, "dhai sau" -> 250)
+  static double parseHindiNumberWords(String text) {
+    final lower = text.toLowerCase().trim();
+    if (lower.isEmpty) return 0.0;
+
+    // 1. Direct compound expressions
+    if (lower.contains('dedh hazaar') || lower.contains('dedh hazar') || lower.contains('डेढ़ हजार') || lower.contains('डेढ़ हज़ार')) {
+      return 1500.0;
+    }
+    if (lower.contains('dhai hazaar') || lower.contains('dhai hazar') || lower.contains('ढाई हजार') || lower.contains('ढाई हज़ार')) {
+      return 2500.0;
+    }
+    if (lower.contains('dedh sau') || lower.contains('डेढ़ सौ')) {
+      return 150.0;
+    }
+    if (lower.contains('dhai sau') || lower.contains('ढाई सौ')) {
+      return 250.0;
     }
 
-    await speakReply(_aiReply);
+    // 2. Parse sequential multiplier tokens
+    final tokens = lower.replaceAll(RegExp(r'[^a-zA-Z\u0900-\u097F\s]'), ' ').split(RegExp(r'\s+'));
+    double total = 0.0;
+    double current = 0.0;
+    bool foundAnyNumber = false;
+
+    for (int i = 0; i < tokens.length; i++) {
+      final t = tokens[i];
+      if (t == 'hazaar' || t == 'hazar' || t == 'हजार' || t == 'हज़ार' || t == 'thousand') {
+        foundAnyNumber = true;
+        if (current == 0.0) current = 1.0;
+        total += current * 1000.0;
+        current = 0.0;
+      } else if (t == 'sau' || t == 'so' || t == 'सौ' || t == 'hundred') {
+        foundAnyNumber = true;
+        if (current == 0.0) current = 1.0;
+        total += current * 100.0;
+        current = 0.0;
+      } else if (t == 'lakh' || t == 'laakh' || t == 'लाख') {
+        foundAnyNumber = true;
+        if (current == 0.0) current = 1.0;
+        total += current * 100000.0;
+        current = 0.0;
+      } else if (_hindiWordToNumber.containsKey(t)) {
+        foundAnyNumber = true;
+        current += _hindiWordToNumber[t]!;
+      }
+    }
+    total += current;
+
+    return foundAnyNumber ? total : 0.0;
   }
 
   String _normalizeDevnagariNumbers(String input) {
@@ -907,6 +1062,9 @@ Merchant speech: "$speechText"
       if (amountMatch != null) {
         amount = double.tryParse(amountMatch.group(1)!) ?? 0.0;
       }
+      if (amount <= 0) {
+        amount = parseHindiNumberWords(lower);
+      }
     }
 
     // Determine type: Given (Udhaar Diya) vs Received (Paise Mile)
@@ -953,11 +1111,12 @@ Merchant speech: "$speechText"
         .replaceAll(RegExp(r'\d+(?:\.\d+)?'), '')
         .replaceAll(
           RegExp(
-            r'\b(rupaye|rupees|rupee|rs|inr|udhar|udhaar|ko|se|ne|ka|ki|ke|par|diya|diye|mila|mile|jama|liya|paid|unpaid|received|gave|given|hai|hain|aaya|aaye|de|maal|saman|each|kilo|kg|packet|soap|piece|pc|darjan|baki|baaki|hisab|khata|khate|me|mein|dalo|add|karo|kar|रुपये|रुपए|रु|उधार|जमा|मिले|दिए|दिया|लिया|को|से|ने|का|की|के|है|हैं|खाते|में|डालो)\b',
+            r'\b(rupaye|rupees|rupee|rs|inr|udhar|udhaar|ko|se|ne|ka|ki|ke|par|diya|diye|mila|mile|jama|liya|paid|unpaid|received|gave|given|hai|hain|aaya|aaye|de|maal|saman|each|kilo|kg|packet|soap|piece|pc|darjan|baki|baaki|hisab|khata|khate|me|mein|dalo|add|karo|kar|रुपये|रुपए|रु|उधार|जमा|मिले|दिए|दिया|लिया|को|से|ने|का|की|के|है|हैं|खाते|में|डालो|sau|so|सौ|hazaar|hazar|हजार|हज़ार|lakh|laakh|लाख|ek|do|teen|chaar|char|paanch|panch|che|chhe|saat|aath|ath|nau|das|gyarah|barah|terah|chaudah|pandrah|pandra|solah|satrah|atharah|unnees|bees|pachees|tees|chaalis|pachaas|pachas|saath|sattar|assi|nabbe|dedh|dhai)\b',
           ),
           '',
         )
         .trim();
+    cleaned = stripHonorifics(cleaned);
     cleaned = cleaned.replaceAll(RegExp(r'[^a-zA-Z\u0900-\u097F\s]'), ' ');
     final words = cleaned.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
     final name = words.isEmpty
@@ -975,7 +1134,7 @@ Merchant speech: "$speechText"
     }
 
     if (amount > 0) {
-      final displayName = matchedCustomer != null ? matchedCustomer['name'] : name;
+      final displayName = matchedCustomer != null ? (matchedCustomer['name'] ?? name) : name;
       final friendlyReply = type == 'Given'
           ? '$displayName ko ${amount.toInt()} rupaye udhar safaltapoorvak add ho gaye.'
           : '$displayName se ${amount.toInt()} rupaye safaltapoorvak mil gaye.';
@@ -1004,28 +1163,36 @@ Merchant speech: "$speechText"
     final users = Get.find<UdharController>().usersList;
 
     if (phone.isNotEmpty) {
-      for (var u in users) {
-        if (u is Map) {
-          final uPhone =
-              (u['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
-          if (uPhone.endsWith(phone) || phone.endsWith(uPhone)) {
-            return Map<String, dynamic>.from(u);
+      final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+      if (cleanPhone.isNotEmpty) {
+        for (var u in users) {
+          if (u is Map) {
+            final uPhone =
+                (u['phone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+            if (uPhone.isNotEmpty &&
+                (uPhone.endsWith(cleanPhone) || cleanPhone.endsWith(uPhone))) {
+              return Map<String, dynamic>.from(u);
+            }
           }
         }
       }
     }
 
-    final q = name.trim().toLowerCase();
+    final strippedQ = stripHonorifics(name);
+    final q = strippedQ.trim().toLowerCase();
     if (q.isEmpty || q == 'customer') return null;
 
-    // 1. Exact or substring match
+    // 1. Exact or substring match (checking raw customer name and stripped customer name)
     for (var u in users) {
       if (u is Map) {
-        final cName = (u['name'] ?? '').toString().toLowerCase();
+        final rawCName = (u['name'] ?? u['customer_name'] ?? '').toString().toLowerCase();
+        final cName = stripHonorifics(rawCName).toLowerCase();
         if (cName == q ||
+            rawCName == q ||
             cName.startsWith(q) ||
             q.startsWith(cName) ||
-            cName.contains(q)) {
+            cName.contains(q) ||
+            rawCName.contains(q)) {
           return Map<String, dynamic>.from(u);
         }
       }
@@ -1035,7 +1202,8 @@ Merchant speech: "$speechText"
     final normQ = _phoneticNormalize(q);
     for (var u in users) {
       if (u is Map) {
-        final cName = (u['name'] ?? '').toString().toLowerCase();
+        final rawCName = (u['name'] ?? u['customer_name'] ?? '').toString().toLowerCase();
+        final cName = stripHonorifics(rawCName).toLowerCase();
         final normC = _phoneticNormalize(cName);
         if (normC == normQ ||
             normC.contains(normQ) ||
@@ -1049,7 +1217,8 @@ Merchant speech: "$speechText"
     if (q.length >= 4) {
       for (var u in users) {
         if (u is Map) {
-          final cName = (u['name'] ?? '').toString().toLowerCase();
+          final rawCName = (u['name'] ?? u['customer_name'] ?? '').toString().toLowerCase();
+          final cName = stripHonorifics(rawCName).toLowerCase();
           final normC = _phoneticNormalize(cName);
           final dist = _levenshtein(normQ, normC);
           final maxAllowedDist = normQ.length >= 6 ? 2 : 1;
@@ -1130,24 +1299,27 @@ Merchant speech: "$speechText"
         udharController.remarksCtrl.text = 'Added via VoiceKhata';
       }
 
+      final cleanName = stripHonorifics(parsedName);
       Map<String, dynamic>? targetCustomer = udharController.selectedUser ??
-          findMatchingCustomer(parsedName, latestParsedResult?.phone ?? '');
+          findMatchingCustomer(cleanName, parsedPhone.isNotEmpty ? parsedPhone : (latestParsedResult?.phone ?? ''));
       if (targetCustomer != null) {
         udharController.selectedUser = targetCustomer;
       }
 
-      // If customer not already in active ledger, try to resolve real phone from speech or phonebook
+      // If customer not already in active ledger, try to resolve real phone from parsedPhone, speech or phonebook
       if (targetCustomer == null) {
-        String phoneToUse = latestParsedResult?.phone ?? '';
+        String phoneToUse = parsedPhone.isNotEmpty
+            ? parsedPhone
+            : (latestParsedResult?.phone ?? '');
 
         if (phoneToUse.isEmpty) {
           // Attempt smart match with device phonebook contacts
           try {
             if (await FlutterContacts.requestPermission(readonly: true)) {
               final contacts = await FlutterContacts.getContacts(withProperties: true);
-              final q = parsedName.trim().toLowerCase();
+              final q = cleanName.trim().toLowerCase();
               for (final c in contacts) {
-                final cName = c.displayName.trim().toLowerCase();
+                final cName = stripHonorifics(c.displayName).trim().toLowerCase();
                 if (cName == q || cName.contains(q) || q.contains(cName)) {
                   if (c.phones.isNotEmpty) {
                     final raw = c.phones.first.number.replaceAll(RegExp(r'\D'), '');
@@ -1166,7 +1338,7 @@ Merchant speech: "$speechText"
 
         if (phoneToUse.isNotEmpty) {
           // Create new customer in backend with their real phone number so Udhar Users App syncs!
-          udharController.nameCtrl.text = parsedName;
+          udharController.nameCtrl.text = cleanName;
           udharController.phoneCtrl.text = phoneToUse;
           targetCustomer = await udharController.addCustomer(closeScreenOnSuccess: false);
           if (targetCustomer != null) {
@@ -1178,7 +1350,7 @@ Merchant speech: "$speechText"
       // If still no valid customer (no real phone number found):
       if (targetCustomer == null && udharController.selectedUser == null) {
         Helpers.showSnackBar(
-          msg: '$parsedName ka mobile number dalein taki Udhar User app se hisab sync ho sake.',
+          msg: '$cleanName ka mobile number dalein taki Udhar User app se hisab sync ho sake.',
           title: 'Mobile Number Required',
         );
         isSubmittingEntry = false;
@@ -1187,22 +1359,26 @@ Merchant speech: "$speechText"
         return;
       }
 
-      // Submit directly to backend API without popping the current screen context
+      // Submit directly to backend API with idempotency protection
+      final safeName = cleanName.replaceAll(RegExp(r'\s+'), '_');
+      final txKey = "voice_${safeName}_${parsedAmount.toInt()}_${DateTime.now().millisecondsSinceEpoch ~/ 60000}";
       final bool success = await udharController.submitUdhar(
         popOnSuccess: false,
         billImagePath: attachedBillImage?.path,
+        idempotencyKey: txKey,
       );
 
       if (success) {
         saveTransaction();
         _transcribedText = "";
         sandboxTextCtrl.clear();
+        parsedPhone = "";
         clearAttachedBillImage();
 
         await speakReply(
           parsedType == 'Given'
-              ? '$parsedName ko ${parsedAmount.toInt()} rupaye udhar ledger mein add ho gaye.'
-              : '$parsedName se ${parsedAmount.toInt()} rupaye ledger mein jama ho gaye.',
+              ? '$cleanName ko ${parsedAmount.toInt()} rupaye udhar ledger mein add ho gaye.'
+              : '$cleanName se ${parsedAmount.toInt()} rupaye ledger mein jama ho gaye.',
         );
       }
     } catch (e) {
