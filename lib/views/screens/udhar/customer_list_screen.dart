@@ -21,6 +21,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = "";
   String _activeTab = "due"; // "due", "all"
+  String _sortOption = "highest_due"; // "highest_due", "oldest_due", "name_asc", "recent"
 
   @override
   void initState() {
@@ -72,6 +73,114 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       Helpers.showSnackBar(
           msg: "Could not launch WhatsApp for $phone", title: "Error");
     }
+  }
+
+  void _showSortBottomSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 14.h),
+                Text(
+                  "Sort Customers By",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                _buildSortOptionTile('highest_due', 'Highest Due (ज्यादा उधार पहले)', Icons.arrow_downward_rounded, isDark),
+                _buildSortOptionTile('oldest_due', 'Days Due (पुराना उधार पहले)', Icons.access_time_rounded, isDark),
+                _buildSortOptionTile('name_asc', 'Name A to Z (नाम अनुसार)', Icons.sort_by_alpha_rounded, isDark),
+                _buildSortOptionTile('recent', 'Recently Added (हाल ही में जोड़े गए)', Icons.history_rounded, isDark),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSortOptionTile(String key, String title, IconData icon, bool isDark) {
+    final isSelected = _sortOption == key;
+    return ListTile(
+      onTap: () {
+        setState(() => _sortOption = key);
+        Navigator.pop(context);
+      },
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        icon,
+        color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+        size: 20.sp,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 13.5.sp,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected
+              ? const Color(0xFF2563EB)
+              : (isDark ? Colors.white : const Color(0xFF1E293B)),
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check_circle_rounded, color: const Color(0xFF2563EB), size: 18.sp)
+          : null,
+    );
+  }
+
+  Widget _buildSortChip(String key, String label, bool isDark) {
+    final isSelected = _sortOption == key;
+    return InkWell(
+      onTap: () => setState(() => _sortOption = key),
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF2563EB).withValues(alpha: 0.12)
+              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected
+                ? const Color(0xFF2563EB)
+                : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+          ),
+        ),
+      ),
+    );
   }
 
   void _navigateToLedger(Map<String, dynamic> userMap) {
@@ -175,6 +284,35 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             return name.contains(_searchQuery) || phone.contains(_searchQuery);
           }).toList();
         }
+
+        // Apply Sorting
+        list.sort((a, b) {
+          if (a is! Map || b is! Map) return 0;
+          if (_sortOption == 'highest_due') {
+            final balA = double.tryParse(
+                    (a['outstanding_balance'] ?? a['balance'] ?? a['udhar_balance'] ?? 0)
+                        .toString()) ??
+                0.0;
+            final balB = double.tryParse(
+                    (b['outstanding_balance'] ?? b['balance'] ?? b['udhar_balance'] ?? 0)
+                        .toString()) ??
+                0.0;
+            return balB.compareTo(balA);
+          } else if (_sortOption == 'oldest_due') {
+            final dueA = int.tryParse((a['days_due'] ?? a['overdue_days'] ?? 0).toString()) ?? 0;
+            final dueB = int.tryParse((b['days_due'] ?? b['overdue_days'] ?? 0).toString()) ?? 0;
+            return dueB.compareTo(dueA);
+          } else if (_sortOption == 'name_asc') {
+            final nameA = (a['name'] ?? a['customer_name'] ?? '').toString().toLowerCase();
+            final nameB = (b['name'] ?? b['customer_name'] ?? '').toString().toLowerCase();
+            return nameA.compareTo(nameB);
+          } else {
+            // 'recent'
+            final idA = int.tryParse((a['id'] ?? 0).toString()) ?? 0;
+            final idB = int.tryParse((b['id'] ?? 0).toString()) ?? 0;
+            return idB.compareTo(idA);
+          }
+        });
 
         return Scaffold(
           backgroundColor:
@@ -291,7 +429,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                             color: const Color(0xFF2563EB),
                             size: 19.sp,
                           ),
-                          onPressed: () {},
+                          onPressed: () => _showSortBottomSheet(context),
                         ),
                       ],
                     ),
@@ -372,7 +510,26 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     ],
                   ),
 
-                  SizedBox(height: 14.h),
+                  SizedBox(height: 10.h),
+
+                  // ── Quick Sort Chips ───────────────────────────────────────
+                  SizedBox(
+                    height: 30.h,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _buildSortChip('highest_due', '₹ Highest Due', isDark),
+                        SizedBox(width: 6.w),
+                        _buildSortChip('oldest_due', '⏰ Days Due', isDark),
+                        SizedBox(width: 6.w),
+                        _buildSortChip('name_asc', '🔤 A to Z', isDark),
+                        SizedBox(width: 6.w),
+                        _buildSortChip('recent', '⚡ Recent', isDark),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 12.h),
 
                   // ── Customers List Cards ─────────────────────────────────
                   controller.isUsersLoading

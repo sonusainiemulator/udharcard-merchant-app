@@ -5,6 +5,43 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.79] - 2026-09-22 00:20:00 IST
+
+### 🚀 Comprehensive App Feature Analysis, Market Gap Closure, Bug Fixes & Stability Hardening
+
+#### Summary
+Bumped version to `1.0.79+80`. Performed deep analysis of all mobile app workflows against leading Indian MSME khata/ledger apps (Khatabook, OkCredit, Vyapar, BharatPe), identified key market gaps and usability bottlenecks, and hardened core customer, reminder, and ledger capabilities for rock-solid production stability.
+
+#### 🛠️ Market Gap Closure & Feature Enhancements
+- **Interactive Customer Picker in Payment Reminders (`SendReminderScreen`)**:
+  - Fixed a critical crash where navigating to "Send Reminder" from Home Quick Actions opened with hardcoded dummy data ("Customer ₹2450") and failed with "Customer phone number is required".
+  - Integrated full customer selection modal (`SelectUserSheet.show`) with 1-tap "Change / Select Customer" banner, auto-prefilling highest-due debtor when opened from Home.
+- **Dynamic 1-Click UPI Payment Link Injection**:
+  - Implemented automatic UPI payment intent link generator (`upi://pay?pa={vpa}&pn={merchant}&am={amount}&cu=INR`) appended directly into reminder messages.
+  - Customers receiving WhatsApp or SMS payment reminders can tap the link to pay the merchant immediately via Google Pay, PhonePe, Paytm, or BHIM.
+- **Bilingual Reminder Templates (4 Modes)**:
+  - Added 4 customizable quick-select reminder templates tailored to Indian retail practices:
+    1. *Polite (विनम्र)*: Respectful reminder with total due and payment link.
+    2. *Due Today (आज देय)*: For bills due on current date.
+    3. *Urgent (अति आवश्यक)*: For accounts overdue past credit terms.
+    4. *English Standard*: Professional billing notice with UPI payment link.
+- **Advanced Multi-Criteria Customer Sorting (`CustomerListScreen`)**:
+  - Connected the previously non-functional tune/filter icon (`Icons.tune_rounded`) to a dedicated Sort Bottom Sheet.
+  - Added horizontal 1-tap quick sort chips row (`₹ Highest Due`, `⏰ Days Due`, `🔤 A to Z`, `⚡ Recent`) beneath the segmented Due/All tabs.
+  - Implemented real-time customer sorting logic across all tabs for instant merchant triage.
+- **Direction-Based Ledger Transaction Filtering (`CustomerLedgerScreen`)**:
+  - Added visual filter chips (`All`, `Udhar Diya / Given`, `Paise Mile / Received`) with real-time counter badges in the transaction timeline.
+  - Preserved backward-chained running post-transaction balances via indexed map entries so visual filtering never distorts balance ledger calculations.
+- **Real-Time Offline-to-Online Sync Feedback Loop (`OfflineSyncService`)**:
+  - Added automated `UdharController.fetchUsers()` trigger upon successful offline queue sync (`syncedCount > 0`).
+  - Ensures customer balances and home screen summaries immediately reflect queued transactions as soon as internet connectivity is restored.
+- **Analyzer Cleanup & Speech Deprecation Fix (`VoiceEntryController`)**:
+  - Replaced deprecated `SpeechToText.listen(localeId: ...)` parameter with `SpeechListenOptions(localeId: ...)` for full forward-compatibility with speech SDK updates.
+  - Verified `flutter analyze --no-pub` yields **0 warnings / 0 errors**.
+- **Automated Test Coverage Expansion**:
+  - Added comprehensive test suite `test/market_gap_features_test.dart` covering reminder generation, UPI deep links, customer sorting algorithms, and indexed ledger balance mapping.
+  - Verified all 72 unit & widget tests pass cleanly.
+
 ## [1.0.78] - 2026-09-22 00:10:15 IST
 
 ### 🧠 Deep Voice Entry Stabilization, Spoken Hindi Numbers, Honorific Stripping & Idempotency Hardening

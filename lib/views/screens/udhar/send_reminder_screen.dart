@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../controllers/udhar_controller.dart';
 import '../../../utils/services/helpers.dart';
+import '../../../utils/services/localstorage/hive.dart';
+import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/custom_appbar.dart';
+import '../../widgets/spacing.dart';
+import 'select_user_sheet.dart';
 
 class SendReminderScreen extends StatefulWidget {
   final Map<String, dynamic>? customer;
@@ -21,21 +28,46 @@ class SendReminderScreen extends StatefulWidget {
 }
 
 class _SendReminderScreenState extends State<SendReminderScreen> {
+  Map<String, dynamic>? _customer;
+  late double _amount;
+  int _daysDue = 3;
   String _selectedChannel = 'whatsapp'; // 'whatsapp', 'sms', 'call'
+  String _selectedTemplate = 'polite'; // 'polite', 'due_today', 'urgent', 'english'
+  bool _includeUpiLink = true;
   late TextEditingController _messageCtrl;
 
   @override
   void initState() {
     super.initState();
-    final customerName = widget.customer?['name'] ?? widget.customer?['customer_name'] ?? 'Customer';
-    final amountVal = widget.amount ??
-        double.tryParse(widget.customer?['outstanding_balance']?.toString() ?? '0') ??
-        2450.0;
-    final days = widget.daysDue ?? 3;
+    _customer = widget.customer;
 
-    final defaultMsg =
-        "Hi $customerName, your udhar of ₹${amountVal.toStringAsFixed(0)} is due in $days days. Please make the payment at your convenience. Thank you!";
-    _messageCtrl = TextEditingController(text: defaultMsg);
+    // If no customer passed (e.g. opened from Home Quick Actions),
+    // try to auto-preselect the first debtor from ledger
+    if (_customer == null && Get.isRegistered<UdharController>()) {
+      final users = Get.find<UdharController>().usersList;
+      for (final u in users) {
+        if (u is Map) {
+          final bal = double.tryParse(
+                (u['outstanding_balance'] ?? u['balance'] ?? 0).toString(),
+              ) ??
+              0.0;
+          if (bal > 0) {
+            _customer = Map<String, dynamic>.from(u);
+            break;
+          }
+        }
+      }
+    }
+
+    _amount = widget.amount ??
+        double.tryParse(_customer?['outstanding_balance']?.toString() ??
+                _customer?['balance']?.toString() ??
+                '0') ??
+        0.0;
+    _daysDue = widget.daysDue ??
+        (int.tryParse(_customer?['days_due']?.toString() ?? '3') ?? 3);
+
+    _messageCtrl = TextEditingController(text: _generateReminderMessage());
   }
 
   @override
@@ -44,16 +76,94 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
     super.dispose();
   }
 
+  void _onCustomerSelected(Map<String, dynamic>? newCustomer) {
+    if (newCustomer == null) return;
+    setState(() {
+      _customer = newCustomer;
+      _amount = double.tryParse(_customer?['outstanding_balance']?.toString() ??
+              _customer?['balance']?.toString() ??
+              '0') ??
+          0.0;
+      _daysDue = int.tryParse(_customer?['days_due']?.toString() ?? '3') ?? 3;
+      _messageCtrl.text = _generateReminderMessage();
+    });
+  }
+
+  String _generateReminderMessage() {
+    final customerName = _customer?['name'] ??
+        _customer?['customer_name'] ??
+        'Customer';
+    final amountVal = _amount > 0 ? _amount : 500.0;
+    final String shopName =
+        (HiveHelp.read('shop_name') ?? 'Udhar Card Merchant').toString().trim();
+    final String merchantUpi = (HiveHelp.read(Keys.merchantUpiId) ??
+            HiveHelp.read('merchant_upi_id') ??
+            'paysecure@upi')
+        .toString()
+        .trim();
+    final String encodedShop =
+        Uri.encodeComponent(shopName.isEmpty ? 'Merchant' : shopName);
+    final String upiUrl =
+        "upi://pay?pa=$merchantUpi&pn=$encodedShop&am=${amountVal.abs().toInt()}&cu=INR";
+
+    String baseMsg = "";
+    switch (_selectedTemplate) {
+      case 'polite':
+        baseMsg =
+            "Namaste $customerName ji 🙏\n\n"
+            "Aapka $shopName par kul udhar *₹${amountVal.abs().toStringAsFixed(0)}* baki hai. "
+            "Kripya samay par bhuqtan karein.\n\n"
+            "Kisi bhi jankari ke liye dukan par sampark karein. Dhanyawad! ✨";
+        break;
+      case 'due_today':
+        baseMsg =
+            "Namaste $customerName ji,\n\n"
+            "Aapka *₹${amountVal.abs().toStringAsFixed(0)}* ka udhar hisab aaj deye hai. "
+            "Kripya aaj hi payment karein.\n\n"
+            "Dhanyawad - $shopName";
+        break;
+      case 'urgent':
+        baseMsg =
+            "⚠️ URGENT PAYMENT REMINDER\n\n"
+            "$customerName ji, aapka *₹${amountVal.abs().toStringAsFixed(0)}* ka hisab overdue ho chuka hai. "
+            "Kripya aaj hi payment clear karein.\n\n"
+            "Sampark: $shopName";
+        break;
+      case 'english':
+      default:
+        baseMsg =
+            "Hi $customerName,\n\n"
+            "Your udhar balance of *₹${amountVal.abs().toStringAsFixed(0)}* at $shopName is due in $_daysDue days. "
+            "Please make the payment at your earliest convenience. Thank you!";
+        break;
+    }
+
+    if (_includeUpiLink && _amount > 0) {
+      baseMsg +=
+          "\n\n📲 *1-Click UPI Payment Link:*\n"
+          "$upiUrl\n\n"
+          "(Google Pay, PhonePe, Paytm kisi bhi app se payment kar sakte hain)";
+    }
+
+    return baseMsg;
+  }
+
   Future<void> _handleSend() async {
-    final phone = widget.customer?['phone'] ?? widget.customer?['mobile'] ?? '';
+    final phone = _customer?['phone'] ?? _customer?['mobile'] ?? '';
     final cleanPhone = phone.toString().replaceAll(RegExp(r'[^0-9]'), '');
     final msg = _messageCtrl.text.trim();
 
+    if (cleanPhone.isEmpty) {
+      Helpers.showSnackBar(
+        msg: "Please select a customer with a valid phone number.",
+        title: "Phone Required",
+      );
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+
     if (_selectedChannel == 'whatsapp') {
-      if (cleanPhone.isEmpty) {
-        Helpers.showSnackBar(msg: "Customer phone number is required for WhatsApp");
-        return;
-      }
       final targetPhone = cleanPhone.length == 10 ? '91$cleanPhone' : cleanPhone;
       final uri = Uri.parse("https://wa.me/$targetPhone?text=${Uri.encodeComponent(msg)}");
       if (await canLaunchUrl(uri)) {
@@ -62,10 +172,6 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
         Helpers.showSnackBar(msg: "Could not open WhatsApp");
       }
     } else if (_selectedChannel == 'sms') {
-      if (cleanPhone.isEmpty) {
-        Helpers.showSnackBar(msg: "Customer phone number is required for SMS");
-        return;
-      }
       final uri = Uri.parse("sms:$cleanPhone?body=${Uri.encodeComponent(msg)}");
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
@@ -73,10 +179,6 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
         Helpers.showSnackBar(msg: "Could not launch SMS app");
       }
     } else if (_selectedChannel == 'call') {
-      if (cleanPhone.isEmpty) {
-        Helpers.showSnackBar(msg: "Customer phone number is required for Call");
-        return;
-      }
       final uri = Uri.parse("tel:$cleanPhone");
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
@@ -89,190 +191,253 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final subtleText = const Color(0xFF64748B);
+    final primaryColor = const Color(0xFF0D9488);
+
+    final customerName = _customer?['name'] ?? _customer?['customer_name'] ?? 'Select Customer';
+    final customerPhone = _customer?['phone'] ?? _customer?['mobile'] ?? '';
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
       appBar: const CustomAppBar(
-        title: "Send Reminder",
+        title: "Send Payment Reminder",
         isReverseIconBgColor: true,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(height: 10.h),
-            // Hero Graphic / Illustration
-            Center(
-              child: Container(
-                width: 140.w,
-                height: 140.w,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFE6F7F5),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Phone Graphic
-                    Container(
-                      width: 70.w,
-                      height: 100.h,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0D9488),
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
+            // ── 1. Customer Selection Card ──────────────────────────────
+            Container(
+              padding: EdgeInsets.all(14.r),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22.r,
+                    backgroundColor: primaryColor.withValues(alpha: 0.12),
+                    child: Icon(Icons.person, color: primaryColor, size: 24.sp),
+                  ),
+                  HSpace(12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customerName,
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        VSpace(2.h),
+                        Text(
+                          customerPhone.isNotEmpty ? customerPhone : "No phone number",
+                          style: TextStyle(fontSize: 12.sp, color: subtleText),
+                        ),
+                        if (_amount > 0) ...[
+                          VSpace(4.h),
+                          Text(
+                            "Due: ₹${_amount.abs().toStringAsFixed(0)}",
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFEF4444),
+                            ),
                           ),
                         ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8.r),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.chat_bubble_rounded,
-                              color: const Color(0xFF25D366),
-                              size: 26.sp,
-                            ),
-                          ),
-                        ],
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final picked = await SelectUserSheet.show(context);
+                      if (picked != null) {
+                        _onCustomerSelected(picked);
+                      }
+                    },
+                    icon: Icon(Icons.swap_horiz_rounded, size: 18.sp, color: primaryColor),
+                    label: Text(
+                      _customer != null ? "Change" : "Select",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: primaryColor,
                       ),
                     ),
-                    // Bubble Overlay
-                    Positioned(
-                      top: 25.h,
-                      right: 15.w,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.access_time_filled_rounded,
-                                size: 12.sp, color: const Color(0xFFEF4444)),
-                            SizedBox(width: 4.w),
-                            Text(
-                              "Due Soon",
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFFEF4444),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 20.h),
+            VSpace(18.h),
 
-            // Headline
-            Text(
-              "Send Payment Reminder",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              "Choose how you want to remind your customer about the due amount.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: const Color(0xFF64748B),
-                height: 1.4,
-              ),
-            ),
-            SizedBox(height: 24.h),
-
-            // Channel Selector Options
+            // ── 2. Channel Selector Options ─────────────────────────────
             _buildChannelOption(
               channelKey: 'whatsapp',
               title: "WhatsApp",
-              subtitle: "Fast & effective",
+              subtitle: "Instant 1-Click payment reminder",
               icon: Icons.chat_bubble_rounded,
               iconColor: const Color(0xFF25D366),
               bgColor: const Color(0xFFE8F8EE),
               isDark: isDark,
             ),
-            SizedBox(height: 12.h),
+            VSpace(10.h),
             _buildChannelOption(
               channelKey: 'sms',
               title: "SMS",
-              subtitle: "Simple & reliable",
+              subtitle: "Direct mobile text reminder",
               icon: Icons.sms_rounded,
               iconColor: const Color(0xFF2563EB),
               bgColor: const Color(0xFFEFF6FF),
               isDark: isDark,
             ),
-            SizedBox(height: 12.h),
+            VSpace(10.h),
             _buildChannelOption(
               channelKey: 'call',
               title: "Call",
-              subtitle: "Direct conversation",
+              subtitle: "Direct phone conversation",
               icon: Icons.phone_rounded,
-              iconColor: const Color(0xFF0D9488),
+              iconColor: primaryColor,
               bgColor: const Color(0xFFE6F7F5),
               isDark: isDark,
             ),
-            SizedBox(height: 24.h),
+            VSpace(20.h),
 
-            // Custom Message Box
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Custom Message (optional)",
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                ),
+            // ── 3. Template Selection Chips ─────────────────────────────
+            Text(
+              "Reminder Message Template",
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
               ),
             ),
-            SizedBox(height: 8.h),
+            VSpace(8.h),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildTemplateChip(
+                    templateKey: 'polite',
+                    label: "🙏 विनम्र (Polite)",
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                  ),
+                  HSpace(8.w),
+                  _buildTemplateChip(
+                    templateKey: 'due_today',
+                    label: "⏰ आज देय (Due Today)",
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                  ),
+                  HSpace(8.w),
+                  _buildTemplateChip(
+                    templateKey: 'urgent',
+                    label: "⚠️ अति आवश्यक (Urgent)",
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                  ),
+                  HSpace(8.w),
+                  _buildTemplateChip(
+                    templateKey: 'english',
+                    label: "🇬🇧 English",
+                    isDark: isDark,
+                    primaryColor: primaryColor,
+                  ),
+                ],
+              ),
+            ),
+            VSpace(14.h),
+
+            // ── 4. UPI Payment Link Toggle ──────────────────────────────
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.qr_code_rounded, color: primaryColor, size: 20.sp),
+                  HSpace(10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Include 1-Click UPI Payment Link",
+                          style: TextStyle(
+                            fontSize: 12.5.sp,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          "Customer can tap & pay via GPay / PhonePe / Paytm",
+                          style: TextStyle(fontSize: 10.5.sp, color: subtleText),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: _includeUpiLink,
+                    activeTrackColor: primaryColor,
+                    onChanged: (val) {
+                      setState(() {
+                        _includeUpiLink = val;
+                        _messageCtrl.text = _generateReminderMessage();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            VSpace(14.h),
+
+            // ── 5. Message Editor Box ───────────────────────────────────
+            Text(
+              "Message Preview (Editable)",
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+              ),
+            ),
+            VSpace(8.h),
             Container(
               padding: EdgeInsets.all(14.r),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                  width: 1,
-                ),
+                border: Border.all(color: borderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   TextField(
                     controller: _messageCtrl,
-                    maxLines: 4,
-                    maxLength: 160,
+                    maxLines: 6,
+                    maxLength: 1000,
                     style: TextStyle(
-                      fontSize: 13.5.sp,
+                      fontSize: 13.sp,
                       color: isDark ? Colors.white : const Color(0xFF1E293B),
                       height: 1.4,
                     ),
@@ -283,9 +448,9 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
-                  SizedBox(height: 4.h),
+                  VSpace(4.h),
                   Text(
-                    "${_messageCtrl.text.length}/160",
+                    "${_messageCtrl.text.length} characters",
                     style: TextStyle(
                       fontSize: 11.sp,
                       color: const Color(0xFF94A3B8),
@@ -295,33 +460,89 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 28.h),
+            VSpace(24.h),
 
-            // Primary CTA Button
+            // ── 6. Primary CTA Button ───────────────────────────────────
             SizedBox(
               width: double.infinity,
               height: 52.h,
               child: ElevatedButton(
                 onPressed: _handleSend,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  elevation: 0,
+                  backgroundColor: primaryColor,
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14.r),
                   ),
                 ),
-                child: Text(
-                  "Send Reminder",
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _selectedChannel == 'whatsapp'
+                          ? Icons.chat_bubble_rounded
+                          : _selectedChannel == 'sms'
+                              ? Icons.sms_rounded
+                              : Icons.phone_rounded,
+                      size: 18.sp,
+                      color: Colors.white,
+                    ),
+                    HSpace(8.w),
+                    Text(
+                      _selectedChannel == 'whatsapp'
+                          ? "Send Reminder on WhatsApp"
+                          : _selectedChannel == 'sms'
+                              ? "Send Reminder via SMS"
+                              : "Call Customer Now",
+                      style: TextStyle(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            SizedBox(height: 20.h),
+            VSpace(20.h),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateChip({
+    required String templateKey,
+    required String label,
+    required bool isDark,
+    required Color primaryColor,
+  }) {
+    final isSelected = _selectedTemplate == templateKey;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() {
+          _selectedTemplate = templateKey;
+          _messageCtrl.text = _generateReminderMessage();
+        });
+      },
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5.sp,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
+          ),
         ),
       ),
     );
@@ -353,25 +574,26 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
             color: isSelected
                 ? const Color(0xFF0D9488)
                 : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-            width: isSelected ? 1.6 : 1,
+            width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ]
-              : null,
+              : [],
         ),
         child: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(10.r),
+              width: 44.w,
+              height: 44.w,
               decoration: BoxDecoration(
-                color: isDark ? iconColor.withValues(alpha: 0.15) : bgColor,
-                shape: BoxShape.circle,
+                color: bgColor,
+                borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(icon, color: iconColor, size: 22.sp),
             ),
@@ -383,7 +605,7 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14.5.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
@@ -392,7 +614,7 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 11.5.sp,
+                      fontSize: 12.sp,
                       color: const Color(0xFF64748B),
                     ),
                   ),
@@ -400,20 +622,20 @@ class _SendReminderScreenState extends State<SendReminderScreen> {
               ),
             ),
             Container(
-              width: 22.r,
-              height: 22.r,
+              width: 20.w,
+              height: 20.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? const Color(0xFF0D9488) : Colors.transparent,
                 border: Border.all(
                   color: isSelected
                       ? const Color(0xFF0D9488)
                       : (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
                   width: 2,
                 ),
+                color: isSelected ? const Color(0xFF0D9488) : Colors.transparent,
               ),
               child: isSelected
-                  ? Icon(Icons.check_rounded, size: 14.sp, color: Colors.white)
+                  ? Icon(Icons.check, size: 12.sp, color: Colors.white)
                   : null,
             ),
           ],

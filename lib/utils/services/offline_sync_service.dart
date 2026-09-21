@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../../controllers/udhar_controller.dart';
 import '../../data/repositories/udhar_repo.dart';
 import 'helpers.dart';
 import 'localstorage/hive.dart';
@@ -160,11 +161,16 @@ class OfflineSyncService extends GetxService {
       await _saveQueue(remainingQueue);
       pendingCount.value = remainingQueue.length;
 
-      if (syncedCount > 0 && showToast) {
-        Helpers.showSnackBar(
-          msg: 'Successfully synced $syncedCount offline transaction${syncedCount > 1 ? 's' : ''} to server.',
-          title: 'Sync Complete',
-        );
+      if (syncedCount > 0) {
+        if (Get.isRegistered<UdharController>()) {
+          Get.find<UdharController>().fetchUsers();
+        }
+        if (showToast) {
+          Helpers.showSnackBar(
+            msg: 'Successfully synced $syncedCount offline transaction${syncedCount > 1 ? 's' : ''} to server.',
+            title: 'Sync Complete',
+          );
+        }
       }
     } finally {
       isSyncing.value = false;

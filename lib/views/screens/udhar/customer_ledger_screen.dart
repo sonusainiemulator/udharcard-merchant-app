@@ -33,6 +33,47 @@ class CustomerLedgerScreen extends StatefulWidget {
 
 class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
   String _activeTab = "details"; // "details" (Screen 4) or "transactions" (Screen 5)
+  String _txFilter = "all"; // "all", "given", "received"
+
+  Widget _buildTxFilterChip(String filterKey, String label, bool isDark) {
+    final isSelected = _txFilter == filterKey;
+    Color activeColor;
+    if (filterKey == 'given') {
+      activeColor = const Color(0xFF2563EB);
+    } else if (filterKey == 'received') {
+      activeColor = const Color(0xFF16A34A);
+    } else {
+      activeColor = const Color(0xFF2563EB);
+    }
+
+    return InkWell(
+      onTap: () => setState(() => _txFilter = filterKey),
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.15)
+              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5.sp,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected
+                ? activeColor
+                : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _callCustomer(String phone) async {
     final cleanPhone = phone.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
@@ -765,10 +806,38 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     required Map storedLanguage,
     required bool isDark,
   }) {
+    final totalGivenCount =
+        txList.where((tx) => _isGivenTransaction(tx)).length;
+    final totalReceivedCount =
+        txList.where((tx) => !_isGivenTransaction(tx)).length;
+
+    final List<MapEntry<int, dynamic>> filteredIndexedTx =
+        txList.asMap().entries.where((entry) {
+      if (_txFilter == 'given') return _isGivenTransaction(entry.value);
+      if (_txFilter == 'received') return !_isGivenTransaction(entry.value);
+      return true;
+    }).toList();
+
     return Column(
       children: [
+        // ── Transaction Filter Chips ───────────────────────────────────────
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          child: Row(
+            children: [
+              _buildTxFilterChip("all", "All (${txList.length})", isDark),
+              SizedBox(width: 8.w),
+              _buildTxFilterChip(
+                  "given", "Udhar Diya ($totalGivenCount)", isDark),
+              SizedBox(width: 8.w),
+              _buildTxFilterChip(
+                  "received", "Paise Mile ($totalReceivedCount)", isDark),
+            ],
+          ),
+        ),
+
         Expanded(
-          child: txList.isEmpty
+          child: filteredIndexedTx.isEmpty
               ? Center(
                   child: Text(
                     "No transactions found",
@@ -780,9 +849,10 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                 )
               : ListView.builder(
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  itemCount: txList.length,
+                  itemCount: filteredIndexedTx.length,
                   itemBuilder: (context, i) {
-                    final tx = txList[i];
+                    final originalIndex = filteredIndexedTx[i].key;
+                    final tx = filteredIndexedTx[i].value;
                     final bool isGiven = _isGivenTransaction(tx);
                     final double amt =
                         double.tryParse(tx['amount']?.toString() ?? '0') ?? 0.0;
@@ -819,7 +889,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 size: 16.sp,
                               ),
                             ),
-                            if (i < txList.length - 1)
+                            if (i < filteredIndexedTx.length - 1)
                               Container(
                                 width: 2.w,
                                 height: 50.h,
@@ -838,7 +908,7 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
                                 tx is Map ? tx : {},
                                 isGiven,
                                 amt,
-                                postBalances[i] ?? balance),
+                                postBalances[originalIndex] ?? balance),
                             borderRadius: BorderRadius.circular(8.r),
                             child: Padding(
                               padding: EdgeInsets.only(bottom: 16.h),

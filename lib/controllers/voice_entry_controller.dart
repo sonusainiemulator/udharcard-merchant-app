@@ -403,7 +403,6 @@ class VoiceEntryController extends GetxController {
       _changeState(VoiceAssistantState.listening);
 
       await _speechToText.listen(
-        localeId: _selectedSpeechLocale,
         onResult: (val) {
           _transcribedText = val.recognizedWords;
           if (_transcribedText.trim().isNotEmpty) {
@@ -422,6 +421,7 @@ class VoiceEntryController extends GetxController {
           listenFor: const Duration(seconds: 30),
           pauseFor: const Duration(seconds: 4),
           partialResults: true,
+          localeId: _selectedSpeechLocale,
         ),
       );
     } else {
