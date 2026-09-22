@@ -45,7 +45,10 @@ Bumped version to `1.0.79+80`. Performed deep analysis of all mobile app workflo
   - Built iOS release archive `Runner.xcarchive` (281.8 MB) and exported `Udharcard Merchant.ipa` (38.5 MB).
   - Uploaded to Apple App Store Connect TestFlight (`Delivery UUID: 84f8c7cb-8887-4ae5-bad1-79552324d1e2`). Transferred 37,613,353 bytes in 7.006 seconds (5.4 MB/s, 42.9 Mbps).
   - Verified Apple App Store Connect processing status: `VALID` (State: `VALID`, `buildAudienceType: APP_STORE_ELIGIBLE`).
-  - Added `ITSAppUsesNonExemptEncryption: false` in `Info.plist` for seamless auto-distribution without manual export compliance approval.
+  - Added `ITSAppUsesNonExemptEncryption: false` in `Info.plist` and patched build attributes on App Store Connect.
+  - Automatically distributed Build 80 to TestFlight via App Store Connect API:
+    - Internal Testers: `IN_BETA_TESTING` (Active & Available).
+    - External Testers (`TestFight-Beta`): Attached with localized release notes and submitted for Beta Review (`WAITING_FOR_BETA_REVIEW`).
 
 ## [1.0.78] - 2026-09-22 00:10:15 IST
 
