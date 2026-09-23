@@ -24,6 +24,13 @@ Bumped version to `1.0.80+81`. Diagnosed and resolved a fatal launch crash (`SIG
 - **Info.plist Configuration Hardening**:
   - Configured `UIApplicationSceneManifest` with `UIWindowSceneSessionRoleApplication` referencing `$(PRODUCT_MODULE_NAME).SceneDelegate`.
   - Added explicit `GIDClientID` (`118952639868-62psc04ou2p8tjkq44gcr5eh7ppe3j0a.apps.googleusercontent.com`) matching `GoogleService-Info.plist` to prevent Google Auth initialization aborts.
+- **TestFlight Deployment (2026-09-23 11:12:00 IST)**:
+  - Built iOS release archive `Runner.xcarchive` (281.8 MB) and exported `Udharcard Merchant.ipa` (38.5 MB).
+  - Uploaded to Apple App Store Connect TestFlight (`Delivery UUID: f7e893d4-00bf-46f2-b18c-eb8cd0ba0ce2`). Transferred 37,615,948 bytes in 25.240 seconds (1.5 MB/s, 11.9 Mbps).
+  - Verified Apple App Store Connect processing status: `VALID` (State: `VALID`, `buildAudienceType: APP_STORE_ELIGIBLE`).
+  - Automatically marked encryption compliance exempt (`usesNonExemptEncryption: false`).
+  - Attached Build 81 to External Testing Group (`TestFight-Beta`) with release notes.
+  - Successfully submitted for Beta App Review (`State: WAITING_FOR_REVIEW`).
 
 ## [1.0.79] - 2026-09-22 00:20:00 IST
 
