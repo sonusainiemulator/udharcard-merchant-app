@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:paysecure/utils/services/localstorage/hive.dart';
 import '../../config/app_colors.dart';
 import '../data/models/profile_model.dart';
@@ -750,8 +752,21 @@ class ProfileController extends GetxController {
     }
   }
 
+  bool isUploadingQr = false;
+
   void loadCustomQrCode({bool notify = false}) {
-    customQrCodePath = HiveHelp.read(Keys.customQrCodePath);
+    final saved = HiveHelp.read(Keys.customQrCodePath);
+    if (saved != null && saved.toString().isNotEmpty) {
+      final file = File(saved.toString());
+      if (file.existsSync()) {
+        customQrCodePath = saved.toString();
+      } else {
+        customQrCodePath = null;
+        HiveHelp.remove(Keys.customQrCodePath);
+      }
+    } else {
+      customQrCodePath = null;
+    }
     if (notify) {
       safeUpdate();
     }
@@ -782,26 +797,101 @@ class ProfileController extends GetxController {
   }
 
   Future<void> pickCustomQrCode(ImageSource source) async {
+    isUploadingQr = true;
+    update();
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: source,
-        imageQuality: 90,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 92,
       );
       if (image != null) {
-        customQrCodePath = image.path;
-        HiveHelp.write(Keys.customQrCodePath, image.path);
-        Helpers.showSnackBar(msg: "Custom QR Code updated successfully!");
-        update();
+        await _saveQrCodePermanently(File(image.path));
+        return;
       }
     } catch (e) {
-      Helpers.showSnackBar(msg: "Failed to pick image: $e");
+      debugPrint("pickCustomQrCode ImagePicker error: $e");
+      // Fallback: If gallery error on certain Android OEM skins, try FilePicker
+      if (source == ImageSource.gallery) {
+        try {
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.image,
+            allowMultiple: false,
+          );
+          if (result != null && result.files.single.path != null) {
+            await _saveQrCodePermanently(File(result.files.single.path!));
+            return;
+          }
+        } catch (fileErr) {
+          debugPrint("pickCustomQrCode FilePicker fallback error: $fileErr");
+        }
+      }
+      Helpers.showSnackBar(msg: "Could not select image: $e");
+    } finally {
+      isUploadingQr = false;
+      update();
+    }
+  }
+
+  Future<void> pickCustomQrCodeFromFilePicker() async {
+    isUploadingQr = true;
+    update();
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+      if (result != null && result.files.single.path != null) {
+        await _saveQrCodePermanently(File(result.files.single.path!));
+      }
+    } catch (e) {
+      debugPrint("pickCustomQrCodeFromFilePicker error: $e");
+      Helpers.showSnackBar(msg: "Could not pick image file: $e");
+    } finally {
+      isUploadingQr = false;
+      update();
+    }
+  }
+
+  Future<void> _saveQrCodePermanently(File sourceFile) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final qrDir = Directory('${appDir.path}/merchant_qr');
+      if (!qrDir.existsSync()) {
+        await qrDir.create(recursive: true);
+      }
+      final extension = sourceFile.path.contains('.')
+          ? '.${sourceFile.path.split('.').last}'
+          : '.png';
+      final targetPath = '${qrDir.path}/merchant_store_qr$extension';
+      final targetFile = File(targetPath);
+      if (targetFile.existsSync()) {
+        await targetFile.delete();
+      }
+      final savedFile = await sourceFile.copy(targetPath);
+      customQrCodePath = savedFile.path;
+      HiveHelp.write(Keys.customQrCodePath, savedFile.path);
+      Helpers.showSnackBar(msg: "Merchant QR Code saved successfully!");
+      update();
+    } catch (e) {
+      debugPrint("Error saving QR code permanently: $e");
+      Helpers.showSnackBar(msg: "Failed to save QR code: $e");
     }
   }
 
   Future<void> removeCustomQrCode() async {
+    try {
+      if (customQrCodePath != null) {
+        final file = File(customQrCodePath!);
+        if (file.existsSync()) {
+          await file.delete();
+        }
+      }
+    } catch (_) {}
     customQrCodePath = null;
-    await HiveHelp.remove(Keys.customQrCodePath);
+    HiveHelp.remove(Keys.customQrCodePath);
     Helpers.showSnackBar(msg: "Custom QR Code removed.");
     update();
   }

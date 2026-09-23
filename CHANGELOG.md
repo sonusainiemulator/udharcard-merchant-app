@@ -5,6 +5,33 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.81] - 2026-09-23 13:47:00 IST
+
+### ⚡ Quick Actions "Add Customer", High-Contrast Due Amount Visibility & Merchant QR Upload Fix
+
+#### Summary
+Bumped version to `1.0.81+82`. Replaced "NFC Add" with intuitive "Add Customer" 1-tap launcher on Home and Udhar flows, redesigned Customer lists to display outstanding Due amounts boldly opposite each customer's name with high-contrast typography, and resolved the Merchant QR Code upload and storage issue with Android 13+ granular media permissions, persistent document storage, and multi-source fallbacks.
+
+#### 🛠️ Key Changes & Enhancements
+- **Quick Action "Add Customer" (Task 1)**:
+  - Replaced legacy `NFC Add` quick action card on the Home screen with `Add Customer` (`Icons.person_add_alt_1_rounded`).
+  - Tapping directly opens `openAddCustomerScreen` and automatically refreshes customer lists upon returning (`fetchUsers(force: true)`).
+  - Updated `add_udhar_screen.dart` action card from `Add via NFC` to `Add Customer` for clean consistency across all creation flows.
+- **Bold Due Amount Display Opposite Customer Name (Task 2)**:
+  - Redesigned customer item layout in `customer_list_screen.dart` (Customers tab) and `home_screen.dart` (Due Customers section).
+  - Moved outstanding due amounts opposite the customer's name ("naam ke samne") in prominent `18.sp - 19.sp` `FontWeight.w900` typography with high-contrast alert red (`#DC2626`) for dues and settled green (`#10B981`) for clear accounts.
+  - Aligned the `[ Due ]` status badge and chevron directly beside/beneath the amount.
+  - Sanitized raw ISO timestamp strings (e.g. `Due by 2026-10-20T18:30:00.000000Z`) into clean, readable dates (e.g. `Due by 20 Oct 2026`).
+- **Merchant QR Upload & Storage Resolution (Task 3)**:
+  - Added `<uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>` to `AndroidManifest.xml` to fix image gallery permission blocks on Android 13+ (API 33-36) OEM devices (Realme, Oppo, Vivo, Samsung).
+  - Fixed temporary cache file deletion: QR code images selected via Gallery/Camera are now permanently saved into the app's persistent documents directory (`getApplicationDocumentsDirectory()`), preventing the OS cache manager from erasing uploaded QR codes.
+  - Added multi-source fallback to `FilePicker` if device-specific gallery intents encounter issues.
+  - Added `initState` lifecycle listener in `QrCodeScreen` to guarantee reactive synchronization on screen load.
+  - Added full loading state indicator (`isUploadingQr`), QR code sharing via WhatsApp/system share (`share_plus`), and UPI copy shortcut.
+- **Automated Verification**:
+  - Added `test/qr_and_customer_ui_test.dart` validating `ProfileController` QR code file persistence, existence checks, and stale cache sanitization.
+  - Verified 100% test pass rate across all 73 tests (`flutter test`).
+
 ## [1.0.80] - 2026-09-23 10:57:00 IST
 
 ### 🛡️ Critical Fix: iOS 27 UIScene Lifecycle Crash Resolution & Launch Stabilization

@@ -291,13 +291,13 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                           child: Column(
                             children: [
                               Icon(
-                                Icons.sensors_rounded,
+                                Icons.person_add_alt_1_rounded,
                                 color: const Color(0xFF0284C7),
                                 size: 24.sp,
                               ),
                               SizedBox(height: 6.h),
                               Text(
-                                "Add via NFC",
+                                "Add Customer",
                                 style: TextStyle(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,
@@ -308,7 +308,7 @@ class _AddUdharScreenState extends State<AddUdharScreen> {
                               ),
                               SizedBox(height: 2.h),
                               Text(
-                                "Tap customer card",
+                                "Select or create",
                                 style: TextStyle(
                                   fontSize: 10.sp,
                                   color: const Color(0xFF64748B),

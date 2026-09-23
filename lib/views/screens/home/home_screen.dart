@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:paysecure/config/app_colors.dart';
 import 'package:paysecure/config/dimensions.dart';
@@ -19,7 +20,6 @@ import 'package:paysecure/utils/services/localstorage/keys.dart';
 import 'package:paysecure/utils/services/subscription_gate_service.dart';
 import 'package:paysecure/views/screens/udhar/add_customer_screen.dart';
 import 'package:paysecure/views/screens/udhar/customer_ledger_screen.dart';
-import 'package:paysecure/views/screens/udhar/select_user_sheet.dart';
 import 'package:paysecure/views/screens/udhar/send_reminder_screen.dart';
 import 'package:paysecure/views/widgets/spacing.dart';
 
@@ -551,23 +551,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     SizedBox(height: 12.h),
 
-                    // ── 5. 3 Quick Actions (NFC Add, Scan QR, Send Reminder) ─
+                    // ── 5. 3 Quick Actions (Add Customer, Scan QR, Send Reminder) ─
                     Row(
                       children: [
                         Expanded(
                           child: _buildQuickActionCard(
                             context,
-                            icon: Icons.contactless_outlined,
+                            icon: Icons.person_add_alt_1_rounded,
                             iconColor: const Color(0xFF10B981),
                             iconBg: const Color(0xFFD1FAE5),
-                            title: "NFC Add",
-                            subtitle: "Tap & Add",
+                            title: "Add Customer",
+                            subtitle: "Quick Add",
                             isDark: isDark,
                             onTap: () async {
-                              final selected =
-                                  await SelectUserSheet.show(context);
-                              if (selected != null) {
-                                _navigateToLedger(selected);
+                              final storedLanguage =
+                                  HiveHelp.read(Keys.languageData) ?? {};
+                              final newCust = await openAddCustomerScreen(
+                                  storedLanguage: storedLanguage);
+                              if (newCust != null &&
+                                  Get.isRegistered<UdharController>()) {
+                                Get.find<UdharController>().fetchUsers(force: true);
                               }
                             },
                           ),
@@ -736,11 +739,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                     .toString()) ??
                                 0.0;
                             final daysDueVal = customer['days_due'];
-                            final String daysText = daysDueVal != null
-                                ? "$daysDueVal days due"
-                                : (customer['due_date'] != null
-                                    ? "Due by ${customer['due_date']}"
-                                    : "Active udhar");
+                            String daysText;
+                            if (daysDueVal != null) {
+                              daysText = "$daysDueVal days due";
+                            } else if (customer['due_date'] != null) {
+                              final rawDue = customer['due_date'].toString();
+                              try {
+                                final parsedDate = DateTime.parse(rawDue);
+                                daysText = "Due by ${DateFormat('dd MMM yyyy').format(parsedDate)}";
+                              } catch (_) {
+                                daysText = "Due by ${rawDue.split('T').first}";
+                              }
+                            } else {
+                              daysText = "Active udhar";
+                            }
 
                             return InkWell(
                               onTap: () => _navigateToLedger(
@@ -786,61 +798,66 @@ class _HomeScreenState extends State<HomeScreen> {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize: 14.sp,
+                                              fontSize: 14.5.sp,
                                               fontWeight: FontWeight.w700,
                                               color: isDark
                                                   ? Colors.white
                                                   : const Color(0xFF0F172A),
                                             ),
                                           ),
-                                          SizedBox(height: 2.h),
-                                          Text(
-                                            "₹ ${balance.toStringAsFixed(0)}",
-                                            style: TextStyle(
-                                              fontSize: 14.5.sp,
-                                              fontWeight: FontWeight.w800,
-                                              color: isDark
-                                                  ? Colors.white
-                                                  : const Color(0xFF0F172A),
-                                            ),
-                                          ),
-                                          SizedBox(height: 2.h),
+                                          SizedBox(height: 3.h),
                                           Text(
                                             daysText,
                                             style: TextStyle(
-                                              fontSize: 11.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFEF4444),
+                                              fontSize: 11.5.sp,
+                                              fontWeight: FontWeight.w500,
+                                              color: const Color(0xFF64748B),
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
+                                    SizedBox(width: 8.w),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 8.w, vertical: 3.h),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFFEE2E2),
-                                            borderRadius:
-                                                BorderRadius.circular(6.r),
-                                          ),
-                                          child: Text(
-                                            "Due",
-                                            style: TextStyle(
-                                              fontSize: 10.5.sp,
-                                              fontWeight: FontWeight.w700,
-                                              color: const Color(0xFFEF4444),
-                                            ),
+                                        Text(
+                                          "₹ ${balance.toStringAsFixed(0)}",
+                                          style: TextStyle(
+                                            fontSize: 18.sp,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFFDC2626),
+                                            letterSpacing: -0.2,
                                           ),
                                         ),
-                                        SizedBox(height: 14.h),
-                                        Icon(
-                                          Icons.chevron_right_rounded,
-                                          color: const Color(0xFF94A3B8),
-                                          size: 20.sp,
+                                        SizedBox(height: 3.h),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 7.w, vertical: 2.h),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFEE2E2),
+                                                borderRadius:
+                                                    BorderRadius.circular(6.r),
+                                              ),
+                                              child: Text(
+                                                "Due",
+                                                style: TextStyle(
+                                                  fontSize: 10.5.sp,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFFEF4444),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 4.w),
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: const Color(0xFF94A3B8),
+                                              size: 18.sp,
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),

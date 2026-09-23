@@ -672,7 +672,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                       style: TextStyle(
-                                                        fontSize: 14.5.sp,
+                                                        fontSize: 15.sp,
                                                         fontWeight:
                                                             FontWeight.w700,
                                                         color: isDark
@@ -681,31 +681,18 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                                 0xFF0F172A),
                                                       ),
                                                     ),
-                                                    SizedBox(height: 2.h),
-                                                    Text(
-                                                      "₹ ${balance.toStringAsFixed(0)}",
-                                                      style: TextStyle(
-                                                        fontSize: 14.5.sp,
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        color: isDark
-                                                            ? Colors.white
-                                                            : const Color(
-                                                                0xFF0F172A),
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 2.h),
+                                                    SizedBox(height: 3.h),
                                                     Text(
                                                       balance > 0
                                                           ? "$days days due"
                                                           : "Settled",
                                                       style: TextStyle(
-                                                        fontSize: 11.sp,
+                                                        fontSize: 11.5.sp,
                                                         fontWeight:
-                                                            FontWeight.w600,
+                                                            FontWeight.w500,
                                                         color: balance > 0
                                                             ? const Color(
-                                                                0xFFEF4444)
+                                                                0xFF64748B)
                                                             : const Color(
                                                                 0xFF10B981),
                                                       ),
@@ -713,40 +700,67 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                                   ],
                                                 ),
                                               ),
+                                              SizedBox(width: 8.w),
                                               Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.end,
                                                 children: [
-                                                  if (balance > 0)
-                                                    Container(
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                              horizontal: 8.w,
-                                                              vertical: 3.h),
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(
-                                                            0xFFFEE2E2),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(6.r),
-                                                      ),
-                                                      child: Text(
-                                                        "Due",
-                                                        style: TextStyle(
-                                                          fontSize: 10.5.sp,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color: const Color(
-                                                              0xFFEF4444),
-                                                        ),
-                                                      ),
+                                                  Text(
+                                                    "₹ ${balance.toStringAsFixed(0)}",
+                                                    style: TextStyle(
+                                                      fontSize: 19.sp,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: balance > 0
+                                                          ? const Color(
+                                                              0xFFDC2626)
+                                                          : const Color(
+                                                              0xFF10B981),
+                                                      letterSpacing: -0.3,
                                                     ),
-                                                  SizedBox(height: 14.h),
-                                                  Icon(
-                                                    Icons.chevron_right_rounded,
-                                                    color:
-                                                        const Color(0xFF94A3B8),
-                                                    size: 20.sp,
+                                                  ),
+                                                  SizedBox(height: 3.h),
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      if (balance > 0)
+                                                        Container(
+                                                          padding:
+                                                              EdgeInsets.symmetric(
+                                                                  horizontal: 7.w,
+                                                                  vertical: 2.h),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: const Color(
+                                                                0xFFFEE2E2),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        6.r),
+                                                          ),
+                                                          child: Text(
+                                                            "Due",
+                                                            style: TextStyle(
+                                                              fontSize:
+                                                                  10.5.sp,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              color: const Color(
+                                                                  0xFFEF4444),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      SizedBox(width: 4.w),
+                                                      Icon(
+                                                        Icons
+                                                            .chevron_right_rounded,
+                                                        color: const Color(
+                                                            0xFF94A3B8),
+                                                        size: 19.sp,
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),

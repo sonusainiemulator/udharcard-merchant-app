@@ -13,6 +13,10 @@ import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
 import '../../widgets/custom_appbar.dart';
 import '../../widgets/spacing.dart';
+import '../../../utils/services/helpers.dart';
+
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 class QrCodeScreen extends StatefulWidget {
   const QrCodeScreen({super.key});
@@ -22,6 +26,17 @@ class QrCodeScreen extends StatefulWidget {
 }
 
 class _QrCodeScreenState extends State<QrCodeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadCustomQrCode(notify: true);
+        Get.find<ProfileController>().loadMerchantUpiId(notify: true);
+      }
+    });
+  }
+
   void _showImagePickerBottomSheet(
     BuildContext context,
     ProfileController controller,
@@ -45,15 +60,19 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                VSpace(20.h),
+                VSpace(16.h),
                 ListTile(
                   leading: Icon(
-                    Icons.photo_library,
+                    Icons.photo_library_rounded,
                     color: AppColors.mainColor,
                   ),
                   title: Text(
                     "Choose from Gallery",
                     style: context.t.displayMedium,
+                  ),
+                  subtitle: Text(
+                    "Select QR from photos",
+                    style: context.t.bodySmall,
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -64,14 +83,42 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                   color: AppColors.sliderInActiveColor.withValues(alpha: 0.3),
                 ),
                 ListTile(
-                  leading: Icon(Icons.camera_alt, color: AppColors.mainColor),
+                  leading: Icon(
+                    Icons.camera_alt_rounded,
+                    color: AppColors.mainColor,
+                  ),
                   title: Text(
                     "Take Photo from Camera",
                     style: context.t.displayMedium,
                   ),
+                  subtitle: Text(
+                    "Capture physical store QR",
+                    style: context.t.bodySmall,
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     controller.pickCustomQrCode(ImageSource.camera);
+                  },
+                ),
+                Divider(
+                  color: AppColors.sliderInActiveColor.withValues(alpha: 0.3),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.folder_open_rounded,
+                    color: AppColors.mainColor,
+                  ),
+                  title: Text(
+                    "Browse Image Files",
+                    style: context.t.displayMedium,
+                  ),
+                  subtitle: Text(
+                    "Pick from Downloads or Drive",
+                    style: context.t.bodySmall,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    controller.pickCustomQrCodeFromFilePicker();
                   },
                 ),
                 if (controller.customQrCodePath != null) ...[
@@ -160,16 +207,49 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
     BuildContext context,
     ProfileController profileController,
   ) {
-    bool hasCustomQr =
-        profileController.customQrCodePath != null &&
-        File(profileController.customQrCodePath!).existsSync();
+    if (profileController.isUploadingQr) {
+      return Container(
+        margin: EdgeInsets.only(top: 24.h),
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 24.w),
+        decoration: BoxDecoration(
+          color: AppThemes.getDarkCardColor(),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.mainColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.mainColor),
+            ),
+            VSpace(16.h),
+            Text(
+              "Saving your Merchant QR Code...",
+              style: context.t.displayMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final path = profileController.customQrCodePath;
+    final bool hasCustomQr =
+        path != null && path.isNotEmpty && File(path).existsSync();
+
+    final shopName =
+        (HiveHelp.read('shop_name') ?? 'UdharCard Store').toString().trim();
+    final upiId = profileController.merchantUpiId ??
+        HiveHelp.read(Keys.merchantUpiId)?.toString();
 
     return Column(
       children: [
-        VSpace(20.h),
+        VSpace(16.h),
         if (hasCustomQr) ...[
           Container(
-            padding: EdgeInsets.all(12.r),
+            padding: EdgeInsets.all(14.r),
             decoration: BoxDecoration(
               color: AppThemes.getDarkCardColor(),
               border: Border.all(color: AppColors.mainColor, width: 2.w),
@@ -187,7 +267,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
                   child: Image.file(
-                    File(profileController.customQrCodePath!),
+                    File(path),
                     height: 260.h,
                     width: 240.w,
                     fit: BoxFit.contain,
@@ -204,53 +284,113 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
-                    "Your Merchant QR Code",
+                    shopName.isNotEmpty ? shopName : "Your Merchant QR Code",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: context.t.displaySmall?.copyWith(
                       color: AppColors.blackColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
+                if (upiId != null && upiId.isNotEmpty) ...[
+                  VSpace(8.h),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: upiId));
+                      Helpers.showSnackBar(
+                          msg: "UPI ID copied: $upiId", title: "Copied");
+                    },
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.copy_rounded,
+                            size: 14.sp,
+                            color: const Color(0xFF64748B),
+                          ),
+                          HSpace(4.w),
+                          Text(
+                            "UPI: $upiId",
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          VSpace(24.h),
+          VSpace(20.h),
           Row(
             children: [
               Expanded(
                 child: AppButton(
                   text: "Change QR",
-                  onTap:
-                      () => _showImagePickerBottomSheet(
-                        context,
-                        profileController,
-                      ),
+                  onTap: () => _showImagePickerBottomSheet(
+                    context,
+                    profileController,
+                  ),
                 ),
               ),
-              HSpace(12.w),
+              HSpace(10.w),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.redAccent),
+                    side: BorderSide(color: AppColors.mainColor),
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                   ),
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent,
+                  icon: Icon(
+                    Icons.share_rounded,
+                    color: AppColors.mainColor,
+                    size: 18.sp,
                   ),
                   label: Text(
-                    "Remove",
+                    "Share QR",
                     style: context.t.displayMedium?.copyWith(
-                      color: Colors.redAccent,
+                      color: AppColors.mainColor,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  onPressed: () => profileController.removeCustomQrCode(),
+                  onPressed: () async {
+                    try {
+                      await Share.shareXFiles(
+                        [XFile(path)],
+                        text:
+                            "Namaste! Please scan this QR code to make your payment directly to $shopName.",
+                      );
+                    } catch (e) {
+                      Helpers.showSnackBar(msg: "Could not share QR: $e");
+                    }
+                  },
                 ),
               ),
             ],
+          ),
+          VSpace(10.h),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text("Remove Merchant QR"),
+              onPressed: () => profileController.removeCustomQrCode(),
+            ),
           ),
         ] else ...[
           Container(
@@ -289,11 +429,10 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                 VSpace(24.h),
                 AppButton(
                   text: "Upload Merchant QR Image",
-                  onTap:
-                      () => _showImagePickerBottomSheet(
-                        context,
-                        profileController,
-                      ),
+                  onTap: () => _showImagePickerBottomSheet(
+                    context,
+                    profileController,
+                  ),
                 ),
               ],
             ),
