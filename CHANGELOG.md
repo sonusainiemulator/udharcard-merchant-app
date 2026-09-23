@@ -5,6 +5,26 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.80] - 2026-09-23 10:57:00 IST
+
+### 🛡️ Critical Fix: iOS 27 UIScene Lifecycle Crash Resolution & Launch Stabilization
+
+#### Summary
+Bumped version to `1.0.80+81`. Diagnosed and resolved a fatal launch crash (`SIGTRAP / EXC_BREAKPOINT`) occurring on physical iOS devices running iOS 27 (e.g. iPhone 16e, build `24A437`). Root cause analysis from device crash logs (`Runner-2026-09-23-005810.ips`) confirmed that UIKit's `___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption_block_invoke` was aborting the process prior to Flutter engine initialization due to missing UIScene lifecycle adoption.
+
+#### 🛠️ Fixes & Architectural Enhancements
+- **UIScene Lifecycle Adoption (`SceneDelegate.swift`)**:
+  - Implemented `SceneDelegate: FlutterSceneDelegate` to adopt modern scene management required by iOS 27 / modern iOS runtimes.
+  - Added URL context routing handling Google Sign-In authentication callbacks (`GIDSignIn.sharedInstance.handle(urlContext.url)`).
+  - Linked `SceneDelegate.swift` into `Runner.xcodeproj` across `PBXBuildFile`, `PBXFileReference`, `PBXGroup`, and `PBXSourcesBuildPhase`.
+- **Implicit Flutter Engine Delegate (`AppDelegate.swift`)**:
+  - Conformed `AppDelegate` to `FlutterAppDelegate, FlutterImplicitEngineDelegate`.
+  - Implemented `didInitializeImplicitFlutterEngine(_ engineBridge:)` to ensure all Flutter plugins cleanly register with the implicit engine registry during scene instantiation.
+  - Preserved `FlutterLocalNotificationsPlugin.setPluginRegistrantCallback` for background notification isolation.
+- **Info.plist Configuration Hardening**:
+  - Configured `UIApplicationSceneManifest` with `UIWindowSceneSessionRoleApplication` referencing `$(PRODUCT_MODULE_NAME).SceneDelegate`.
+  - Added explicit `GIDClientID` (`118952639868-62psc04ou2p8tjkq44gcr5eh7ppe3j0a.apps.googleusercontent.com`) matching `GoogleService-Info.plist` to prevent Google Auth initialization aborts.
+
 ## [1.0.79] - 2026-09-22 00:20:00 IST
 
 ### 🚀 Comprehensive App Feature Analysis, Market Gap Closure, Bug Fixes & Stability Hardening
