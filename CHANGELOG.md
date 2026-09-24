@@ -5,6 +5,32 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.84] - 2026-09-24 16:46:15 IST
+
+### 📲 Merchant QR Code Upload Overhaul, Byte-Level & Base64 Persistence, and Dynamic UPI QR Fallback
+
+#### Summary
+Bumped version to `1.0.84+85`. Overhauled the Merchant QR code upload and payment receiving flow (`QrCodeScreen` & `ProfileController`) with byte-level stream processing, Base64 permanent persistence in Hive, Android 14 visual media permissions, dismiss delays for seamless picker activation on OEM ROMs (ColorOS/Realme/Xiaomi), and dynamic UPI QR generation via `qr_flutter`.
+
+#### 🛠️ Key Changes & Enhancements
+- **Byte-Level Image Processing & Base64 Persistence (`ProfileController`)**:
+  - Replaced risky POSIX `File.copy()` with direct byte reading (`await image.readAsBytes()` / `readStream`) and atomic file writing (`targetFile.writeAsBytes(bytes, flush: true)`), eradicating `FileSystemException` on Android scoped storage and virtual caches.
+  - Added dual-layer persistence: stored raw base64 string in Hive (`Keys.customQrCodeBase64`) alongside physical disk storage. If the physical file is cleaned by OS storage optimizers or app sandbox UUID changes, `loadCustomQrCode()` automatically re-inflates the file from Hive Base64.
+  - Added safe application directory fallback (`_getSafeAppDirectory()`) ensuring compatibility across platform channels and headless test runners.
+- **Picker Stability & Window Token Safety (`QrCodeScreen`)**:
+  - Added modal bottom sheet dismissal delays (`await Future.delayed(200ms)`) before invoking system camera/gallery intents, preventing window token collision and activity attachment failures on Android OEM skins.
+  - Improved error messages for camera and photo permission denial with actionable instructions for merchants.
+- **Dynamic UPI QR Code Generation (`qr_flutter`)**:
+  - Added instant UPI QR generation (`upi://pay?pa=...&pn=...&cu=INR`) for merchants who prefer linking their UPI ID directly or don't have a physical QR image photo handy.
+  - Integrated `QrImageView` with store name badge, copy UPI ID button, and direct share action.
+  - Provided dual support: merchants can upload custom branded QR standee photos, enter/edit their store UPI ID, or use both seamlessly.
+- **Android Permissions & Compatibility (`AndroidManifest.xml`)**:
+  - Added `android.permission.READ_MEDIA_VISUAL_USER_SELECTED` for full Android 14+ (API 34/36) Photo Picker compliance.
+  - Enabled `android:requestLegacyExternalStorage="true"` for legacy storage compatibility.
+- **Automated Verification**:
+  - Added tests in `test/qr_and_customer_ui_test.dart` asserting byte-level persistence, Base64 disk recovery, and UPI ID lifecycle management.
+  - Verified 100% test pass across all 79 unit and widget tests (`flutter test`).
+
 ## [1.0.83] - 2026-09-24 16:18:25 IST
 
 ### 🚀 Permanent Resolution of Choose Plan Bottom Overflow (RenderFlex Error Elimination)

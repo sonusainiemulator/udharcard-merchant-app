@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -755,16 +756,43 @@ class ProfileController extends GetxController {
   bool isUploadingQr = false;
 
   void loadCustomQrCode({bool notify = false}) {
-    final saved = HiveHelp.read(Keys.customQrCodePath);
-    if (saved != null && saved.toString().isNotEmpty) {
-      final file = File(saved.toString());
-      if (file.existsSync()) {
-        customQrCodePath = saved.toString();
-      } else {
-        customQrCodePath = null;
-        HiveHelp.remove(Keys.customQrCodePath);
+    try {
+      final saved = HiveHelp.read(Keys.customQrCodePath);
+      if (saved != null && saved.toString().isNotEmpty) {
+        final file = File(saved.toString());
+        if (file.existsSync() && file.lengthSync() > 0) {
+          customQrCodePath = saved.toString();
+          if (notify) safeUpdate();
+          return;
+        }
       }
-    } else {
+      // Check Base64 persistence fallback from Hive
+      final base64Str = HiveHelp.read(Keys.customQrCodeBase64);
+      if (base64Str != null && base64Str.toString().isNotEmpty) {
+        try {
+          final bytes = base64Decode(base64Str.toString());
+          if (bytes.isNotEmpty) {
+            _getSafeAppDirectory().then((appDir) async {
+              final qrDir = Directory('${appDir.path}/merchant_qr');
+              if (!qrDir.existsSync()) {
+                await qrDir.create(recursive: true);
+              }
+              final targetFile = File('${qrDir.path}/merchant_store_qr.png');
+              await targetFile.writeAsBytes(bytes, flush: true);
+              customQrCodePath = targetFile.path;
+              HiveHelp.write(Keys.customQrCodePath, targetFile.path);
+              safeUpdate();
+            });
+            return;
+          }
+        } catch (e) {
+          debugPrint("Failed to restore base64 QR: $e");
+        }
+      }
+      customQrCodePath = null;
+      HiveHelp.remove(Keys.customQrCodePath);
+    } catch (e) {
+      debugPrint("loadCustomQrCode error: $e");
       customQrCodePath = null;
     }
     if (notify) {
@@ -784,7 +812,7 @@ class ProfileController extends GetxController {
     merchantUpiId = upiId.trim();
     upiIdEditingController.text = merchantUpiId!;
     HiveHelp.write(Keys.merchantUpiId, merchantUpiId);
-    Helpers.showSnackBar(msg: "Merchant UPI ID saved successfully!");
+    Helpers.showSnackBar(msg: "Merchant UPI ID saved successfully!", title: "Success");
     update();
   }
 
@@ -803,32 +831,57 @@ class ProfileController extends GetxController {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
         source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 92,
+        maxWidth: 2048,
+        maxHeight: 2048,
       );
       if (image != null) {
-        await _saveQrCodePermanently(File(image.path));
-        return;
+        final bytes = await image.readAsBytes();
+        if (bytes.isNotEmpty) {
+          final extension = image.name.contains('.')
+              ? '.${image.name.split('.').last}'
+              : (image.path.contains('.') ? '.${image.path.split('.').last}' : '.png');
+          await saveQrCodeBytes(bytes, extension: extension);
+          return;
+        }
       }
     } catch (e) {
       debugPrint("pickCustomQrCode ImagePicker error: $e");
-      // Fallback: If gallery error on certain Android OEM skins, try FilePicker
+      // Fallback: If gallery error on certain Android OEM skins or permissions, try FilePicker
       if (source == ImageSource.gallery) {
         try {
           final result = await FilePicker.platform.pickFiles(
             type: FileType.image,
             allowMultiple: false,
+            withData: true,
           );
-          if (result != null && result.files.single.path != null) {
-            await _saveQrCodePermanently(File(result.files.single.path!));
-            return;
+          if (result != null && result.files.isNotEmpty) {
+            final picked = result.files.first;
+            Uint8List? bytes = picked.bytes;
+            if (bytes == null && picked.path != null) {
+              final f = File(picked.path!);
+              if (f.existsSync()) {
+                bytes = await f.readAsBytes();
+              }
+            }
+            if (bytes != null && bytes.isNotEmpty) {
+              final extension = picked.extension != null ? '.${picked.extension}' : '.png';
+              await saveQrCodeBytes(bytes, extension: extension);
+              return;
+            }
           }
         } catch (fileErr) {
           debugPrint("pickCustomQrCode FilePicker fallback error: $fileErr");
         }
       }
-      Helpers.showSnackBar(msg: "Could not select image: $e");
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains("camera_access_denied") || errStr.contains("permission")) {
+        Helpers.showSnackBar(
+          msg: "Permission is required to access ${source == ImageSource.camera ? 'camera' : 'photos'}. Please allow permission in Settings.",
+          title: "Permission Required",
+        );
+      } else {
+        Helpers.showSnackBar(msg: "Could not select image: $e");
+      }
     } finally {
       isUploadingQr = false;
       update();
@@ -842,9 +895,24 @@ class ProfileController extends GetxController {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
+        withData: true,
       );
-      if (result != null && result.files.single.path != null) {
-        await _saveQrCodePermanently(File(result.files.single.path!));
+      if (result != null && result.files.isNotEmpty) {
+        final picked = result.files.first;
+        Uint8List? bytes = picked.bytes;
+        if (bytes == null && picked.path != null) {
+          final f = File(picked.path!);
+          if (f.existsSync()) {
+            bytes = await f.readAsBytes();
+          }
+        }
+        if (bytes != null && bytes.isNotEmpty) {
+          final extension = picked.extension != null ? '.${picked.extension}' : '.png';
+          await saveQrCodeBytes(bytes, extension: extension);
+          return;
+        } else {
+          Helpers.showSnackBar(msg: "No image file selected.");
+        }
       }
     } catch (e) {
       debugPrint("pickCustomQrCodeFromFilePicker error: $e");
@@ -855,29 +923,66 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<void> _saveQrCodePermanently(File sourceFile) async {
+  Future<Directory> _getSafeAppDirectory() async {
     try {
-      final appDir = await getApplicationDocumentsDirectory();
+      return await getApplicationDocumentsDirectory();
+    } catch (_) {
+      return Directory.systemTemp;
+    }
+  }
+
+  Future<void> saveQrCodeBytes(Uint8List bytes, {String extension = '.png'}) async {
+    try {
+      if (bytes.isEmpty) {
+        Helpers.showSnackBar(msg: "Selected image was empty. Please select another image.");
+        return;
+      }
+      final appDir = await _getSafeAppDirectory();
       final qrDir = Directory('${appDir.path}/merchant_qr');
       if (!qrDir.existsSync()) {
         await qrDir.create(recursive: true);
       }
-      final extension = sourceFile.path.contains('.')
-          ? '.${sourceFile.path.split('.').last}'
-          : '.png';
-      final targetPath = '${qrDir.path}/merchant_store_qr$extension';
+
+      // Clean up previous files inside qrDir safely
+      try {
+        if (qrDir.existsSync()) {
+          for (final entity in qrDir.listSync()) {
+            if (entity is File) {
+              entity.deleteSync();
+            }
+          }
+        }
+      } catch (_) {}
+
+      final cleanExt = (extension.startsWith('.') ? extension : '.$extension').toLowerCase();
+      final targetPath = '${qrDir.path}/merchant_store_qr$cleanExt';
       final targetFile = File(targetPath);
-      if (targetFile.existsSync()) {
-        await targetFile.delete();
-      }
-      final savedFile = await sourceFile.copy(targetPath);
-      customQrCodePath = savedFile.path;
-      HiveHelp.write(Keys.customQrCodePath, savedFile.path);
-      Helpers.showSnackBar(msg: "Merchant QR Code saved successfully!");
+      await targetFile.writeAsBytes(bytes, flush: true);
+
+      // Save persistent base64 representation to Hive as permanent fallback
+      final base64String = base64Encode(bytes);
+      HiveHelp.write(Keys.customQrCodeBase64, base64String);
+      HiveHelp.write(Keys.customQrCodePath, targetFile.path);
+
+      customQrCodePath = targetFile.path;
+      Helpers.showSnackBar(msg: "Merchant QR Code saved successfully!", title: "Success");
       update();
     } catch (e) {
       debugPrint("Error saving QR code permanently: $e");
       Helpers.showSnackBar(msg: "Failed to save QR code: $e");
+    }
+  }
+
+  Future<void> _saveQrCodePermanently(File sourceFile) async {
+    try {
+      final bytes = await sourceFile.readAsBytes();
+      final extension = sourceFile.path.contains('.')
+          ? '.${sourceFile.path.split('.').last}'
+          : '.png';
+      await saveQrCodeBytes(bytes, extension: extension);
+    } catch (e) {
+      debugPrint("Error reading QR source file: $e");
+      Helpers.showSnackBar(msg: "Failed to read QR code file: $e");
     }
   }
 
@@ -892,6 +997,7 @@ class ProfileController extends GetxController {
     } catch (_) {}
     customQrCodePath = null;
     HiveHelp.remove(Keys.customQrCodePath);
+    HiveHelp.remove(Keys.customQrCodeBase64);
     Helpers.showSnackBar(msg: "Custom QR Code removed.");
     update();
   }

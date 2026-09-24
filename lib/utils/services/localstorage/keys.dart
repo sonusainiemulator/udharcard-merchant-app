@@ -17,6 +17,7 @@ class Keys {
   static String currencySymbol = "currencySymbol";
   static String isNotificationSeen = "isNotificationSeen";
   static String customQrCodePath = "customQrCodePath";
+  static String customQrCodeBase64 = "customQrCodeBase64";
   static String merchantUpiId = "merchantUpiId";
   static String udharCustomers = "udharCustomers";
   static String udharTransactions = "udharTransactions";

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -40,5 +41,43 @@ void main() {
 
     // Cleanup
     await realFile.delete();
+  });
+
+  test('ProfileController saveQrCodeBytes saves file, writes base64 to Hive, and restores from base64', () async {
+    final controller = Get.put(ProfileController());
+
+    final dummyBytes = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]);
+    await controller.saveQrCodeBytes(dummyBytes, extension: '.png');
+
+    expect(controller.customQrCodePath, isNotNull);
+    expect(File(controller.customQrCodePath!).existsSync(), isTrue);
+    expect(HiveHelp.read(Keys.customQrCodeBase64), isNotNull);
+
+    // Simulate file getting deleted on disk
+    await File(controller.customQrCodePath!).delete();
+    expect(File(controller.customQrCodePath!).existsSync(), isFalse);
+
+    // Call loadCustomQrCode - it should restore from base64 backup!
+    controller.loadCustomQrCode();
+    expect(controller.customQrCodePath, isNotNull);
+    expect(HiveHelp.read(Keys.customQrCodeBase64), isNotNull);
+
+    // Clean up
+    await controller.removeCustomQrCode();
+    expect(controller.customQrCodePath, isNull);
+    expect(HiveHelp.read(Keys.customQrCodePath), isNull);
+    expect(HiveHelp.read(Keys.customQrCodeBase64), isNull);
+  });
+
+  test('ProfileController saveMerchantUpiId and removeMerchantUpiId manage state and storage', () async {
+    final controller = Get.put(ProfileController());
+
+    await controller.saveMerchantUpiId('store@upi');
+    expect(controller.merchantUpiId, equals('store@upi'));
+    expect(HiveHelp.read(Keys.merchantUpiId), equals('store@upi'));
+
+    await controller.removeMerchantUpiId();
+    expect(controller.merchantUpiId, isNull);
+    expect(HiveHelp.read(Keys.merchantUpiId), isNull);
   });
 }

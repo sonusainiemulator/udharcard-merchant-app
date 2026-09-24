@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:paysecure/controllers/profile_controller.dart';
 import 'package:paysecure/views/widgets/app_button.dart';
 import 'package:paysecure/views/widgets/text_theme_extension.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/dimensions.dart';
 import '../../../themes/themes.dart';
@@ -26,15 +28,31 @@ class QrCodeScreen extends StatefulWidget {
 }
 
 class _QrCodeScreenState extends State<QrCodeScreen> {
+  late final ProfileController _profileController;
+  final TextEditingController _upiInputController = TextEditingController();
+  bool _isEditingUpi = false;
+
   @override
   void initState() {
     super.initState();
+    _profileController = Get.isRegistered<ProfileController>()
+        ? Get.find<ProfileController>()
+        : Get.put(ProfileController());
+    _profileController.loadCustomQrCode(notify: false);
+    _profileController.loadMerchantUpiId(notify: false);
+    _upiInputController.text = _profileController.merchantUpiId ?? '';
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (Get.isRegistered<ProfileController>()) {
-        Get.find<ProfileController>().loadCustomQrCode(notify: true);
-        Get.find<ProfileController>().loadMerchantUpiId(notify: true);
-      }
+      _profileController.loadCustomQrCode(notify: true);
+      _profileController.loadMerchantUpiId(notify: true);
+      _upiInputController.text = _profileController.merchantUpiId ?? '';
     });
+  }
+
+  @override
+  void dispose() {
+    _upiInputController.dispose();
+    super.dispose();
   }
 
   void _showImagePickerBottomSheet(
@@ -47,7 +65,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
@@ -71,11 +89,12 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     style: context.t.displayMedium,
                   ),
                   subtitle: Text(
-                    "Select QR from photos",
+                    "Select QR image from your photos",
                     style: context.t.bodySmall,
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await Future.delayed(const Duration(milliseconds: 200));
                     controller.pickCustomQrCode(ImageSource.gallery);
                   },
                 ),
@@ -92,11 +111,12 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     style: context.t.displayMedium,
                   ),
                   subtitle: Text(
-                    "Capture physical store QR",
+                    "Capture physical store QR standee",
                     style: context.t.bodySmall,
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await Future.delayed(const Duration(milliseconds: 200));
                     controller.pickCustomQrCode(ImageSource.camera);
                   },
                 ),
@@ -113,15 +133,17 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     style: context.t.displayMedium,
                   ),
                   subtitle: Text(
-                    "Pick from Downloads or Drive",
+                    "Pick from Downloads, Drive, or WhatsApp",
                     style: context.t.bodySmall,
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await Future.delayed(const Duration(milliseconds: 200));
                     controller.pickCustomQrCodeFromFilePicker();
                   },
                 ),
-                if (controller.customQrCodePath != null) ...[
+                if (controller.customQrCodePath != null ||
+                    HiveHelp.read(Keys.customQrCodeBase64) != null) ...[
                   Divider(
                     color: AppColors.sliderInActiveColor.withValues(alpha: 0.3),
                   ),
@@ -131,13 +153,13 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                       color: Colors.redAccent,
                     ),
                     title: Text(
-                      "Remove Merchant QR",
+                      "Remove Merchant QR Image",
                       style: context.t.displayMedium?.copyWith(
                         color: Colors.redAccent,
                       ),
                     ),
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.pop(sheetContext);
                       controller.removeCustomQrCode();
                     },
                   ),
@@ -154,6 +176,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
   Widget build(BuildContext context) {
     var storedLanguage = HiveHelp.read(Keys.languageData) ?? {};
     return GetBuilder<ProfileController>(
+      init: _profileController,
       builder: (profileController) {
         return Scaffold(
           appBar: CustomAppBar(
@@ -162,7 +185,8 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
           body: RefreshIndicator(
             color: AppColors.mainColor,
             onRefresh: () async {
-              profileController.getProfile();
+              profileController.loadCustomQrCode(notify: true);
+              profileController.loadMerchantUpiId(notify: true);
             },
             child: Container(
               padding: Dimensions.kDefaultPadding,
@@ -236,18 +260,25 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
     }
 
     final path = profileController.customQrCodePath;
-    final bool hasCustomQr =
+    final b64 = HiveHelp.read(Keys.customQrCodeBase64);
+    final bool hasFileOnDisk =
         path != null && path.isNotEmpty && File(path).existsSync();
+    final bool hasBase64 = b64 != null && b64.toString().isNotEmpty;
+    final bool hasCustomQrImage = hasFileOnDisk || hasBase64;
 
     final shopName =
         (HiveHelp.read('shop_name') ?? 'UdharCard Store').toString().trim();
-    final upiId = profileController.merchantUpiId ??
-        HiveHelp.read(Keys.merchantUpiId)?.toString();
+    final upiId = (profileController.merchantUpiId ??
+            HiveHelp.read(Keys.merchantUpiId)?.toString() ??
+            '')
+        .trim();
+    final bool hasUpiId = upiId.isNotEmpty;
 
     return Column(
       children: [
         VSpace(16.h),
-        if (hasCustomQr) ...[
+        if (hasCustomQrImage) ...[
+          // --- Display Custom Uploaded QR Card ---
           Container(
             padding: EdgeInsets.all(14.r),
             decoration: BoxDecoration(
@@ -266,12 +297,36 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
-                  child: Image.file(
-                    File(path),
-                    height: 260.h,
-                    width: 240.w,
-                    fit: BoxFit.contain,
-                  ),
+                  child: hasFileOnDisk
+                      ? Image.file(
+                          File(path!),
+                          height: 260.h,
+                          width: 240.w,
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, stack) {
+                            if (hasBase64) {
+                              try {
+                                return Image.memory(
+                                  base64Decode(b64.toString()),
+                                  height: 260.h,
+                                  width: 240.w,
+                                  fit: BoxFit.contain,
+                                );
+                              } catch (_) {}
+                            }
+                            return Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 160.r,
+                              color: AppColors.mainColor,
+                            );
+                          },
+                        )
+                      : Image.memory(
+                          base64Decode(b64.toString()),
+                          height: 260.h,
+                          width: 240.w,
+                          fit: BoxFit.contain,
+                        ),
                 ),
                 VSpace(12.h),
                 Container(
@@ -293,7 +348,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     ),
                   ),
                 ),
-                if (upiId != null && upiId.isNotEmpty) ...[
+                if (hasUpiId) ...[
                   VSpace(8.h),
                   InkWell(
                     onTap: () {
@@ -366,11 +421,17 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                   ),
                   onPressed: () async {
                     try {
-                      await Share.shareXFiles(
-                        [XFile(path)],
-                        text:
-                            "Namaste! Please scan this QR code to make your payment directly to $shopName.",
-                      );
+                      if (hasFileOnDisk) {
+                        await Share.shareXFiles(
+                          [XFile(path!)],
+                          text:
+                              "Namaste! Please scan this QR code to make your payment directly to $shopName.",
+                        );
+                      } else if (hasUpiId) {
+                        await Share.share(
+                          "Namaste! Pay directly to $shopName via UPI ID: $upiId",
+                        );
+                      }
                     } catch (e) {
                       Helpers.showSnackBar(msg: "Could not share QR: $e");
                     }
@@ -392,9 +453,153 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
               onPressed: () => profileController.removeCustomQrCode(),
             ),
           ),
-        ] else ...[
+        ] else if (hasUpiId && !_isEditingUpi) ...[
+          // --- Display Generated Dynamic UPI QR Card ---
           Container(
-            padding: EdgeInsets.symmetric(vertical: 36.h, horizontal: 20.w),
+            padding: EdgeInsets.all(14.r),
+            decoration: BoxDecoration(
+              color: AppThemes.getDarkCardColor(),
+              border: Border.all(color: AppColors.mainColor, width: 2.w),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: QrImageView(
+                    data: "upi://pay?pa=$upiId&pn=${Uri.encodeComponent(shopName)}&cu=INR",
+                    version: QrVersions.auto,
+                    size: 220.r,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                VSpace(12.h),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.mainColor,
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    shopName.isNotEmpty ? shopName : "Your UPI QR Code",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.t.displaySmall?.copyWith(
+                      color: AppColors.blackColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                VSpace(8.h),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: upiId));
+                    Helpers.showSnackBar(
+                        msg: "UPI ID copied: $upiId", title: "Copied");
+                  },
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.copy_rounded,
+                          size: 14.sp,
+                          color: const Color(0xFF64748B),
+                        ),
+                        HSpace(4.w),
+                        Text(
+                          "UPI: $upiId",
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          VSpace(20.h),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  text: "Upload QR Photo",
+                  onTap: () => _showImagePickerBottomSheet(
+                    context,
+                    profileController,
+                  ),
+                ),
+              ),
+              HSpace(10.w),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.mainColor),
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.edit_note_rounded,
+                    color: AppColors.mainColor,
+                    size: 18.sp,
+                  ),
+                  label: Text(
+                    "Edit UPI ID",
+                    style: context.t.displayMedium?.copyWith(
+                      color: AppColors.mainColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isEditingUpi = true;
+                      _upiInputController.text = upiId;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          VSpace(10.h),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text("Remove UPI QR"),
+              onPressed: () => profileController.removeMerchantUpiId(),
+            ),
+          ),
+        ] else ...[
+          // --- Empty State: Upload Image OR Enter UPI ID ---
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 30.h, horizontal: 18.w),
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.mainColor.withValues(alpha: 0.05),
@@ -408,10 +613,10 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
               children: [
                 Icon(
                   Icons.qr_code_scanner_rounded,
-                  size: 80.r,
+                  size: 72.r,
                   color: AppColors.mainColor,
                 ),
-                VSpace(16.h),
+                VSpace(14.h),
                 Text(
                   "Upload Merchant QR",
                   style: context.t.headlineMedium?.copyWith(
@@ -426,12 +631,105 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                     color: AppThemes.getParagraphColor(),
                   ),
                 ),
-                VSpace(24.h),
+                VSpace(20.h),
                 AppButton(
                   text: "Upload Merchant QR Image",
                   onTap: () => _showImagePickerBottomSheet(
                     context,
                     profileController,
+                  ),
+                ),
+                VSpace(24.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                      child: Text(
+                        "OR ENTER UPI ID",
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF64748B),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ],
+                ),
+                VSpace(16.h),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppThemes.getDarkCardColor(),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.mainColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _upiInputController,
+                    decoration: InputDecoration(
+                      hintText: "e.g. yourstore@okhdfcbank or 9876543210@paytm",
+                      hintStyle: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade500,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: AppColors.mainColor,
+                        size: 20.sp,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 12.h,
+                      ),
+                    ),
+                  ),
+                ),
+                VSpace(12.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44.h,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.mainColor,
+                      foregroundColor: AppColors.blackColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      final entered = _upiInputController.text.trim();
+                      if (entered.isEmpty || !entered.contains('@')) {
+                        Helpers.showSnackBar(
+                          msg: "Please enter a valid UPI ID (e.g. name@bank)",
+                          title: "Invalid UPI ID",
+                        );
+                        return;
+                      }
+                      setState(() {
+                        _isEditingUpi = false;
+                      });
+                      profileController.saveMerchantUpiId(entered);
+                    },
+                    child: Text(
+                      "Generate Instant QR from UPI ID",
+                      style: TextStyle(
+                        fontSize: 13.5.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -443,3 +741,4 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
     );
   }
 }
+
