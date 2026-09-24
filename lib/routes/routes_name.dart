@@ -34,6 +34,7 @@ class RoutesName {
   static String addCustomerScreen = "/addCustomerScreen";
   static String addUdharScreen = "/addUdharScreen";
   static String customerListScreen = "/customerListScreen";
+  static String supplierListScreen = "/supplierListScreen";
   static String customerLedgerScreen = "/customerLedgerScreen";
   static String udharReportsScreen = "/udharReportsScreen";
   static String udharDashboardScreen = "/udharDashboardScreen";

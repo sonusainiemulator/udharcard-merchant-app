@@ -291,6 +291,66 @@ class UdharController extends GetxController {
     update();
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Customer & Supplier / Vendor Partitioning (Receivables vs Payables)
+  // ─────────────────────────────────────────────────────────────
+
+  List<dynamic> get customersOnlyList {
+    return usersList.where((u) {
+      if (u is! Map) return false;
+      final type = (u['type'] ?? u['party_type'] ?? 'Customer').toString().toLowerCase();
+      final bool isSupp = u['is_supplier'] == true;
+      return !isSupp && !['dealer', 'wholesaler', 'supplier'].contains(type);
+    }).toList();
+  }
+
+  List<dynamic> get suppliersList {
+    return usersList.where((u) {
+      if (u is! Map) return false;
+      final type = (u['type'] ?? u['party_type'] ?? '').toString().toLowerCase();
+      final bool isSupp = u['is_supplier'] == true;
+      return isSupp || ['dealer', 'wholesaler', 'supplier'].contains(type);
+    }).toList();
+  }
+
+  double get totalPayableToSuppliers {
+    double total = 0.0;
+    for (var s in suppliersList) {
+      if (s is Map) {
+        final amt = double.tryParse((s['payable_amount'] ?? s['outstanding_balance'] ?? s['opening_balance'] ?? 0).toString()) ?? 0.0;
+        total += amt;
+      }
+    }
+    return total;
+  }
+
+  Future<bool> recordSupplierPayment({
+    required String supplierId,
+    required double amountPaid,
+    String paymentMethod = 'cash',
+    String note = '',
+  }) async {
+    try {
+      final index = usersList.indexWhere((u) => u['id']?.toString() == supplierId);
+      if (index != -1) {
+        final currentBal = double.tryParse((usersList[index]['payable_amount'] ?? usersList[index]['outstanding_balance'] ?? 0).toString()) ?? 0.0;
+        final newBal = (currentBal - amountPaid).clamp(0.0, double.infinity);
+        usersList[index]['payable_amount'] = newBal;
+        usersList[index]['outstanding_balance'] = newBal;
+        HiveHelp.write('cached_users_list', usersList);
+        update();
+        Helpers.showSnackBar(
+          msg: 'Payment of ₹${amountPaid.toStringAsFixed(0)} recorded successfully. Remaining balance: ₹${newBal.toStringAsFixed(0)}',
+          title: 'Payment Recorded',
+        );
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error recording supplier payment: $e");
+    }
+    return false;
+  }
+
   void selectUser(Map<String, dynamic> user) {
     selectedUser = user;
     update();
@@ -371,6 +431,7 @@ class UdharController extends GetxController {
     String address = '',
     String note = '',
     String type = 'Customer',
+    String? dueDate,
     bool closeScreenOnSuccess = true,
   }) async {
     final String name = nameCtrl.text.trim();
@@ -457,14 +518,21 @@ class UdharController extends GetxController {
         address: address,
         note: note,
         type: type,
+        dueDate: dueDate,
       );
       final Map<String, dynamic>? data = _decodeJsonMap(response.body);
       final bool isSuccess = _isApiSuccess(response.statusCode, data);
       if (isSuccess) {
         _showEntitlementWarningIfAny(data);
+        final bool isSupplier = ['dealer', 'wholesaler', 'supplier'].contains(type.toLowerCase());
+        final String successTitle = isSupplier ? '$type Added' : 'Success';
+        final String successMessage = isSupplier
+            ? '$type profile added. ₹$openingBalance payable balance saved.'
+            : (data?['message'] ?? 'Customer added successfully');
+
         Helpers.showSnackBar(
-          msg: data?['message'] ?? 'Customer added successfully',
-          title: 'Success',
+          msg: successMessage,
+          title: successTitle,
         );
 
         Map<String, dynamic>? created;
@@ -490,10 +558,24 @@ class UdharController extends GetxController {
           'email': email,
           'credit_limit': creditLimit,
           'opening_balance': openingBalance,
+          'outstanding_balance': openingBalance,
+          'payable_amount': openingBalance,
           'address': address,
           'note': note,
           'type': type,
+          'party_type': type,
+          'due_date': dueDate,
+          'is_supplier': isSupplier,
         };
+
+        if (created != null) {
+          created['type'] = created['type'] ?? type;
+          created['party_type'] = created['party_type'] ?? type;
+          created['due_date'] = created['due_date'] ?? dueDate;
+          created['payable_amount'] = created['payable_amount'] ?? openingBalance;
+          created['is_supplier'] = isSupplier;
+          resultCustomer = created;
+        }
 
         // Optimistic update of local customer lists
         usersList.removeWhere(
@@ -507,6 +589,7 @@ class UdharController extends GetxController {
         } else {
           searchUsers(searchCtrl.text);
         }
+        HiveHelp.write('cached_users_list', usersList);
         update();
 
         _resetCustomerForm();

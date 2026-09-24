@@ -14,6 +14,7 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
   required Map storedLanguage,
   String? initialName,
   String? initialPhone,
+  String? initialType,
 }) async {
   if (!Get.isRegistered<UdharController>()) {
     Get.put(UdharController());
@@ -21,10 +22,18 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
   final ctrl = Get.find<UdharController>();
   ctrl.showCustomerLimitNudgeIfNeeded();
 
+  // Reset transient fields before opening
+  ctrl.nameCtrl.text = initialName ?? '';
+  ctrl.phoneCtrl.text = initialPhone ?? '';
+  ctrl.emailCtrl.clear();
+  ctrl.openingBalanceCtrl.clear();
+  ctrl.limitCtrl.clear();
+
   final args = {
     'storedLanguage': storedLanguage,
     'initialName': initialName,
     'initialPhone': initialPhone,
+    'initialType': initialType,
   };
 
   try {
@@ -41,6 +50,29 @@ Future<Map<String, dynamic>?> openAddCustomerScreen({
     if (result != null) return result;
   }
   return null;
+}
+
+class IndianPhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (text.length > 10) {
+      if (text.length == 12 && text.startsWith('91')) {
+        text = text.substring(2);
+      } else if (text.length == 11 && text.startsWith('0')) {
+        text = text.substring(1);
+      } else {
+        text = text.substring(text.length - 10);
+      }
+    }
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
 }
 
 class AddCustomerScreen extends StatefulWidget {
@@ -62,6 +94,11 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
 
   bool _showMoreInfo = false;
   String _selectedType = 'Customer';
+  DateTime? _selectedDueDate;
+  String _dueDatePreset = 'next_week';
+
+  bool get _isSupplierType =>
+      ['dealer', 'wholesaler', 'supplier'].contains(_selectedType.toLowerCase());
 
   void _onNameChanged() {
     if (mounted) setState(() {});
@@ -81,8 +118,29 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
     _controller.limitCtrl.clear();
     _controller.emailCtrl.clear();
     _controller.nameCtrl.text = (args['initialName'] ?? '').toString();
-    _controller.phoneCtrl.text = (args['initialPhone'] ?? '').toString();
+
+    // Sanitize any passed phone to strictly 10 digits
+    final rawPhone = (args['initialPhone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+    String cleanInitialPhone = rawPhone;
+    if (cleanInitialPhone.length > 10) {
+      if (cleanInitialPhone.length == 12 && cleanInitialPhone.startsWith('91')) {
+        cleanInitialPhone = cleanInitialPhone.substring(2);
+      } else if (cleanInitialPhone.length == 11 && cleanInitialPhone.startsWith('0')) {
+        cleanInitialPhone = cleanInitialPhone.substring(1);
+      } else {
+        cleanInitialPhone = cleanInitialPhone.substring(cleanInitialPhone.length - 10);
+      }
+    }
+    _controller.phoneCtrl.text = cleanInitialPhone;
     _controller.nameCtrl.addListener(_onNameChanged);
+
+    if (args['initialType'] != null && args['initialType'].toString().isNotEmpty) {
+      _selectedType = args['initialType'].toString();
+    }
+    if (_isSupplierType) {
+      _selectedDueDate = DateTime.now().add(const Duration(days: 7));
+      _dueDatePreset = 'next_week';
+    }
   }
 
   @override
@@ -207,6 +265,17 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                         cardColor: cardColor,
                         borderColor: borderColor,
                       ),
+
+                      // Highlighted Supplier / Dealer Payable Section (Merchant ko pay karna hai)
+                      if (_isSupplierType) ...[
+                        VSpace(16.h),
+                        _buildSupplierPayableSection(
+                          context: context,
+                          isDark: isDark,
+                          cardColor: cardColor,
+                          borderColor: borderColor,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -252,11 +321,18 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                     ? null
                     : () async {
                         FocusScope.of(context).unfocus();
-                        await ctrl.addCustomer(
+                        final formattedDueDate = _selectedDueDate != null
+                            ? "${_selectedDueDate!.year.toString().padLeft(4, '0')}-${_selectedDueDate!.month.toString().padLeft(2, '0')}-${_selectedDueDate!.day.toString().padLeft(2, '0')}"
+                            : null;
+                        final created = await ctrl.addCustomer(
                           address: _addressCtrl.text,
                           note: _noteCtrl.text,
                           type: _selectedType,
+                          dueDate: formattedDueDate,
                         );
+                        if (created != null && _isSupplierType) {
+                          Get.toNamed(RoutesName.supplierListScreen);
+                        }
                       },
                 child: ctrl.isAddingCustomer
                     ? SizedBox(
@@ -269,19 +345,28 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.person_add_alt_1_rounded,
+                            _isSupplierType
+                                ? Icons.local_shipping_rounded
+                                : Icons.person_add_alt_1_rounded,
                             color: Colors.white,
-                            size: 20.sp,
+                            size: 18.sp,
                           ),
-                          HSpace(8.w),
-                          Text(
-                            _storedLanguage['Add Customer'] ?? 'Add Customer',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w700,
+                          HSpace(6.w),
+                          Flexible(
+                            child: Text(
+                              _isSupplierType
+                                  ? 'Add $_selectedType (Dene Hain)'
+                                  : (_storedLanguage['Add Customer'] ?? 'Add Customer'),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ],
@@ -569,8 +654,11 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 child: TextField(
                   controller: _controller.phoneCtrl,
                   keyboardType: TextInputType.phone,
+                  autofillHints: null,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
+                    IndianPhoneNumberFormatter(),
                     LengthLimitingTextInputFormatter(10),
                   ],
                   style: context.t.bodyMedium?.copyWith(
@@ -788,6 +876,268 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  /// Highlighted Section for Supplier / Wholesaler / Dealer Credit Purchases (Dene Hain)
+  Widget _buildSupplierPayableSection({
+    required BuildContext context,
+    required bool isDark,
+    required Color cardColor,
+    required Color borderColor,
+  }) {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    String formattedDate = '';
+    if (_selectedDueDate != null) {
+      formattedDate =
+          '${_selectedDueDate!.day} ${months[_selectedDueDate!.month - 1]} ${_selectedDueDate!.year}';
+    }
+
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+              : const Color(0xFFFDE68A),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shopping_bag_rounded,
+                  color: const Color(0xFFD97706),
+                  size: 16.sp,
+                ),
+              ),
+              HSpace(8.w),
+              Expanded(
+                child: Text(
+                  'Credit Purchase / Payable (Dene Hain)',
+                  style: TextStyle(
+                    fontSize: 13.5.sp,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF92400E),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          VSpace(4.h),
+          Text(
+            'In se kitne ka samaan udhar liya jo aapko pay karna hai (e.g. ₹10,000):',
+            style: TextStyle(
+              fontSize: 11.5.sp,
+              color: isDark ? Colors.white70 : const Color(0xFF78350F),
+              height: 1.3,
+            ),
+          ),
+          VSpace(10.h),
+          // Amount Field with ₹ symbol
+          Container(
+            height: 48.h,
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkBgColor : Colors.white,
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: isDark ? const Color(0xFF475569) : const Color(0xFFFCD34D),
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '₹',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFFD97706),
+                  ),
+                ),
+                HSpace(8.w),
+                Expanded(
+                  child: TextField(
+                    controller: _controller.openingBalanceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter amount to pay (e.g. 10000)',
+                      hintStyle: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textFieldHintColor,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          VSpace(12.h),
+          // Due Date Section
+          Text(
+            'Payment Due Date (Kab pay karna hai):',
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF92400E),
+            ),
+          ),
+          VSpace(6.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 6.h,
+            children: [
+              _buildDatePresetChip('next_week', '⚡ Next Week', 7),
+              _buildDatePresetChip('15_days', '15 Days', 15),
+              _buildDatePresetChip('1_month', '1 Month', 30),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDueDate ?? DateTime.now().add(const Duration(days: 7)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _selectedDueDate = picked;
+                      _dueDatePreset = 'custom';
+                    });
+                  }
+                },
+                borderRadius: BorderRadius.circular(20.r),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: _dueDatePreset == 'custom'
+                        ? const Color(0xFFD97706)
+                        : (isDark ? const Color(0xFF334155) : Colors.white),
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
+                      color: _dueDatePreset == 'custom'
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFFFCD34D),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 13.sp,
+                        color: _dueDatePreset == 'custom'
+                            ? Colors.white
+                            : const Color(0xFFD97706),
+                      ),
+                      HSpace(4.w),
+                      Text(
+                        _dueDatePreset == 'custom' && formattedDate.isNotEmpty
+                            ? formattedDate
+                            : 'Custom Date',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _dueDatePreset == 'custom'
+                              ? Colors.white
+                              : (isDark ? Colors.white70 : const Color(0xFF92400E)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_selectedDueDate != null && _dueDatePreset != 'custom') ...[
+            VSpace(8.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.event_available_rounded,
+                    size: 13.sp,
+                    color: const Color(0xFFD97706),
+                  ),
+                  HSpace(6.w),
+                  Text(
+                    'Due on: $formattedDate (Agle hafte)',
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFD97706),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatePresetChip(String key, String label, int days) {
+    final isSelected = _dueDatePreset == key;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _dueDatePreset = key;
+          _selectedDueDate = DateTime.now().add(Duration(days: days));
+        });
+      },
+      borderRadius: BorderRadius.circular(20.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFD97706)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFD97706) : const Color(0xFFFCD34D),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF92400E),
+          ),
+        ),
+      ),
     );
   }
 

@@ -117,8 +117,8 @@ class PlanCardWidget extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          margin: EdgeInsets.only(top: hasRibbon ? 12 : 4, bottom: 8),
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          margin: EdgeInsets.only(top: hasRibbon ? 12 : 4, bottom: 6),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -238,7 +238,7 @@ class PlanCardWidget extends StatelessWidget {
 
               // Feature Checklist
               ...features.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
+                    padding: const EdgeInsets.only(bottom: 6.5),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -246,19 +246,19 @@ class PlanCardWidget extends StatelessWidget {
                           padding: EdgeInsets.only(top: 2),
                           child: Icon(
                             Icons.check,
-                            size: 17,
+                            size: 16,
                             color: Color(0xFF10B981), // Emerald green checkmark
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             item,
                             style: const TextStyle(
-                              fontSize: 13.5,
+                              fontSize: 13,
                               color: Color(0xFF1E293B),
                               fontWeight: FontWeight.w500,
-                              height: 1.35,
+                              height: 1.3,
                             ),
                           ),
                         ),
@@ -268,13 +268,13 @@ class PlanCardWidget extends StatelessWidget {
 
               // Try Saying Box (Voice Prompts)
               if (prompts.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF4F7FF),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFE0EAFF)),
                   ),
                   child: Column(
@@ -283,19 +283,19 @@ class PlanCardWidget extends StatelessWidget {
                       const Text(
                         'TRY SAYING:',
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF64748B),
                           letterSpacing: 0.6,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       ...prompts.map((prompt) => Padding(
-                            padding: const EdgeInsets.only(bottom: 3),
+                            padding: const EdgeInsets.only(bottom: 2),
                             child: Text(
                               '“$prompt”',
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 12,
                                 fontStyle: FontStyle.italic,
                                 color: Color(0xFF1E40AF),
                                 fontWeight: FontWeight.w600,
@@ -307,7 +307,7 @@ class PlanCardWidget extends StatelessWidget {
                 ),
               ],
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // CTA Button
               if (isFree)

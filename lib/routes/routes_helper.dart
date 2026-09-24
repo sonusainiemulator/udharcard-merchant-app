@@ -6,6 +6,7 @@ import '../views/screens/qr-payment/qr_code_screen.dart';
 import '../views/screens/transfer/transfer_money_screen.dart';
 import '../views/screens/udhar/add_customer_screen.dart';
 import '../views/screens/udhar/customer_list_screen.dart';
+import '../views/screens/udhar/supplier_list_screen.dart';
 import '../views/screens/udhar/customer_ledger_screen.dart';
 import '../views/screens/udhar/chat_ledger_screen.dart';
 import '../views/screens/udhar/reports_dashboard_screen.dart';
@@ -130,6 +131,10 @@ class RouteHelper {
     GetPage(
       name: RoutesName.customerListScreen,
       page: () => const CustomerListScreen(),
+    ),
+    GetPage(
+      name: RoutesName.supplierListScreen,
+      page: () => const SupplierListScreen(),
     ),
     GetPage(
       name: RoutesName.customerLedgerScreen,

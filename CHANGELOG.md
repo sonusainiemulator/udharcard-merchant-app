@@ -5,6 +5,38 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.82] - 2026-09-24 12:00:00 IST
+
+### 💳 Razorpay Credentials Setup, Choose Plan Bottom Overflow Fix, Dedicated Suppliers Ledger & Test Number Eradication
+
+#### Summary
+Bumped version to `1.0.82+83`. Configured Razorpay test credentials in `.env` and backend controller, resolved the 4.0px bottom overflow on the Gold Plan subscription card, implemented a dedicated Suppliers & Dealers page for tracking credit purchases/payables ("Dene Hain") with payment settlements, and eradicated the hardcoded test phone number (`+91 98765 43210`) across customer lists and ledgers.
+
+#### 🛠️ Key Changes & Enhancements
+- **Razorpay Test Credentials Configuration**:
+  - Configured test credentials in `.env`: `RAZORPAY_KEY_ID = rzp_test_RqNdkMYtrjOcBJ`, `RAZORPAY_KEY_SECRET = d7NFjF9ypB0SCwZkzmejtEOB`, `RAZORPAY_WEBHOOK_SECRET = d7NFjF9ypB0SCwZkzmejtEOB`.
+  - Updated Laravel backend `SubscriptionController.php` fallback to `rzp_test_RqNdkMYtrjOcBJ`.
+  - Updated `SubscriptionController.dart` to prioritize the active `.env` key over remote backend fallback keys for testing and development.
+- **Choose a Plan Bottom Overflow Fix (4.0 px)**:
+  - Eliminated the `BOTTOM OVERFLOWED BY 4.0 PIXELS` error on the Gold Plan card in `subscription_plans_screen.dart` and `plan_card_widget.dart`.
+  - Adjusted outer card padding (`18.h, 18.w, 18.h, 14.h`), bullet feature margins (`6.5.h`), prompt voice assistant box padding (`8.h`), and CTA button margin (`12.h`).
+  - Increased PageView viewport height from 590 to 610, providing over 45px of breathing room without any visual compression.
+- **Suppliers, Dealers & Wholesalers Separate Page & Payables ("Dene Hain") Tracking**:
+  - Created dedicated `SupplierListScreen` (`RoutesName.supplierListScreen = "/supplierListScreen"`).
+  - Added hero card displaying total amount owed to suppliers ("Total You Owe / कुल देने हैं") in bold typography, pending due count, and total supplier count.
+  - Added category filter chips: `All`, `Payment Due`, `Wholesalers`, `Dealers`, `Suppliers`.
+  - Integrated top 2-way switcher between `[ 👤 Customers (Lene Hain) ]` and `[ 🏢 Suppliers & Dealers (Dene Hain) ]` across both screens.
+  - Added supplier action sheet to record full or partial payments (`✓ Pay / Settle`) with Cash, UPI, or Bank Transfer options, updating ledger and payable amounts in real-time.
+  - Extended `UdharCustomer` model fillable array with `party_type`, `type`, and `payable_amount`.
+  - Added credit purchase payable input and due date presets in `AddCustomerScreen` when creating a Dealer, Wholesaler, or Supplier.
+- **Fixed Test Phone Number (`+91 98765 43210` / `+91987876543210`)**:
+  - Removed fake demo data fallback (`if (list.isEmpty)`) in `customer_list_screen.dart` that was injecting `Rajesh Kumar` with `+91 98765 43210` and fake counts.
+  - Replaced fallback in `customer_ledger_screen.dart:375` from `'+91 98765 43210'` to clean `''`.
+  - Added `IndianPhoneNumberFormatter` in `add_customer_screen.dart` and disabled autofill hints to prevent Android system autofill interference.
+- **Automated Verification**:
+  - Added `test/supplier_list_screen_test.dart` testing supplier partitioning and UI layout.
+  - Verified 100% test pass rate across all 75 unit/widget tests (`flutter test`).
+
 ## [1.0.81] - 2026-09-23 13:47:00 IST
 
 ### ⚡ Quick Actions "Add Customer", High-Contrast Due Amount Visibility & Merchant QR Upload Fix

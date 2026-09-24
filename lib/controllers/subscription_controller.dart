@@ -381,8 +381,9 @@ class SubscriptionController extends GetxController {
       _pendingOrderId = orderId;
       _pendingPlanCode = planCode;
 
+      final envKey = _resolveRazorpayKey();
       final serverKey = (data['data']?['razorpay_key_id'] ?? '').toString().trim();
-      final keyId = serverKey.isNotEmpty ? serverKey : _resolveRazorpayKey();
+      final keyId = envKey.isNotEmpty ? envKey : serverKey;
       if (keyId.isEmpty) {
         _isCheckoutLoading = false;
         update();

@@ -22,6 +22,9 @@ class UdharCustomer extends Model
         'opening_balance',
         'status',
         'due_date',
+        'party_type',
+        'type',
+        'payable_amount',
     ];
 
     protected $casts = [

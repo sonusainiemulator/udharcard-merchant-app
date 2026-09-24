@@ -6,6 +6,7 @@ import '../../../controllers/udhar_controller.dart';
 import '../../../utils/services/helpers.dart';
 import '../../../utils/services/localstorage/hive.dart';
 import '../../../utils/services/localstorage/keys.dart';
+import '../../../routes/routes_name.dart';
 import 'add_customer_screen.dart';
 import 'customer_ledger_screen.dart';
 import '../voice_entry/voice_khata_sheet.dart';
@@ -210,8 +211,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
     return GetBuilder<UdharController>(
       builder: (controller) {
+        // Use customersOnlyList so suppliers, dealers and wholesalers are strictly separated
+        final List<dynamic> baseCustomers = controller.customersOnlyList;
         int debtorCount = 0;
-        for (var u in controller.usersList) {
+        for (var u in baseCustomers) {
           final bal = double.tryParse((u['outstanding_balance'] ??
                       u['balance'] ??
                       u['udhar_balance'] ??
@@ -220,45 +223,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               0.0;
           if (bal > 0) debtorCount++;
         }
-        if (debtorCount == 0 && controller.usersList.isEmpty) debtorCount = 5;
-        final int totalCustomersCount =
-            controller.usersList.isNotEmpty ? controller.usersList.length : 28;
+        final int totalCustomersCount = baseCustomers.length;
 
-        List<dynamic> list = List.from(controller.usersList);
-
-        // Fallback demo data matching Screenshot Screen 2 if no customers yet
-        if (list.isEmpty) {
-          list = [
-            {
-              'id': '1',
-              'name': 'Rajesh Kumar',
-              'phone': '+91 98765 43210',
-              'outstanding_balance': 2450.0,
-              'days_due': 3,
-            },
-            {
-              'id': '2',
-              'name': 'Suresh Yadav',
-              'phone': '+91 98765 43211',
-              'outstanding_balance': 1280.0,
-              'days_due': 5,
-            },
-            {
-              'id': '3',
-              'name': 'Pooja Sharma',
-              'phone': '+91 98765 43212',
-              'outstanding_balance': 980.0,
-              'days_due': 7,
-            },
-            {
-              'id': '4',
-              'name': 'Amit Singh',
-              'phone': '+91 98765 43213',
-              'outstanding_balance': 2150.0,
-              'days_due': 10,
-            },
-          ];
-        }
+        List<dynamic> list = List.from(baseCustomers);
 
         // Apply Tab Filter
         if (_activeTab == "due") {
@@ -379,6 +346,88 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Top Segmented Toggle: Customers (Lene Hain) vs Suppliers (Dene Hain) ──
+                  Container(
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    padding: EdgeInsets.all(4.r),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 8.h),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              borderRadius: BorderRadius.circular(10.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF2563EB).withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              "👤 Customers ($totalCustomersCount)",
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              Get.toNamed(RoutesName.supplierListScreen);
+                            },
+                            borderRadius: BorderRadius.circular(10.r),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "🏢 Suppliers & Dealers",
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  if (controller.suppliersList.isNotEmpty) ...[
+                                    SizedBox(width: 4.w),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDC2626),
+                                        borderRadius: BorderRadius.circular(10.r),
+                                      ),
+                                      child: Text(
+                                        "${controller.suppliersList.length}",
+                                        style: TextStyle(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // ── Search Bar Input with Filter Icon ─────────────────────
                   Container(
                     decoration: BoxDecoration(

@@ -84,7 +84,7 @@ class UdharRepo {
     return await ApiClient.get(ENDPOINT_URL: AppConstants.getContactsUrl);
   }
 
-  /// POST /api/merchant/udhar/customers - Add new customer
+  /// POST /api/merchant/udhar/customers - Add new customer or supplier
   static Future<http.Response> addCustomer({
     required String name,
     required String phone,
@@ -94,6 +94,7 @@ class UdharRepo {
     String address = '',
     String note = '',
     String type = 'Customer',
+    String? dueDate,
   }) async {
     final Map<String, dynamic> payload = {
       "name": name,
@@ -112,6 +113,9 @@ class UdharRepo {
     }
     if (type.trim().isNotEmpty) {
       payload["type"] = type.trim();
+    }
+    if (dueDate != null && dueDate.trim().isNotEmpty) {
+      payload["due_date"] = dueDate.trim();
     }
 
     return await ApiClient.post(
