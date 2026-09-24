@@ -837,17 +837,33 @@ class UdharController extends GetxController {
           }
 
           if (payload['customer'] != null && payload['customer'] is Map) {
+            final customerMap = Map<String, dynamic>.from(payload['customer']);
             currentOutstandingBalance =
                 double.tryParse(
-                  payload['customer']['outstanding_balance']?.toString() ??
-                      '0',
+                  customerMap['outstanding_balance']?.toString() ?? '0',
                 ) ??
                 0.0;
             currentCreditLimit =
                 double.tryParse(
-                  payload['customer']['credit_limit']?.toString() ?? '5000',
+                  customerMap['credit_limit']?.toString() ?? '5000',
                 ) ??
                 5000.0;
+            // Populate selectedUser from the API response so phone and other
+            // details are always available (fixes "No Phone" on ledger screen).
+            selectedUser = {
+              ...customerMap,
+              // Normalise common phone field variants
+              'phone': customerMap['phone'] ??
+                  customerMap['mobile'] ??
+                  customerMap['contact'] ??
+                  customerMap['phone_number'] ??
+                  (selectedUser?['phone'] ?? ''),
+              // Keep existing selectedUser fields if API doesn't return them
+              if (selectedUser != null) ...{
+                for (final k in selectedUser!.keys)
+                  if (!customerMap.containsKey(k)) k: selectedUser![k],
+              },
+            };
           } else {
             currentOutstandingBalance =
                 double.tryParse(

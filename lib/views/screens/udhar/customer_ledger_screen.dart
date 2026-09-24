@@ -372,7 +372,12 @@ class _CustomerLedgerScreenState extends State<CustomerLedgerScreen> {
     required bool isDark,
   }) {
     final customer = controller.selectedUser ?? {};
-    final phone = (customer['phone'] ?? customer['mobile'] ?? '').toString();
+    final phone = (customer['phone'] ??
+            customer['mobile'] ??
+            customer['contact'] ??
+            customer['phone_number'] ??
+            '')
+        .toString();
     final effectiveLimit = limit > 0 ? limit : 10000.0;
     final available = (effectiveLimit - balance).clamp(0.0, effectiveLimit);
     final usagePercent = effectiveLimit > 0

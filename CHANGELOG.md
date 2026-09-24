@@ -5,6 +5,22 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.84] - 2026-09-24 21:04:00 IST
+
+### 🐛 Fix: Customer Phone Number Not Shown on Ledger Screen
+
+#### Summary
+Fixed a bug where the customer ledger screen always displayed **"No Phone"** and showed "Customer phone number is not available" when tapping the Call button.
+
+#### Root Cause
+`fetchCustomerLedger()` in `UdharController` was fetching the full customer object from the live server API (`/api/merchant/udhar/customers/{id}/ledger`), but **only reading `outstanding_balance` and `credit_limit`** from the returned `customer` map — never populating `selectedUser`. Since `selectedUser` remained `null` or stale, the ledger screen had no phone number to display.
+
+#### 🛠️ Changes
+- **`lib/controllers/udhar_controller.dart`**: After reading balance/limit from `payload['customer']`, now also sets `selectedUser` from the full API customer map, normalizing all phone field variants (`phone`, `mobile`, `contact`, `phone_number`). Preserves any extra fields already in `selectedUser` that the API may not return.
+- **`lib/views/screens/udhar/customer_ledger_screen.dart`**: Extended phone extraction to also check `contact` and `phone_number` variants as defensive fallbacks.
+
+---
+
 ## [1.0.84] - 2026-09-24 16:46:15 IST
 
 ### 📲 Merchant QR Code Upload Overhaul, Byte-Level & Base64 Persistence, and Dynamic UPI QR Fallback
