@@ -19,6 +19,7 @@ Under Apple's strict `UIScene` lifecycle requirements on iOS 27, `UIApplication.
 - **`ios/Runner/AppDelegate.swift`**: In `didInitializeImplicitFlutterEngine(_:)`, defensively initialize `self.window` and assign a fallback `rootViewController` before `GeneratedPluginRegistrant.register(with:)` is executed, preventing force-unwrap exceptions in legacy plugins.
 - **`ios/Runner/SceneDelegate.swift`**: Overrode `scene(_:willConnectTo:options:)` to link and propagate `self.window` to `(UIApplication.shared.delegate as? AppDelegate)?.window`, ensuring runtime calls to `UIApplication.shared.delegate?.window` reflect the active `FlutterViewController`.
 - **🧪 Verification**: Built for iOS 27 simulator (`iPhone 17`, runtime `iOS-27-0`), deployed, and launched cleanly (PID `15827`). Confirmed zero crashes and active UI rendering.
+- **🚀 TestFlight Distribution**: Uploaded Release IPA (v1.0.85, Build 86, Delivery UUID: `383c7453-88a1-4fa2-bac7-5fc48c1eb76e`) to App Store Connect for TestFlight beta testing.
 
 ---
 
