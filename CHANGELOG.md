@@ -5,6 +5,23 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.84] - 2026-09-25 00:19:00 IST
+
+### 🐛 Fix: iOS 27 SceneDelegate Plugin Initialization Crash (`flutter_contacts` Nil Unwrap)
+
+#### Summary
+Resolved a fatal startup crash on iOS 27 (`flutter_contacts/SwiftFlutterContactsPlugin.swift:435: Fatal error: Unexpectedly found nil while unwrapping an Optional value`) triggered when legacy Flutter plugins attempt to unwrap `UIApplication.shared.delegate!.window!!.rootViewController!` under the modern `UIScene` lifecycle.
+
+#### Root Cause
+Under Apple's strict `UIScene` lifecycle requirements on iOS 27, `UIApplication.shared.delegate?.window` remains `nil` because window management shifts entirely to `UIWindowScene` and `SceneDelegate`. Legacy plugins such as `flutter_contacts` force-unwrap `UIApplication.shared.delegate!.window!!.rootViewController!` during `register(with:)`, which triggered an unhandled Swift runtime trap and terminated the app immediately during startup.
+
+#### 🛠️ Changes
+- **`ios/Runner/AppDelegate.swift`**: In `didInitializeImplicitFlutterEngine(_:)`, defensively initialize `self.window` and assign a fallback `rootViewController` before `GeneratedPluginRegistrant.register(with:)` is executed, preventing force-unwrap exceptions in legacy plugins.
+- **`ios/Runner/SceneDelegate.swift`**: Overrode `scene(_:willConnectTo:options:)` to link and propagate `self.window` to `(UIApplication.shared.delegate as? AppDelegate)?.window`, ensuring runtime calls to `UIApplication.shared.delegate?.window` reflect the active `FlutterViewController`.
+- **🧪 Verification**: Built for iOS 27 simulator (`iPhone 17`, runtime `iOS-27-0`), deployed, and launched cleanly (PID `15827`). Confirmed zero crashes and active UI rendering.
+
+---
+
 ## [1.0.84] - 2026-09-24 21:04:00 IST
 
 ### 🐛 Fix: Customer Phone Number Not Shown on Ledger Screen
