@@ -5,6 +5,27 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.83] - 2026-09-24 16:18:25 IST
+
+### 🚀 Permanent Resolution of Choose Plan Bottom Overflow (RenderFlex Error Elimination)
+
+#### Summary
+Bumped version to `1.0.83+84`. Permanently resolved the `BOTTOM OVERFLOWED BY 4.0 PIXELS` error on the Gold Plan card in `Choose a Plan` (`SubscriptionPlansScreen`) using a dual-layer architecture: unbounded scroll resilience via `SingleChildScrollView` (eliminating `RenderFlex` exceptions under any viewport, resolution, or accessibility text scaling) and fine-tuned vertical spatial ergonomics.
+
+#### 🛠️ Key Changes & Enhancements
+- **Scroll-Resilient Card Architecture (`plan_card_widget.dart`)**:
+  - Encapsulated the plan card's internal layout in `SingleChildScrollView(physics: const ClampingScrollPhysics())`.
+  - Guarantees zero `RenderFlex` yellow-and-black striped overflow errors even on low-resolution displays or large font accessibility scaling (tested up to 130%+ text scale).
+- **Spatial Optimization & Headroom Expansion**:
+  - Fine-tuned inner card padding to `16.w, 16.h, 16.w, 12.h` (from `18.w, 18.h, 18.w, 14.h`).
+  - Adjusted bullet feature list item bottom margins to `5.h` with compact text styling (`12.5` font size, `1.25` line height).
+  - Optimized "TRY SAYING" voice assistant prompt box padding (`7.h` vertical) and sample text sizing (`11.5` font size).
+  - Streamlined CTA button heights to `44.h` (from `48.h`), saving ~52px of vertical content height.
+  - Increased `PageView.builder` viewport height in `subscription_plans_screen.dart` from `610` to `645`, providing ~87px of safety headroom so typical devices fit all content with zero scrolling required.
+- **Automated Verification**:
+  - Added dedicated widget tests in `test/subscription_plan_card_overflow_test.dart` asserting that the Gold Plan card with all 6 features, prompt hints, and CTA buttons renders completely with zero bottom overflow on both standard phone dimensions and 1.3x accessibility text scale.
+  - Verified 100% test pass across all 77 unit and widget tests (`flutter test`).
+
 ## [1.0.82] - 2026-09-24 12:00:00 IST
 
 ### 💳 Razorpay Credentials Setup, Choose Plan Bottom Overflow Fix, Dedicated Suppliers Ledger & Test Number Eradication

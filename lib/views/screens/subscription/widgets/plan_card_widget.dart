@@ -135,280 +135,283 @@ class PlanCardWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Badge & Plan Name Row
-              Row(
-                children: [
-                  if (badge.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: badgeBg,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        badge.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  if (badge.isNotEmpty) const SizedBox(width: 10),
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (isCurrent)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF86EFAC)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check_circle, size: 13, color: Color(0xFF16A34A)),
-                          const SizedBox(width: 4),
-                          Text(
-                            isTrialActive ? 'TRIAL' : 'CURRENT',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF15803D),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // Price Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    displayPrice,
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    periodLabel,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Subtitle
-              if (subtitle.isNotEmpty)
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: Color(0xFF475569),
-                    height: 1.4,
-                  ),
-                ),
-              const SizedBox(height: 16),
-
-              // Feature Checklist
-              ...features.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6.5),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 2),
-                          child: Icon(
-                            Icons.check,
-                            size: 16,
-                            color: Color(0xFF10B981), // Emerald green checkmark
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            item,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF1E293B),
-                              fontWeight: FontWeight.w500,
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-
-              // Try Saying Box (Voice Prompts)
-              if (prompts.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF4F7FF),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE0EAFF)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'TRY SAYING:',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      ...prompts.map((prompt) => Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              '“$prompt”',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: Color(0xFF1E40AF),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          )),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 12),
-
-              // CTA Button
-              if (isFree)
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: isCurrent ? null : onSelectPlan,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      backgroundColor: isCurrent ? const Color(0xFFF8FAFC) : Colors.white,
-                    ),
-                    child: Text(
-                      isCurrent ? 'Current Plan' : (plan['cta_text']?.toString() ?? 'Get Started Free'),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: isCurrent ? const Color(0xFF64748B) : const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Column(
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Badge & Plan Name Row
+                Row(
                   children: [
-                    // Trial Button if available & merchant is currently on Basic plan
-                    if (isEligibleForTrial)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : onStartTrial,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.flash_on_rounded, size: 18, color: Colors.amberAccent),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Start $trialDays-Day Free Trial',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
-
-                    // Primary Subscribe Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : onSelectPlan,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: (trialDays > 0 && !isTrialActive && !isCurrent)
-                              ? Colors.white
-                              : buttonColor,
-                          foregroundColor: (trialDays > 0 && !isTrialActive && !isCurrent)
-                              ? buttonColor
-                              : Colors.white,
-                          elevation: 0,
-                          side: (trialDays > 0 && !isTrialActive && !isCurrent)
-                              ? BorderSide(color: buttonColor, width: 1.5)
-                              : BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    if (badge.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          isCurrent
-                              ? (isTrialActive ? 'Upgrade to Paid Plan' : 'Active Plan')
-                              : (plan['cta_text']?.toString() ?? 'Subscribe Now'),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: (trialDays > 0 && !isTrialActive && !isCurrent)
-                                ? buttonColor
-                                : Colors.white,
+                          badge.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
                           ),
                         ),
+                      ),
+                    if (badge.isNotEmpty) const SizedBox(width: 8),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isCurrent)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check_circle, size: 13, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 4),
+                            Text(
+                              isTrialActive ? 'TRIAL' : 'CURRENT',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Price Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      displayPrice,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      periodLabel,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
                       ),
                     ),
                   ],
                 ),
-            ],
+                const SizedBox(height: 8),
+
+                // Subtitle
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF475569),
+                      height: 1.3,
+                    ),
+                  ),
+                const SizedBox(height: 12),
+
+                // Feature Checklist
+                ...features.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.check,
+                              size: 15,
+                              color: Color(0xFF10B981), // Emerald green checkmark
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF1E293B),
+                                fontWeight: FontWeight.w500,
+                                height: 1.25,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+
+                // Try Saying Box (Voice Prompts)
+                if (prompts.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F7FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE0EAFF)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'TRY SAYING:',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        ...prompts.map((prompt) => Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                '“$prompt”',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontStyle: FontStyle.italic,
+                                  color: Color(0xFF1E40AF),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 10),
+
+                // CTA Button
+                if (isFree)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton(
+                      onPressed: isCurrent ? null : onSelectPlan,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: isCurrent ? const Color(0xFFF8FAFC) : Colors.white,
+                      ),
+                      child: Text(
+                        isCurrent ? 'Current Plan' : (plan['cta_text']?.toString() ?? 'Get Started Free'),
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: isCurrent ? const Color(0xFF64748B) : const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      // Trial Button if available & merchant is currently on Basic plan
+                      if (isEligibleForTrial)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: ElevatedButton(
+                              onPressed: isLoading ? null : onStartTrial,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: buttonColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.flash_on_rounded, size: 16, color: Colors.amberAccent),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Start $trialDays-Day Free Trial',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+
+                      // Primary Subscribe Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : onSelectPlan,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: (trialDays > 0 && !isTrialActive && !isCurrent)
+                                ? Colors.white
+                                : buttonColor,
+                            foregroundColor: (trialDays > 0 && !isTrialActive && !isCurrent)
+                                ? buttonColor
+                                : Colors.white,
+                            elevation: 0,
+                            side: (trialDays > 0 && !isTrialActive && !isCurrent)
+                                ? BorderSide(color: buttonColor, width: 1.5)
+                                : BorderSide.none,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text(
+                            isCurrent
+                                ? (isTrialActive ? 'Upgrade to Paid Plan' : 'Active Plan')
+                                : (plan['cta_text']?.toString() ?? 'Subscribe Now'),
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
+                              color: (trialDays > 0 && !isTrialActive && !isCurrent)
+                                  ? buttonColor
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
 

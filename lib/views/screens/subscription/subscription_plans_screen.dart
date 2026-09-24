@@ -243,7 +243,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
 
                     // --- Horizontal Swipeable Plan Cards ---
                     SizedBox(
-                      height: 610,
+                      height: 645,
                       child: PageView.builder(
                         controller: _pageController,
                         itemCount: controller.plans.length,
