@@ -22,6 +22,7 @@ Resolved an issue where the Google Sign-in button icon appeared incomplete/disto
 - **`lib/views/widgets/fintech_auth_widgets.dart`**: Redesigned `FintechGoogleButton`'s loading state to display the progress spinner alongside explicit informative text (`Signing in with Google...`), preserving button structure and completely eliminating isolated crescent arcs.
 - **`lib/controllers/auth_controller.dart`**: Added a 45-second timeout and wrapped the execution in a robust `try ... finally` block, guaranteeing `isGoogleLoading` resets to `false` and notifies the UI under any outcome.
 - **🧪 Verification**: Built and deployed to iOS 27 simulator (`iPhone 17`). Verified that the Google "G" logo is 100% visible, vibrant, crisp, and properly centered with "Sign in with Google".
+- **🚀 TestFlight Distribution**: Uploaded Release IPA (v1.0.87, Build 88, Delivery UUID: `b3c223f8-f9e4-4638-b63c-64d98d26e2a2`) to App Store Connect for TestFlight internal and external testing.
 
 ---
 
