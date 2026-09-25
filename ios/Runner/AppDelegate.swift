@@ -19,13 +19,12 @@ import flutter_local_notifications
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    if self.window == nil {
-      let win = UIWindow(frame: UIScreen.main.bounds)
-      win.rootViewController = UIViewController()
-      self.window = win
-    } else if self.window?.rootViewController == nil {
-      self.window?.rootViewController = UIViewController()
-    }
+    let tempWindow = UIWindow(frame: UIScreen.main.bounds)
+    tempWindow.rootViewController = UIViewController()
+    self.window = tempWindow
+
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    self.window = nil
   }
 }

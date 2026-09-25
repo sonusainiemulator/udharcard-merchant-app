@@ -44,4 +44,19 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
   end
+
+  # Auto-patch flutter_contacts for UIScene and iOS 27 compatibility
+  plugin_path = File.expand_path(File.join('.symlinks', 'plugins', 'flutter_contacts', 'ios', 'Classes', 'SwiftFlutterContactsPlugin.swift'), __dir__)
+  if File.exist?(plugin_path)
+    content = File.read(plugin_path)
+    if content.include?('UIApplication.shared.delegate!.window!!.rootViewController!')
+      content.gsub!('let rootViewController = UIApplication.shared.delegate!.window!!.rootViewController!',
+                    'let rootViewController = UIApplication.shared.delegate?.window??.rootViewController ?? UIViewController()')
+      content.gsub!('self.rootViewController.present',
+                    'let presenter: UIViewController = (UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.windows }.flatMap { $0 }.first { $0.isKeyWindow }?.rootViewController) ?? (UIApplication.shared.delegate?.window??.rootViewController) ?? self.rootViewController; presenter.present')
+      File.write(plugin_path, content)
+      puts "[Podfile] Successfully patched flutter_contacts for UIScene / iOS 27 compatibility."
+    end
+  end
 end
+
