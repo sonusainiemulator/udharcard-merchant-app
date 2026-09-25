@@ -1018,12 +1018,14 @@ class AuthController extends GetxController {
     try {
       await _ensureGoogleSignInInitialized();
 
-      final GoogleSignInAccount? googleUser =
-          await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance
+          .authenticate()
+          .timeout(
+            const Duration(seconds: 45),
+            onTimeout: () => throw Exception('Google Sign-In timed out. Please try again.'),
+          );
 
       if (googleUser == null) {
-        isGoogleLoading = false;
-        _notifyAuthSubmission();
         return;
       }
 
@@ -1084,9 +1086,6 @@ class AuthController extends GetxController {
         phone: phone,
       );
 
-      isGoogleLoading = false;
-      _notifyAuthSubmission();
-
       final bool onboardingCompleted =
           HiveHelp.read('onboarding_completed') ?? false;
       if (!onboardingCompleted) {
@@ -1095,7 +1094,6 @@ class AuthController extends GetxController {
         await _navigatePostAuthentication();
       }
     } on PlatformException catch (e) {
-      isGoogleLoading = false;
       debugPrint("Google Sign-In PlatformException: [${e.code}] ${e.message}");
       if (e.code == 'network_error') {
         loginErrorMessage = 'Network error. Please check your internet connection.';
@@ -1110,31 +1108,27 @@ class AuthController extends GetxController {
       } else {
         loginErrorMessage = e.message ?? 'Google Sign-In error (${e.code}).';
       }
-      _notifyAuthSubmission();
       if (loginErrorMessage != null) {
         Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
       }
     } on GoogleSignInException catch (e) {
-      isGoogleLoading = false;
       if (e.code.name != 'canceled') {
         loginErrorMessage =
             'Google Sign-In error: ${e.description ?? e.code.name}';
         Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
       }
-      _notifyAuthSubmission();
     } on FirebaseAuthException catch (e) {
-      isGoogleLoading = false;
       loginErrorMessage =
           e.message ?? 'Firebase authentication failed (${e.code}).';
-      _notifyAuthSubmission();
       Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
     } catch (e) {
-      isGoogleLoading = false;
       final errStr = e.toString().toLowerCase();
       if (!errStr.contains('canceled') && !errStr.contains('cancelled')) {
         loginErrorMessage = 'Google Sign-In failed: $e';
         Helpers.showSnackBar(msg: loginErrorMessage!, title: 'Google Sign-In');
       }
+    } finally {
+      isGoogleLoading = false;
       _notifyAuthSubmission();
     }
   }

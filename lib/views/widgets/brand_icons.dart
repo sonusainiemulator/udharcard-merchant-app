@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 
-/// Pixel-perfect 4-color Google "G" Logo
+/// Official Pixel-perfect 4-color Google "G" Logo
 class GoogleBrandIcon extends StatelessWidget {
   final double size;
   const GoogleBrandIcon({super.key, this.size = 20.0});
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _GoogleLogoPainter(),
+    return Image.asset(
+      'assets/images/google.png',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      errorBuilder: (context, error, stackTrace) {
+        return CustomPaint(
+          size: Size(size, size),
+          painter: _GoogleLogoPainter(),
+        );
+      },
     );
   }
 }

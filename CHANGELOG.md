@@ -5,6 +5,26 @@ All notable changes to the **UdharCard Merchant Mobile Application** project wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.87] - 2026-09-25 09:36:00 IST
+
+### 🎨 Fix: Official Google Brand "G" Logo & Button Loading State Architecture
+
+#### Summary
+Resolved an issue where the Google Sign-in button icon appeared incomplete/distorted and the button's loading state displayed an isolated spinning blue arc that was mistaken for a broken or cut-off Google logo.
+
+#### Root Cause
+1. **Logo Geometry Distortion**: `GoogleBrandIcon` was previously rendered using a custom `CustomPainter` with incomplete arc sweeps (~85-degree gap in the top arc and misaligned bar paint), resulting in an incomplete and distorted "G" symbol on high-DPI screens.
+2. **Ambiguous Loading State**: In `FintechGoogleButton`, when `isLoading` was active, the entire button label and icon were replaced by an isolated 20x20 `CircularProgressIndicator`. When paused or frozen, the spinning blue circular arc (`(`) was perceived as a clipped, malformed Google logo.
+3. **Google Sign-In State Guard**: In `AuthController.signInWithGoogle()`, lack of an unconditional `finally` block and safety timeout could leave `isGoogleLoading` stuck in the loading state if the Google authentication prompt hung or threw an unhandled platform exception.
+
+#### 🛠️ Changes
+- **`lib/views/widgets/brand_icons.dart`**: Integrated the official high-resolution 4-color Google "G" brand asset (`assets/images/google.png`, 200x204 RGBA) with graceful fallback, ensuring pixel-perfect rendering adhering to official Google branding guidelines.
+- **`lib/views/widgets/fintech_auth_widgets.dart`**: Redesigned `FintechGoogleButton`'s loading state to display the progress spinner alongside explicit informative text (`Signing in with Google...`), preserving button structure and completely eliminating isolated crescent arcs.
+- **`lib/controllers/auth_controller.dart`**: Added a 45-second timeout and wrapped the execution in a robust `try ... finally` block, guaranteeing `isGoogleLoading` resets to `false` and notifies the UI under any outcome.
+- **🧪 Verification**: Built and deployed to iOS 27 simulator (`iPhone 17`). Verified that the Google "G" logo is 100% visible, vibrant, crisp, and properly centered with "Sign in with Google".
+
+---
+
 ## [1.0.86] - 2026-09-25 09:03:00 IST
 
 ### 🐛 Fix: iOS 27 Black Screen on Startup & `flutter_contacts` UIScene Compatibility

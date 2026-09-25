@@ -488,36 +488,37 @@ class FintechGoogleButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        child: isLoading
-            ? SizedBox(
-                height: 20.r,
-                width: 20.r,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLoading)
+              SizedBox(
+                height: 18.r,
+                width: 18.r,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppColors.mainColor,
                 ),
               )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GoogleBrandIcon(size: 18.r),
-                  SizedBox(width: 10.w),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.sp,
-                        letterSpacing: .2,
-                      ),
-                    ),
-                  ),
-                ],
+            else
+              GoogleBrandIcon(size: 20.r),
+            SizedBox(width: 10.w),
+            Flexible(
+              child: Text(
+                isLoading ? 'Signing in with Google...' : label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14.sp,
+                  letterSpacing: .2,
+                ),
               ),
+            ),
+          ],
+        ),
       ),
     );
 
