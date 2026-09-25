@@ -19,7 +19,8 @@ Resolved a black screen issue on iOS 27 (physical devices and simulator) caused 
 #### 🛠️ Changes
 - **`ios/Runner/AppDelegate.swift`**: Reset `self.window = nil` immediately after `GeneratedPluginRegistrant.register` finishes. This allows plugins to safely register without crashing while preventing `FlutterSceneDelegate` from hijacking the scene window with a dummy view controller.
 - **`ios/Podfile`**: Added an automated `post_install` hook that patches `flutter_contacts`'s `SwiftFlutterContactsPlugin.swift` to safely unwrap `rootViewController` during registration and dynamically resolves the active view controller from the key window when presenting contact pickers.
-- **🧪 Verification**: Built and tested on iOS 27 simulator (`iPhone 17`, PID `33477`). Confirmed zero warnings, zero crashes, and active Flutter UI rendering (confirmed by UI screenshot).
+- **🧪 Verification**: Built and tested on iOS 27 simulator (`iPhone 17`, PID `33477` / PID `55282`). Confirmed zero warnings, zero crashes, and active Flutter UI rendering (confirmed by UI screenshot).
+- **🚀 TestFlight Distribution**: Uploaded Release IPA (v1.0.86, Build 87, Delivery UUID: `06cd8eb1-1323-497d-8585-cd7ff287442b`) to App Store Connect for TestFlight internal and external testing.
 
 ---
 

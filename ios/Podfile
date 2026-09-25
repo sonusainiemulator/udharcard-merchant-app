@@ -49,14 +49,23 @@ post_install do |installer|
   plugin_path = File.expand_path(File.join('.symlinks', 'plugins', 'flutter_contacts', 'ios', 'Classes', 'SwiftFlutterContactsPlugin.swift'), __dir__)
   if File.exist?(plugin_path)
     content = File.read(plugin_path)
+    modified = false
     if content.include?('UIApplication.shared.delegate!.window!!.rootViewController!')
       content.gsub!('let rootViewController = UIApplication.shared.delegate!.window!!.rootViewController!',
                     'let rootViewController = UIApplication.shared.delegate?.window??.rootViewController ?? UIViewController()')
-      content.gsub!('self.rootViewController.present',
-                    'let presenter: UIViewController = (UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.windows }.flatMap { $0 }.first { $0.isKeyWindow }?.rootViewController) ?? (UIApplication.shared.delegate?.window??.rootViewController) ?? self.rootViewController; presenter.present')
+      modified = true
+    end
+    unless content.include?('private var activeViewController: UIViewController')
+      content.gsub!('private var externalResult: FlutterResult?',
+                    "private var externalResult: FlutterResult?\n\n    private var activeViewController: UIViewController {\n        return UIApplication.shared.delegate?.window??.rootViewController ?? self.rootViewController\n    }")
+      content.gsub!('self.rootViewController.present(', 'self.activeViewController.present(')
+      modified = true
+    end
+    if modified
       File.write(plugin_path, content)
-      puts "[Podfile] Successfully patched flutter_contacts for UIScene / iOS 27 compatibility."
+      puts '[Podfile] Successfully patched flutter_contacts for UIScene / iOS 27 compatibility.'
     end
   end
 end
+
 
